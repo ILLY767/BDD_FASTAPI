@@ -1,0 +1,999 @@
+{% extends "base.html" %}
+
+{% block title %}
+Mon compte - Gestion de Boutique
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    /* =====================================================
+       PAGE MON COMPTE
+       ===================================================== */
+
+    .compte-page {
+        max-width: 1200px;
+        margin: 35px auto;
+        padding: 0 20px 50px;
+    }
+
+
+    /* =====================================================
+       EN-TÊTE
+       ===================================================== */
+
+    .compte-header {
+        margin-bottom: 28px;
+    }
+
+    .compte-header h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 800;
+        color: #172033;
+    }
+
+    .compte-header p {
+        margin-top: 8px;
+        color: #718096;
+        font-size: 15px;
+    }
+
+
+    /* =====================================================
+       MESSAGES
+       ===================================================== */
+
+    .message-compte {
+        padding: 15px 18px;
+        border-radius: 12px;
+        margin-bottom: 22px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .message-succes {
+        background: #ecfdf3;
+        color: #087443;
+        border: 1px solid #b7ebcd;
+    }
+
+    .message-erreur {
+        background: #fff1f2;
+        color: #be123c;
+        border: 1px solid #fecdd3;
+    }
+
+
+    /* =====================================================
+       GRILLE PRINCIPALE
+       ===================================================== */
+
+    .compte-grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 25px;
+        align-items: start;
+    }
+
+
+    /* =====================================================
+       CARTE PROFIL
+       ===================================================== */
+
+    .profil-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow:
+            0 8px 30px rgba(15, 23, 42, 0.08);
+        border: 1px solid #edf0f5;
+        text-align: center;
+    }
+
+
+    .avatar-compte {
+        width: 105px;
+        height: 105px;
+        border-radius: 50%;
+        margin: 0 auto 18px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 34px;
+        font-weight: 800;
+
+        color: white;
+
+        background:
+            linear-gradient(
+                135deg,
+                #2563eb,
+                #7c3aed
+            );
+
+        box-shadow:
+            0 10px 25px
+            rgba(37, 99, 235, 0.28);
+    }
+
+
+    .profil-card h2 {
+        margin: 0;
+        color: #172033;
+        font-size: 22px;
+    }
+
+
+    .profil-email {
+        margin-top: 7px;
+        color: #718096;
+        font-size: 14px;
+        word-break: break-word;
+    }
+
+
+    /* =====================================================
+       BADGE RÔLE
+       ===================================================== */
+
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        margin-top: 16px;
+        padding: 8px 15px;
+
+        border-radius: 999px;
+
+        background: #eff6ff;
+        color: #1d4ed8;
+
+        font-size: 13px;
+        font-weight: 700;
+
+        text-transform: capitalize;
+    }
+
+
+    /* =====================================================
+       INFORMATIONS COMPTE
+       ===================================================== */
+
+    .infos-compte {
+        margin-top: 28px;
+        padding-top: 22px;
+        border-top: 1px solid #edf0f5;
+        text-align: left;
+    }
+
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        padding: 10px 0;
+        font-size: 14px;
+    }
+
+    .info-label {
+        color: #718096;
+    }
+
+    .info-value {
+        color: #172033;
+        font-weight: 700;
+        text-align: right;
+    }
+
+
+    /* =====================================================
+       CARTES DROITE
+       ===================================================== */
+
+    .compte-section {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+
+        border: 1px solid #edf0f5;
+
+        box-shadow:
+            0 8px 30px rgba(15, 23, 42, 0.08);
+
+        margin-bottom: 25px;
+    }
+
+
+    .section-titre {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        margin-bottom: 25px;
+    }
+
+
+    .section-icone {
+        width: 45px;
+        height: 45px;
+
+        border-radius: 12px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 21px;
+
+        background: #eff6ff;
+    }
+
+
+    .section-titre h2 {
+        margin: 0;
+        font-size: 21px;
+        color: #172033;
+    }
+
+
+    .section-titre p {
+        margin: 4px 0 0;
+        color: #718096;
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       FORMULAIRE
+       ===================================================== */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+
+    .champ {
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .champ.full {
+        grid-column: 1 / -1;
+    }
+
+
+    .champ label {
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #334155;
+    }
+
+
+    .champ input {
+        width: 100%;
+        box-sizing: border-box;
+
+        padding: 13px 15px;
+
+        border: 1px solid #dbe2ea;
+        border-radius: 11px;
+
+        outline: none;
+
+        font-size: 14px;
+
+        transition:
+            border-color 0.2s,
+            box-shadow 0.2s;
+    }
+
+
+    .champ input:focus {
+        border-color: #2563eb;
+
+        box-shadow:
+            0 0 0 3px
+            rgba(37, 99, 235, 0.10);
+    }
+
+
+    .champ input:disabled {
+        background: #f8fafc;
+        color: #64748b;
+        cursor: not-allowed;
+    }
+
+
+    .aide-champ {
+        margin-top: 6px;
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+
+    /* =====================================================
+       BOUTONS
+       ===================================================== */
+
+    .form-actions {
+        margin-top: 25px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+
+    .btn-principal {
+        border: none;
+        border-radius: 11px;
+
+        padding: 13px 22px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #2563eb,
+                #4f46e5
+            );
+
+        color: white;
+
+        font-size: 14px;
+        font-weight: 700;
+
+        cursor: pointer;
+
+        box-shadow:
+            0 7px 18px
+            rgba(37, 99, 235, 0.22);
+
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+    }
+
+
+    .btn-principal:hover {
+        transform: translateY(-2px);
+
+        box-shadow:
+            0 10px 22px
+            rgba(37, 99, 235, 0.28);
+    }
+
+
+    /* =====================================================
+       CHAMPS MOT DE PASSE
+       ===================================================== */
+
+    .password-wrapper {
+        position: relative;
+    }
+
+
+    .password-wrapper input {
+        padding-right: 48px;
+    }
+
+
+    .toggle-password {
+        position: absolute;
+
+        right: 12px;
+        top: 50%;
+
+        transform: translateY(-50%);
+
+        border: none;
+        background: transparent;
+
+        cursor: pointer;
+
+        font-size: 18px;
+
+        color: #64748b;
+    }
+
+
+    .toggle-password:hover {
+        color: #2563eb;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+
+    @media (max-width: 850px) {
+
+        .compte-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .profil-card {
+            max-width: none;
+        }
+
+    }
+
+
+    @media (max-width: 600px) {
+
+        .compte-page {
+            margin-top: 20px;
+            padding: 0 12px 35px;
+        }
+
+        .compte-header h1 {
+            font-size: 26px;
+        }
+
+        .compte-section {
+            padding: 22px 18px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .champ.full {
+            grid-column: auto;
+        }
+
+        .form-actions {
+            justify-content: stretch;
+        }
+
+        .btn-principal {
+            width: 100%;
+        }
+
+    }
+
+</style>
+
+
+<div class="compte-page">
+
+
+    <!-- =================================================
+         EN-TÊTE
+         ================================================= -->
+
+    <div class="compte-header">
+
+        <h1>
+            👤 Mon compte
+        </h1>
+
+        <p>
+            Gérez vos informations personnelles
+            et la sécurité de votre compte.
+        </p>
+
+    </div>
+
+
+    <!-- =================================================
+         MESSAGES
+         ================================================= -->
+
+    {% if request.args.get("succes") %}
+
+        <div class="message-compte message-succes">
+
+            ✅
+
+            <span>
+                {{ request.args.get("succes") }}
+            </span>
+
+        </div>
+
+    {% endif %}
+
+
+    {% if request.args.get("erreur") %}
+
+        <div class="message-compte message-erreur">
+
+            ⚠️
+
+            <span>
+                {{ request.args.get("erreur") }}
+            </span>
+
+        </div>
+
+    {% endif %}
+
+
+    {% if erreur %}
+
+        <div class="message-compte message-erreur">
+
+            ⚠️
+
+            <span>
+                {{ erreur }}
+            </span>
+
+        </div>
+
+    {% endif %}
+
+
+    {% if compte %}
+
+
+    <div class="compte-grid">
+
+
+        <!-- =================================================
+             COLONNE GAUCHE
+             ================================================= -->
+
+        <aside class="profil-card">
+
+            <div class="avatar-compte">
+
+                {{ compte.prenom[0]|upper
+                   if compte.prenom
+                   else "" }}
+
+                {{ compte.nom[0]|upper
+                   if compte.nom
+                   else "" }}
+
+            </div>
+
+
+            <h2>
+
+                {{ compte.prenom }}
+                {{ compte.nom }}
+
+            </h2>
+
+
+            <div class="profil-email">
+
+                {{ compte.email }}
+
+            </div>
+
+
+            <div class="role-badge">
+
+                {% if compte.role == "admin" %}
+                    🛡️ Administrateur
+
+                {% elif compte.role == "vendeur" %}
+                    🏪 Vendeur
+
+                {% else %}
+                    👤 Client
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="infos-compte">
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Identifiant
+                    </span>
+
+                    <span class="info-value">
+                        #{{ compte.id_utilisateur }}
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Téléphone
+                    </span>
+
+                    <span class="info-value">
+
+                        {{ compte.telephone
+                           if compte.telephone
+                           else "Non renseigné" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Date de naissance
+                    </span>
+
+                    <span class="info-value">
+
+                        {{ compte.date_naissance
+                           if compte.date_naissance
+                           else "Non renseignée" }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+
+
+        <!-- =================================================
+             COLONNE DROITE
+             ================================================= -->
+
+        <main>
+
+
+            <!-- =============================================
+                 INFORMATIONS PERSONNELLES
+                 ============================================= -->
+
+            <section class="compte-section">
+
+                <div class="section-titre">
+
+                    <div class="section-icone">
+                        👤
+                    </div>
+
+                    <div>
+
+                        <h2>
+                            Informations personnelles
+                        </h2>
+
+                        <p>
+                            Modifiez vos informations
+                            personnelles.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form
+                    method="POST"
+                    action="{{ url_for('modifier_mon_compte') }}"
+                >
+
+
+                    <div class="form-grid">
+
+
+                        <div class="champ">
+
+                            <label for="nom">
+                                Nom
+                            </label>
+
+                            <input
+                                type="text"
+                                id="nom"
+                                name="nom"
+                                value="{{ compte.nom }}"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="champ">
+
+                            <label for="prenom">
+                                Prénom
+                            </label>
+
+                            <input
+                                type="text"
+                                id="prenom"
+                                name="prenom"
+                                value="{{ compte.prenom }}"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="champ full">
+
+                            <label for="email">
+                                Adresse email
+                            </label>
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value="{{ compte.email }}"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="champ">
+
+                            <label for="telephone">
+                                Téléphone
+                            </label>
+
+                            <input
+                                type="tel"
+                                id="telephone"
+                                name="telephone"
+                                value="{{ compte.telephone or '' }}"
+                                placeholder="+221 77 000 00 00"
+                            >
+
+                        </div>
+
+
+                        <div class="champ">
+
+                            <label for="date_naissance">
+                                Date de naissance
+                            </label>
+
+                            <input
+                                type="date"
+                                id="date_naissance"
+                                name="date_naissance"
+                                value="{{ compte.date_naissance or '' }}"
+                            >
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="btn-principal"
+                        >
+                            💾 Enregistrer les modifications
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+
+
+            <!-- =============================================
+                 SÉCURITÉ
+                 ============================================= -->
+
+            <section class="compte-section">
+
+                <div class="section-titre">
+
+                    <div class="section-icone">
+                        🔐
+                    </div>
+
+                    <div>
+
+                        <h2>
+                            Sécurité
+                        </h2>
+
+                        <p>
+                            Modifiez votre mot de passe.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form
+                    method="POST"
+                    action="{{ url_for('modifier_mot_de_passe') }}"
+                >
+
+
+                    <div class="form-grid">
+
+
+                        <div class="champ full">
+
+                            <label
+                                for="ancien_mot_de_passe"
+                            >
+                                Ancien mot de passe
+                            </label>
+
+                            <div class="password-wrapper">
+
+                                <input
+                                    type="password"
+                                    id="ancien_mot_de_passe"
+                                    name="ancien_mot_de_passe"
+                                    required
+                                >
+
+                                <button
+                                    type="button"
+                                    class="toggle-password"
+                                    onclick="togglePassword(
+                                        'ancien_mot_de_passe',
+                                        this
+                                    )"
+                                >
+                                    👁️
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="champ">
+
+                            <label
+                                for="nouveau_mot_de_passe"
+                            >
+                                Nouveau mot de passe
+                            </label>
+
+                            <div class="password-wrapper">
+
+                                <input
+                                    type="password"
+                                    id="nouveau_mot_de_passe"
+                                    name="nouveau_mot_de_passe"
+                                    minlength="8"
+                                    required
+                                >
+
+                                <button
+                                    type="button"
+                                    class="toggle-password"
+                                    onclick="togglePassword(
+                                        'nouveau_mot_de_passe',
+                                        this
+                                    )"
+                                >
+                                    👁️
+                                </button>
+
+                            </div>
+
+                            <span class="aide-champ">
+                                Minimum 8 caractères.
+                            </span>
+
+                        </div>
+
+
+                        <div class="champ">
+
+                            <label
+                                for="confirmation_mot_de_passe"
+                            >
+                                Confirmation
+                            </label>
+
+                            <div class="password-wrapper">
+
+                                <input
+                                    type="password"
+                                    id="confirmation_mot_de_passe"
+                                    name="confirmation_mot_de_passe"
+                                    minlength="8"
+                                    required
+                                >
+
+                                <button
+                                    type="button"
+                                    class="toggle-password"
+                                    onclick="togglePassword(
+                                        'confirmation_mot_de_passe',
+                                        this
+                                    )"
+                                >
+                                    👁️
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="btn-principal"
+                        >
+                            🔒 Modifier le mot de passe
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+
+        </main>
+
+    </div>
+
+
+    {% endif %}
+
+</div>
+
+
+<script>
+
+    /* =====================================================
+       AFFICHER / MASQUER UN MOT DE PASSE
+       ===================================================== */
+
+    function togglePassword(
+        id,
+        bouton
+    ) {
+
+        const champ =
+            document.getElementById(id);
+
+        if (!champ) {
+            return;
+        }
+
+        if (champ.type === "password") {
+
+            champ.type = "text";
+
+            bouton.textContent = "🙈";
+
+        } else {
+
+            champ.type = "password";
+
+            bouton.textContent = "👁️";
+        }
+    }
+
+</script>
+
+{% endblock %}

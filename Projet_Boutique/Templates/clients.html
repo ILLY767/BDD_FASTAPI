@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Clients - Gestion de Boutique
+
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    .clients-container {
+        max-width: 1200px;
+        margin: 30px auto;
+    }
+
+
+    .titre-page {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+
+    .titre-page h2 {
+        margin: 0;
+        font-size: 28px;
+    }
+
+
+    .card {
+        background: white;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-radius: 12px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    }
+
+
+    .card h3 {
+        margin-top: 0;
+    }
+
+
+    /* ================================
+       FORMULAIRE
+       ================================= */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .form-group label {
+        margin-bottom: 7px;
+        font-weight: bold;
+    }
+
+
+    .form-group input {
+        padding: 11px;
+        border: 1px solid #ccc;
+        border-radius: 7px;
+        font-size: 15px;
+    }
+
+
+    .form-button {
+        margin-top: 20px;
+    }
+
+
+    /* ================================
+       BOUTONS
+       ================================= */
+
+    button {
+        border: none;
+        border-radius: 7px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+
+    .btn-ajouter {
+        background: #198754;
+        color: white;
+        padding: 12px 25px;
+    }
+
+
+    .btn-modifier {
+        background: #0d6efd;
+        color: white;
+    }
+
+
+    .btn-supprimer {
+        background: #dc3545;
+        color: white;
+    }
+
+
+    /* ================================
+       RECHERCHE
+       ================================= */
+
+    .recherche {
+        display: flex;
+        gap: 10px;
+    }
+
+
+    .recherche input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 7px;
+        font-size: 15px;
+    }
+
+
+    .btn-rechercher {
+        background: #343a40;
+        color: white;
+        padding: 12px 20px;
+    }
+
+
+    .btn-tous {
+        background: #6c757d;
+        color: white;
+        padding: 12px 20px;
+        text-decoration: none;
+        border-radius: 7px;
+    }
+
+
+    /* ================================
+       TABLEAU
+       ================================= */
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+
+    th {
+        background: #343a40;
+        color: white;
+        padding: 14px;
+        text-align: left;
+    }
+
+
+    td {
+        padding: 13px;
+        border-bottom: 1px solid #ddd;
+    }
+
+
+    tr:hover {
+        background: #f8f9fa;
+    }
+
+
+    .actions {
+        display: flex;
+        gap: 8px;
+    }
+
+
+    .aucun {
+        text-align: center;
+        padding: 25px;
+        color: #777;
+    }
+
+</style>
+
+
+<div class="clients-container">
+
+
+    <!-- =================================================
+         TITRE
+         ================================================= -->
+
+    <div class="titre-page">
+
+        <h2>👥 Gestion des clients</h2>
+
+        <strong>
+            {{ clients|length }} client(s)
+        </strong>
+
+    </div>
+
+
+    <!-- =================================================
+         AJOUTER UN CLIENT
+         ================================================= -->
+
+    <div class="card">
+
+        <h3>➕ Ajouter un client</h3>
+
+
+        <form method="POST">
+
+
+            <div class="form-grid">
+
+
+                <div class="form-group">
+
+                    <label>Nom</label>
+
+                    <input
+                        type="text"
+                        name="nom"
+                        placeholder="Nom"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Prénom</label>
+
+                    <input
+                        type="text"
+                        name="prenom"
+                        placeholder="Prénom"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Date de naissance</label>
+
+                    <input
+                        type="date"
+                        name="date_naissance"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Email</label>
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="exemple@email.com"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Téléphone</label>
+
+                    <input
+                        type="text"
+                        name="telephone"
+                        placeholder="77 000 00 00"
+                        required
+                    >
+
+                </div>
+
+
+            </div>
+
+
+            <div class="form-button">
+
+                <button
+                    type="submit"
+                    class="btn-ajouter"
+                >
+                    ➕ Ajouter le client
+                </button>
+
+            </div>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- =================================================
+         RECHERCHE
+         ================================================= -->
+
+    <div class="card">
+
+        <h3>🔎 Rechercher un client</h3>
+
+
+        <form
+            method="GET"
+            action="{{ url_for('clients') }}"
+        >
+
+            <div class="recherche">
+
+                <input
+                    type="text"
+                    name="recherche"
+                    value="{{ recherche }}"
+                    placeholder="Nom, prénom, email, téléphone ou ID..."
+                >
+
+
+                <button
+                    type="submit"
+                    class="btn-rechercher"
+                >
+                    🔎 Rechercher
+                </button>
+
+
+                <a
+                    href="{{ url_for('clients') }}"
+                    class="btn-tous"
+                >
+                    Tous les clients
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- =================================================
+         LISTE DES CLIENTS
+         ================================================= -->
+
+    <div class="card">
+
+        <h3>📋 Liste des clients</h3>
+
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Date de naissance</th>
+                    <th>Email</th>
+                    <th>Téléphone</th>
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+
+                {% for client in clients %}
+
+                <tr>
+
+
+                    <td>
+                        <strong>
+                            #{{ client.id_client }}
+                        </strong>
+                    </td>
+
+
+                    <td>
+                        {{ client.nom }}
+                    </td>
+
+
+                    <td>
+                        {{ client.prenom }}
+                    </td>
+
+
+                    <td>
+                        {{ client.date_naissance }}
+                    </td>
+
+
+                    <td>
+                        {{ client.email }}
+                    </td>
+
+
+                    <td>
+                        {{ client.telephone }}
+                    </td>
+
+
+                    <td>
+
+                        <div class="actions">
+
+
+                            <!-- MODIFIER -->
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'modifier_client',
+                                    id_client=client.id_client
+                                ) }}"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="nom"
+                                    value="{{ client.nom }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="prenom"
+                                    value="{{ client.prenom }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="date_naissance"
+                                    value="{{ client.date_naissance }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="email"
+                                    value="{{ client.email }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="telephone"
+                                    value="{{ client.telephone }}"
+                                >
+
+
+                                <button
+                                    type="submit"
+                                    class="btn-modifier"
+                                    onclick="return modifierClient(this)"
+                                >
+                                    ✏️
+                                </button>
+
+                            </form>
+
+
+                            <!-- SUPPRIMER -->
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'supprimer_client',
+                                    id_client=client.id_client
+                                ) }}"
+                            >
+
+                                <button
+                                    type="submit"
+                                    class="btn-supprimer"
+                                    onclick="
+                                        return confirm(
+                                            'Voulez-vous vraiment supprimer ce client ?'
+                                        )
+                                    "
+                                >
+                                    🗑️
+                                </button>
+
+                            </form>
+
+
+                        </div>
+
+                    </td>
+
+
+                </tr>
+
+
+                {% else %}
+
+                <tr>
+
+                    <td
+                        colspan="7"
+                        class="aucun"
+                    >
+                        Aucun client trouvé.
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+</div>
+
+
+<!-- =====================================================
+     JAVASCRIPT : MODIFICATION
+     ===================================================== -->
+
+<script>
+
+function modifierClient(bouton) {
+
+    let formulaire = bouton.closest("form");
+
+
+    let nom = formulaire.querySelector(
+        'input[name="nom"]'
+    ).value;
+
+
+    let prenom = formulaire.querySelector(
+        'input[name="prenom"]'
+    ).value;
+
+
+    let dateNaissance = formulaire.querySelector(
+        'input[name="date_naissance"]'
+    ).value;
+
+
+    let email = formulaire.querySelector(
+        'input[name="email"]'
+    ).value;
+
+
+    let telephone = formulaire.querySelector(
+        'input[name="telephone"]'
+    ).value;
+
+
+    let nouveauNom = prompt(
+        "Nom :",
+        nom
+    );
+
+    if (nouveauNom === null) {
+        return false;
+    }
+
+
+    let nouveauPrenom = prompt(
+        "Prénom :",
+        prenom
+    );
+
+    if (nouveauPrenom === null) {
+        return false;
+    }
+
+
+    let nouvelleDate = prompt(
+        "Date de naissance (AAAA-MM-JJ) :",
+        dateNaissance
+    );
+
+    if (nouvelleDate === null) {
+        return false;
+    }
+
+
+    let nouvelEmail = prompt(
+        "Email :",
+        email
+    );
+
+    if (nouvelEmail === null) {
+        return false;
+    }
+
+
+    let nouveauTelephone = prompt(
+        "Téléphone :",
+        telephone
+    );
+
+    if (nouveauTelephone === null) {
+        return false;
+    }
+
+
+    formulaire.querySelector(
+        'input[name="nom"]'
+    ).value = nouveauNom;
+
+
+    formulaire.querySelector(
+        'input[name="prenom"]'
+    ).value = nouveauPrenom;
+
+
+    formulaire.querySelector(
+        'input[name="date_naissance"]'
+    ).value = nouvelleDate;
+
+
+    formulaire.querySelector(
+        'input[name="email"]'
+    ).value = nouvelEmail;
+
+
+    formulaire.querySelector(
+        'input[name="telephone"]'
+    ).value = nouveauTelephone;
+
+
+    return true;
+
+}
+
+</script>
+
+
+{% endblock %}

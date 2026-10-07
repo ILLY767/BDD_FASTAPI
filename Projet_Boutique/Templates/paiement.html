@@ -1,0 +1,734 @@
+{% extends "base.html" %}
+
+{% block title %}
+Paiement - Gestion de Boutique
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    /* =====================================================
+       PAGE PAIEMENT
+       ===================================================== */
+
+    .paiement-page {
+        max-width: 1200px;
+        margin: 35px auto;
+        padding: 0 20px 60px;
+    }
+
+
+    /* =====================================================
+       EN-TÊTE
+       ===================================================== */
+
+    .paiement-header {
+        margin-bottom: 30px;
+    }
+
+    .paiement-header h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 800;
+        color: #172033;
+    }
+
+    .paiement-header p {
+        margin-top: 8px;
+        color: #718096;
+    }
+
+
+    /* =====================================================
+       GRILLE
+       ===================================================== */
+
+    .paiement-grid {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 25px;
+        align-items: start;
+    }
+
+
+    /* =====================================================
+       CARTE
+       ===================================================== */
+
+    .paiement-card {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 20px;
+        padding: 28px;
+
+        box-shadow:
+            0 8px 30px
+            rgba(15, 23, 42, 0.07);
+    }
+
+
+    /* =====================================================
+       TITRE SECTION
+       ===================================================== */
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        margin-bottom: 24px;
+    }
+
+    .section-icon {
+        width: 46px;
+        height: 46px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 13px;
+
+        background: #eff6ff;
+
+        font-size: 22px;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: #172033;
+        font-size: 21px;
+    }
+
+    .section-heading p {
+        margin: 4px 0 0;
+        color: #718096;
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       MOYENS DE PAIEMENT
+       ===================================================== */
+
+    .methode-option {
+        position: relative;
+        margin-bottom: 14px;
+    }
+
+    .methode-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+
+    .methode-label {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        padding: 17px;
+
+        border: 2px solid #e5e7eb;
+        border-radius: 15px;
+
+        cursor: pointer;
+
+        transition:
+            border-color .2s,
+            background .2s,
+            transform .2s;
+    }
+
+
+    .methode-label:hover {
+        border-color: #93c5fd;
+        transform: translateY(-1px);
+    }
+
+
+    .methode-option input:checked
+    + .methode-label {
+
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+
+
+    .methode-logo {
+        width: 48px;
+        height: 48px;
+
+        border-radius: 12px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 24px;
+
+        background: #f8fafc;
+    }
+
+
+    .methode-info {
+        flex: 1;
+    }
+
+
+    .methode-info strong {
+        display: block;
+
+        color: #172033;
+        font-size: 15px;
+    }
+
+
+    .methode-info span {
+        display: block;
+
+        margin-top: 4px;
+
+        color: #718096;
+        font-size: 12px;
+    }
+
+
+    .radio-cercle {
+        width: 20px;
+        height: 20px;
+
+        border: 2px solid #cbd5e1;
+        border-radius: 50%;
+
+        position: relative;
+    }
+
+
+    .methode-option input:checked
+    + .methode-label
+    .radio-cercle {
+
+        border-color: #2563eb;
+    }
+
+
+    .methode-option input:checked
+    + .methode-label
+    .radio-cercle::after {
+
+        content: "";
+
+        position: absolute;
+
+        width: 10px;
+        height: 10px;
+
+        top: 3px;
+        left: 3px;
+
+        border-radius: 50%;
+
+        background: #2563eb;
+    }
+
+
+    /* =====================================================
+       BADGE "BIENTÔT"
+       ===================================================== */
+
+    .bientot {
+        display: inline-block;
+
+        margin-left: 8px;
+
+        padding: 3px 7px;
+
+        border-radius: 999px;
+
+        background: #fef3c7;
+        color: #92400e;
+
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+
+    /* =====================================================
+       RÉCAPITULATIF
+       ===================================================== */
+
+    .recap-ligne {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+
+        padding: 12px 0;
+
+        color: #64748b;
+
+        font-size: 14px;
+
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+
+    .recap-ligne strong {
+        color: #172033;
+    }
+
+
+    .total {
+        display: flex;
+        justify-content: space-between;
+
+        margin-top: 18px;
+
+        padding-top: 18px;
+
+        border-top: 2px solid #e5e7eb;
+    }
+
+
+    .total span:first-child {
+        font-size: 16px;
+        font-weight: 700;
+        color: #172033;
+    }
+
+
+    .total span:last-child {
+        font-size: 25px;
+        font-weight: 800;
+        color: #2563eb;
+    }
+
+
+    /* =====================================================
+       BOUTON
+       ===================================================== */
+
+    .btn-payer {
+        width: 100%;
+
+        margin-top: 25px;
+
+        padding: 15px;
+
+        border: none;
+        border-radius: 13px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #2563eb,
+                #4f46e5
+            );
+
+        color: white;
+
+        font-size: 15px;
+        font-weight: 800;
+
+        cursor: pointer;
+
+        box-shadow:
+            0 8px 20px
+            rgba(37, 99, 235, .22);
+
+        transition:
+            transform .2s,
+            box-shadow .2s;
+    }
+
+
+    .btn-payer:hover {
+        transform: translateY(-2px);
+
+        box-shadow:
+            0 12px 25px
+            rgba(37, 99, 235, .28);
+    }
+
+
+    /* =====================================================
+       MESSAGE SÉCURITÉ
+       ===================================================== */
+
+    .paiement-securise {
+        margin-top: 18px;
+
+        padding: 13px;
+
+        border-radius: 11px;
+
+        background: #f8fafc;
+
+        color: #64748b;
+
+        font-size: 12px;
+
+        text-align: center;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+
+    @media (max-width: 850px) {
+
+        .paiement-grid {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+
+    @media (max-width: 600px) {
+
+        .paiement-page {
+            padding: 0 12px 40px;
+        }
+
+        .paiement-card {
+            padding: 20px;
+        }
+
+        .paiement-header h1 {
+            font-size: 27px;
+        }
+
+    }
+
+</style>
+
+
+<div class="paiement-page">
+
+
+    <!-- =================================================
+         EN-TÊTE
+         ================================================= -->
+
+    <div class="paiement-header">
+
+        <h1>
+            💳 Paiement
+        </h1>
+
+        <p>
+            Choisissez votre mode de paiement
+            pour finaliser votre commande.
+        </p>
+
+    </div>
+
+
+    <div class="paiement-grid">
+
+
+        <!-- =================================================
+             CHOIX DU PAIEMENT
+             ================================================= -->
+
+        <section class="paiement-card">
+
+            <div class="section-heading">
+
+                <div class="section-icon">
+                    💳
+                </div>
+
+                <div>
+
+                    <h2>
+                        Mode de paiement
+                    </h2>
+
+                    <p>
+                        Sélectionnez votre moyen de paiement.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form
+                method="POST"
+                action="{{ url_for('confirmer_paiement') }}"
+            >
+
+
+                <!-- =========================================
+                     PAIEMENT À LA LIVRAISON
+                     ========================================= -->
+
+                <div class="methode-option">
+
+                    <input
+                        type="radio"
+                        id="livraison"
+                        name="methode_paiement"
+                        value="livraison"
+                        checked
+                    >
+
+                    <label
+                        for="livraison"
+                        class="methode-label"
+                    >
+
+                        <div class="methode-logo">
+                            💵
+                        </div>
+
+                        <div class="methode-info">
+
+                            <strong>
+                                Paiement à la livraison
+                            </strong>
+
+                            <span>
+                                Payez lorsque vous recevez
+                                votre commande.
+                            </span>
+
+                        </div>
+
+                        <div class="radio-cercle"></div>
+
+                    </label>
+
+                </div>
+
+
+                <!-- =========================================
+                     WAVE
+                     ========================================= -->
+
+                <div class="methode-option">
+
+                    <input
+                        type="radio"
+                        id="wave"
+                        name="methode_paiement"
+                        value="wave"
+                    >
+
+                    <label
+                        for="wave"
+                        class="methode-label"
+                    >
+
+                        <div class="methode-logo">
+                            📱
+                        </div>
+
+                        <div class="methode-info">
+
+                            <strong>
+                                Wave
+                                <span class="bientot">
+                                    Bientôt
+                                </span>
+                            </strong>
+
+                            <span>
+                                Paiement mobile sécurisé.
+                            </span>
+
+                        </div>
+
+                        <div class="radio-cercle"></div>
+
+                    </label>
+
+                </div>
+
+
+                <!-- =========================================
+                     ORANGE MONEY
+                     ========================================= -->
+
+                <div class="methode-option">
+
+                    <input
+                        type="radio"
+                        id="orange_money"
+                        name="methode_paiement"
+                        value="orange_money"
+                    >
+
+                    <label
+                        for="orange_money"
+                        class="methode-label"
+                    >
+
+                        <div class="methode-logo">
+                            🟠
+                        </div>
+
+                        <div class="methode-info">
+
+                            <strong>
+                                Orange Money
+                                <span class="bientot">
+                                    Bientôt
+                                </span>
+                            </strong>
+
+                            <span>
+                                Paiement mobile sécurisé.
+                            </span>
+
+                        </div>
+
+                        <div class="radio-cercle"></div>
+
+                    </label>
+
+                </div>
+
+
+                <!-- =========================================
+                     CARTE
+                     ========================================= -->
+
+                <div class="methode-option">
+
+                    <input
+                        type="radio"
+                        id="carte"
+                        name="methode_paiement"
+                        value="carte"
+                    >
+
+                    <label
+                        for="carte"
+                        class="methode-label"
+                    >
+
+                        <div class="methode-logo">
+                            💳
+                        </div>
+
+                        <div class="methode-info">
+
+                            <strong>
+                                Carte bancaire
+                                <span class="bientot">
+                                    Bientôt
+                                </span>
+                            </strong>
+
+                            <span>
+                                Visa, Mastercard, etc.
+                            </span>
+
+                        </div>
+
+                        <div class="radio-cercle"></div>
+
+                    </label>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn-payer"
+                >
+                    ✅ Continuer
+                </button>
+
+            </form>
+
+        </section>
+
+
+
+        <!-- =================================================
+             RÉCAPITULATIF
+             ================================================= -->
+
+        <aside class="paiement-card">
+
+            <div class="section-heading">
+
+                <div class="section-icon">
+                    🛒
+                </div>
+
+                <div>
+
+                    <h2>
+                        Votre commande
+                    </h2>
+
+                    <p>
+                        Récapitulatif avant validation.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="recap-ligne">
+
+                <span>
+                    Produits
+                </span>
+
+                <strong>
+                    {{ session.get("panier", {})|length }}
+                </strong>
+
+            </div>
+
+
+            <div class="recap-ligne">
+
+                <span>
+                    Services
+                </span>
+
+                <strong>
+                    {{ session.get("panier_services", {})|length }}
+                </strong>
+
+            </div>
+
+
+            <div class="total">
+
+                <span>
+                    Total
+                </span>
+
+                <span>
+                    À confirmer
+                </span>
+
+            </div>
+
+
+            <div class="paiement-securise">
+
+                🔒 Vos informations de paiement
+                sont traitées de manière sécurisée.
+
+            </div>
+
+        </aside>
+
+
+    </div>
+
+</div>
+
+{% endblock %}

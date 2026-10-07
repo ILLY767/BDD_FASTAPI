@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+
+<meta charset="UTF-8">
+
+<title>Gestion des utilisateurs</title>
+
+
+</head>
+
+<body>
+
+
+<h1>👥 Gestion des utilisateurs</h1>
+
+<a href="{{ url_for('creer_utilisateur_admin') }}">
+    ➕ Créer un utilisateur
+</a>
+
+<br><br>
+
+<table border="1" cellpadding="10">
+
+    <thead>
+
+        <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        {% for utilisateur in utilisateurs %}
+
+        <tr>
+
+            <td>{{ utilisateur.id_utilisateur }}</td>
+
+            <td>{{ utilisateur.nom }}</td>
+
+            <td>{{ utilisateur.prenom }}</td>
+
+            <td>{{ utilisateur.email }}</td>
+
+            <td>{{ utilisateur.role }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+<br>
+
+<a href="{{ url_for('tableau_de_bord') }}">
+    🏠 Retour au tableau de bord
+</a>
+
+
+</body>
+
+</html>

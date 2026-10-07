@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+>
+
+<title>
+    {% if session.get("role") == "client" %}
+        Boutique - Accueil
+    {% else %}
+        Tableau de bord - Boutique
+    {% endif %}
+</title>
+
+<style>
+
+/* =========================================================
+   RÉINITIALISATION
+   ========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family:
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    background: #f5f7fb;
+    color: #1f2937;
+
+    min-height: 100vh;
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.navbar {
+    height: 70px;
+
+    background: white;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 0 6%;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    font-size: 21px;
+
+    font-weight: 700;
+
+    color: #2563eb;
+
+    text-decoration: none;
+}
+
+.logo-icon {
+    font-size: 27px;
+}
+
+.nav-right {
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+}
+
+.user-name {
+    font-size: 14px;
+
+    color: #4b5563;
+}
+
+.logout {
+    text-decoration: none;
+
+    background: #fee2e2;
+
+    color: #dc2626;
+
+    padding: 9px 16px;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    transition: 0.2s;
+}
+
+.logout:hover {
+    background: #fecaca;
+}
+
+
+/* =========================================================
+   CONTENEUR PRINCIPAL
+   ========================================================= */
+
+.container {
+    width: 88%;
+
+    max-width: 1250px;
+
+    margin: auto;
+}
+
+
+/* =========================================================
+   ESPACE CLIENT
+   ========================================================= */
+
+.client-container {
+    padding: 45px 0 60px;
+}
+
+
+/* =========================================================
+   HERO CLIENT
+   ========================================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #1d4ed8
+        );
+
+    border-radius: 22px;
+
+    padding: 45px;
+
+    color: white;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    min-height: 260px;
+
+    overflow: hidden;
+
+    position: relative;
+
+    box-shadow:
+        0 15px 35px rgba(
+            37,
+            99,
+            235,
+            0.20
+        );
+}
+
+.hero::after {
+    content: "🛍️";
+
+    position: absolute;
+
+    right: 50px;
+
+    bottom: -25px;
+
+    font-size: 170px;
+
+    opacity: 0.12;
+}
+
+.hero-content {
+    position: relative;
+
+    z-index: 2;
+
+    max-width: 650px;
+}
+
+.hero-content h1 {
+    font-size: 38px;
+
+    margin-bottom: 12px;
+
+    line-height: 1.2;
+}
+
+.hero-content p {
+    font-size: 17px;
+
+    line-height: 1.6;
+
+    opacity: 0.92;
+
+    margin-bottom: 25px;
+}
+
+.btn-primary {
+    display: inline-block;
+
+    text-decoration: none;
+
+    background: white;
+
+    color: #2563eb;
+
+    padding: 12px 22px;
+
+    border-radius: 10px;
+
+    font-weight: 700;
+
+    transition: 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 20px rgba(
+            0,
+            0,
+            0,
+            0.15
+        );
+}
+
+
+/* =========================================================
+   TITRES DE SECTION
+   ========================================================= */
+
+.section-title {
+    margin-top: 45px;
+
+    margin-bottom: 20px;
+}
+
+.section-title h2 {
+    font-size: 25px;
+
+    margin-bottom: 5px;
+}
+
+.section-title p {
+    color: #6b7280;
+
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   CARTES CLIENT
+   ========================================================= */
+
+.cards {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 20px;
+}
+
+.card {
+    background: white;
+
+    border-radius: 16px;
+
+    padding: 25px;
+
+    text-decoration: none;
+
+    color: inherit;
+
+    border: 1px solid #e5e7eb;
+
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+
+    box-shadow:
+        0 12px 25px rgba(
+            0,
+            0,
+            0,
+            0.08
+        );
+}
+
+.card-icon {
+    width: 52px;
+
+    height: 52px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: #eff6ff;
+
+    border-radius: 13px;
+
+    font-size: 25px;
+
+    margin-bottom: 17px;
+}
+
+.card h3 {
+    margin-bottom: 8px;
+
+    font-size: 18px;
+}
+
+.card p {
+    color: #6b7280;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+.service-card-icon {
+    background: #ecfdf5;
+
+    color: #198754;
+}
+
+
+/* =========================================================
+   BANDEAU CLIENT
+   ========================================================= */
+
+.info-banner {
+    margin-top: 25px;
+
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 20px 25px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+}
+
+.info-icon {
+    font-size: 28px;
+}
+
+.info-banner strong {
+    display: block;
+
+    margin-bottom: 3px;
+}
+
+.info-banner span {
+    font-size: 14px;
+
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   ESPACE ADMIN / VENDEUR
+   ========================================================= */
+
+.management-container {
+    padding: 45px 0 60px;
+}
+
+.management-header {
+    margin-bottom: 30px;
+}
+
+.management-header h1 {
+    font-size: 32px;
+
+    margin-bottom: 8px;
+}
+
+.management-header p {
+    color: #6b7280;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   CARTES STATISTIQUES
+   ========================================================= */
+
+.stats-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(5, 1fr);
+
+    gap: 16px;
+
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    box-shadow:
+        0 4px 12px rgba(
+            0,
+            0,
+            0,
+            0.03
+        );
+
+    transition: 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 10px 20px rgba(
+            0,
+            0,
+            0,
+            0.07
+        );
+}
+
+.stat-icon {
+    font-size: 27px;
+
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    font-size: 13px;
+
+    color: #6b7280;
+
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 25px;
+
+    font-weight: 750;
+
+    color: #111827;
+}
+
+.stat-ca {
+    grid-column: span 1;
+}
+
+.stat-ca .stat-value {
+    color: #198754;
+}
+
+
+/* =========================================================
+   GRILLE DASHBOARD
+   ========================================================= */
+
+.dashboard-grid {
+    display: grid;
+
+    grid-template-columns:
+        2fr 1fr;
+
+    gap: 22px;
+
+    margin-bottom: 30px;
+}
+
+.dashboard-panel {
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 24px;
+}
+
+.dashboard-panel h2 {
+    font-size: 19px;
+
+    margin-bottom: 18px;
+}
+
+
+/* =========================================================
+   TABLE DERNIÈRES COMMANDES
+   ========================================================= */
+
+.commandes-table-wrapper {
+    overflow-x: auto;
+}
+
+.commandes-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 14px;
+}
+
+.commandes-table th {
+    text-align: left;
+
+    padding: 11px;
+
+    background: #f9fafb;
+
+    color: #6b7280;
+
+    font-size: 12px;
+
+    text-transform: uppercase;
+}
+
+.commandes-table td {
+    padding: 13px 11px;
+
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.commandes-table tr:last-child td {
+    border-bottom: none;
+}
+
+.commande-id {
+    font-weight: 700;
+
+    color: #2563eb;
+}
+
+.commande-total {
+    font-weight: 700;
+
+    color: #198754;
+}
+
+
+/* =========================================================
+   BADGES STATUT
+   ========================================================= */
+
+.statut-badge {
+    display: inline-block;
+
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    background: #eff6ff;
+
+    color: #2563eb;
+}
+
+
+/* =========================================================
+   RÉPARTITION DES STATUTS
+   ========================================================= */
+
+.status-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.status-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 12px;
+
+    background: #f9fafb;
+
+    border-radius: 10px;
+}
+
+.status-name {
+    font-size: 14px;
+}
+
+.status-number {
+    font-weight: 700;
+
+    color: #2563eb;
+}
+
+
+/* =========================================================
+   ACCÈS RAPIDES
+   ========================================================= */
+
+.management-title {
+    margin-top: 35px;
+
+    margin-bottom: 18px;
+
+    font-size: 22px;
+}
+
+.management-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 22px;
+}
+
+.management-card {
+    background: white;
+
+    border-radius: 16px;
+
+    padding: 28px;
+
+    border: 1px solid #e5e7eb;
+
+    text-decoration: none;
+
+    color: #1f2937;
+
+    transition: 0.2s;
+}
+
+.management-card:hover {
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 12px 25px rgba(
+            0,
+            0,
+            0,
+            0.08
+        );
+}
+
+.management-icon {
+    font-size: 35px;
+
+    margin-bottom: 15px;
+}
+
+.management-card h3 {
+    margin-bottom: 8px;
+}
+
+.management-card p {
+    color: #6b7280;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+.management-service {
+    border-color: #d7eadf;
+}
+
+.management-service:hover {
+    border-color: #9bc9aa;
+
+    box-shadow:
+        0 12px 25px rgba(
+            25,
+            135,
+            84,
+            0.12
+        );
+}
+
+
+/* =========================================================
+   MESSAGE SI AUCUNE COMMANDE
+   ========================================================= */
+
+.empty-dashboard {
+    text-align: center;
+
+    padding: 30px;
+
+    color: #9ca3af;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+footer {
+    text-align: center;
+
+    padding: 30px;
+
+    color: #9ca3af;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .stats-grid {
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 900px) {
+
+    .cards,
+    .management-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .hero-content h1 {
+        font-size: 30px;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .navbar {
+        padding: 0 20px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .container {
+        width: 92%;
+    }
+
+    .hero {
+        padding: 30px 25px;
+    }
+
+    .hero-content h1 {
+        font-size: 27px;
+    }
+
+    .hero-content p {
+        font-size: 15px;
+    }
+
+    .cards,
+    .management-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-value {
+        font-size: 21px;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- =========================================================
+     NAVIGATION
+     ========================================================= -->
+
+<nav class="navbar">
+
+
+<a
+    href="{{ url_for('tableau_de_bord') }}"
+    class="logo"
+>
+
+    <span class="logo-icon">
+        🛒
+    </span>
+
+    <span>
+        Ma Boutique
+    </span>
+
+</a>
+
+
+<div class="nav-right">
+
+    {% if session.get("role") == "client" %}
+
+        <span class="user-name">
+            Bonjour
+            {{ session.get("prenom") }}
+        </span>
+
+    {% else %}
+
+        <span class="user-name">
+            {{ session.get("prenom") }}
+            {{ session.get("nom") }}
+        </span>
+
+    {% endif %}
+
+
+    <a
+        href="{{ url_for('logout') }}"
+        class="logout"
+    >
+
+        🚪 Déconnexion
+
+    </a>
+
+</div>
+
+
+</nav>
+
+<!-- =========================================================
+     ESPACE CLIENT
+     ========================================================= -->
+
+{% if session.get("role") == "client" %}
+
+<div class="container client-container">
+
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <h1>
+            Bonjour
+            {{ session.get("prenom") }}
+            👋
+        </h1>
+
+        <p>
+            Bienvenue dans votre espace client.
+
+            Découvrez nos produits et nos services,
+            passez vos commandes et suivez facilement
+            vos achats.
+        </p>
+
+        <a
+            href="{{ url_for('produits') }}"
+            class="btn-primary"
+        >
+            🛍️ Découvrir les produits
+        </a>
+
+    </div>
+
+</section>
+
+
+<div class="section-title">
+
+    <h2>
+        Que souhaitez-vous faire ?
+    </h2>
+
+    <p>
+        Accédez rapidement aux principales
+        fonctionnalités.
+    </p>
+
+</div>
+
+
+<div class="cards">
+
+
+    <a
+        href="{{ url_for('produits') }}"
+        class="card"
+    >
+
+        <div class="card-icon">
+            🛍️
+        </div>
+
+        <h3>
+            Nos produits
+        </h3>
+
+        <p>
+            Découvrez notre catalogue et trouvez
+            les produits qui vous intéressent.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('afficher_services') }}"
+        class="card"
+    >
+
+        <div
+            class="card-icon service-card-icon"
+        >
+            🛠️
+        </div>
+
+        <h3>
+            Mes services
+        </h3>
+
+        <p>
+            Découvrez nos services disponibles
+            et choisissez celui qui répond
+            à vos besoins.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('mes_commandes') }}"
+        class="card"
+    >
+
+        <div class="card-icon">
+            📦
+        </div>
+
+        <h3>
+            Mes commandes
+        </h3>
+
+        <p>
+            Consultez vos commandes et suivez
+            leur évolution.
+        </p>
+
+    </a>
+
+
+    <a
+    href="{{ url_for('mon_compte') }}"
+    class="card"
+>
+
+    <div class="card-icon">
+        👤
+    </div>
+
+    <h3>
+        Mon compte
+    </h3>
+
+    <p>
+        Consultez vos informations personnelles
+        et gérez votre compte.
+    </p>
+
+</a>
+
+</div>
+
+
+<div class="info-banner">
+
+    <div class="info-icon">
+        💬
+    </div>
+
+    <div>
+
+        <strong>
+            Besoin d'aide ?
+        </strong>
+
+        <span>
+            Vous pourrez contacter notre équipe
+            directement depuis votre espace client.
+        </span>
+
+    </div>
+
+</div>
+
+
+</div>
+
+<!-- =========================================================
+     ESPACE ADMINISTRATEUR
+     ========================================================= -->
+
+{% elif session.get("role") == "admin" %}
+
+<div class="container management-container">
+
+
+<div class="management-header">
+
+    <h1>
+        🛠️ Tableau de bord administrateur
+    </h1>
+
+    <p>
+        Bienvenue
+        {{ session.get("prenom") }}.
+
+        Voici une vue d'ensemble de l'activité
+        de votre boutique.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     STATISTIQUES PRINCIPALES
+     ===================================================== -->
+
+<div class="stats-grid">
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            👥
+        </div>
+
+        <div class="stat-label">
+            Clients
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_clients|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            🛒
+        </div>
+
+        <div class="stat-label">
+            Commandes
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_commandes|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            📦
+        </div>
+
+        <div class="stat-label">
+            Produits
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_produits|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            🛠️
+        </div>
+
+        <div class="stat-label">
+            Services
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_services|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card stat-ca">
+
+        <div class="stat-icon">
+            💰
+        </div>
+
+        <div class="stat-label">
+            Chiffre d'affaires
+        </div>
+
+        <div class="stat-value">
+
+            {{
+                "{:,.0f}".format(
+                    statistiques.chiffre_affaires|default(0)
+                ).replace(",", " ")
+            }}
+
+            F CFA
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- =====================================================
+     DERNIÈRES COMMANDES + STATUTS
+     ===================================================== -->
+
+<div class="dashboard-grid">
+
+
+    <!-- =================================================
+         DERNIÈRES COMMANDES
+         ================================================= -->
+
+    <div class="dashboard-panel">
+
+        <h2>
+            📋 Dernières commandes
+        </h2>
+
+
+        {% if statistiques.dernieres_commandes %}
+
+        <div class="commandes-table-wrapper">
+
+            <table class="commandes-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Commande
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Statut
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for commande in statistiques.dernieres_commandes %}
+
+                    <tr>
+
+                        <td>
+
+                            <span class="commande-id">
+
+                                #{{ commande.id_commande }}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if commande.date_commande %}
+
+                                {{ commande.date_commande[:10] }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="statut-badge">
+
+                                {{ commande.statut }}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="commande-total">
+
+                                {{
+                                    "{:,.0f}".format(
+                                        commande.total|default(0)
+                                    ).replace(",", " ")
+                                }}
+
+                                F CFA
+
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty-dashboard">
+
+                📭 Aucune commande pour le moment.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- =================================================
+         RÉPARTITION DES STATUTS
+         ================================================= -->
+
+    <div class="dashboard-panel">
+
+        <h2>
+            📊 Commandes par statut
+        </h2>
+
+
+        {% if statistiques.repartition_statuts %}
+
+            <div class="status-list">
+
+                {% for element in statistiques.repartition_statuts %}
+
+                    <div class="status-row">
+
+                        <span class="status-name">
+
+                            {{ element.statut }}
+
+                        </span>
+
+                        <span class="status-number">
+
+                            {{ element.nombre }}
+
+                        </span>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-dashboard">
+
+                Aucune donnée disponible.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     ACCÈS RAPIDES ADMINISTRATEUR
+     ===================================================== -->
+
+<h2 class="management-title">
+    ⚡ Accès rapides
+</h2>
+
+
+<div class="management-grid">
+
+
+    <a
+        href="{{ url_for('clients') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            👥
+        </div>
+
+        <h3>
+            Clients
+        </h3>
+
+        <p>
+            Consulter et gérer les clients
+            de la boutique.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('produits') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            📦
+        </div>
+
+        <h3>
+            Produits
+        </h3>
+
+        <p>
+            Ajouter, modifier et gérer
+            les produits.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('afficher_services') }}"
+        class="management-card management-service"
+    >
+
+        <div class="management-icon">
+            🛠️
+        </div>
+
+        <h3>
+            Services
+        </h3>
+
+        <p>
+            Ajouter, modifier, activer ou désactiver
+            les services proposés aux clients.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('commandes') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            🛒
+        </div>
+
+        <h3>
+            Commandes
+        </h3>
+
+        <p>
+            Consulter et gérer les commandes
+            des clients.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('utilisateurs') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            👤
+        </div>
+
+        <h3>
+            Utilisateurs
+        </h3>
+
+        <p>
+            Gérer les comptes et les rôles
+            des utilisateurs.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('gestion_accueil') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            🎨
+        </div>
+
+        <h3>
+            Page d'accueil
+        </h3>
+
+        <p>
+            Gérer les photos, publicités et
+            contenus de la boutique.
+        </p>
+
+    </a>
+
+
+</div>
+
+
+</div>
+
+<!-- =========================================================
+     ESPACE VENDEUR
+     ========================================================= -->
+
+{% elif session.get("role") == "vendeur" %}
+
+<div class="container management-container">
+
+<div class="management-header">
+
+    <h1>
+        🏪 Espace vendeur
+    </h1>
+
+    <p>
+        Bienvenue
+        {{ session.get("prenom") }}.
+
+        Voici une vue d'ensemble de l'activité
+        commerciale de la boutique.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     STATISTIQUES VENDEUR
+     ===================================================== -->
+
+<div class="stats-grid">
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            👥
+        </div>
+
+        <div class="stat-label">
+            Clients
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_clients|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            🛒
+        </div>
+
+        <div class="stat-label">
+            Commandes
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_commandes|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            📦
+        </div>
+
+        <div class="stat-label">
+            Produits
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_produits|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            🛠️
+        </div>
+
+        <div class="stat-label">
+            Services
+        </div>
+
+        <div class="stat-value">
+            {{ statistiques.nombre_services|default(0) }}
+        </div>
+
+    </div>
+
+
+    <div class="stat-card stat-ca">
+
+        <div class="stat-icon">
+            💰
+        </div>
+
+        <div class="stat-label">
+            Chiffre d'affaires
+        </div>
+
+        <div class="stat-value">
+
+            {{
+                "{:,.0f}".format(
+                    statistiques.chiffre_affaires|default(0)
+                ).replace(",", " ")
+            }}
+
+            F CFA
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- =====================================================
+     COMMANDES
+     ===================================================== -->
+
+<div class="dashboard-grid">
+
+
+    <div class="dashboard-panel">
+
+        <h2>
+            📋 Dernières commandes
+        </h2>
+
+
+        {% if statistiques.dernieres_commandes %}
+
+        <div class="commandes-table-wrapper">
+
+            <table class="commandes-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Commande
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Statut
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for commande in statistiques.dernieres_commandes %}
+
+                    <tr>
+
+                        <td>
+
+                            <span class="commande-id">
+
+                                #{{ commande.id_commande }}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if commande.date_commande %}
+
+                                {{ commande.date_commande[:10] }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="statut-badge">
+
+                                {{ commande.statut }}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="commande-total">
+
+                                {{
+                                    "{:,.0f}".format(
+                                        commande.total|default(0)
+                                    ).replace(",", " ")
+                                }}
+
+                                F CFA
+
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty-dashboard">
+
+                📭 Aucune commande pour le moment.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="dashboard-panel">
+
+        <h2>
+            📊 Commandes par statut
+        </h2>
+
+
+        {% if statistiques.repartition_statuts %}
+
+            <div class="status-list">
+
+                {% for element in statistiques.repartition_statuts %}
+
+                    <div class="status-row">
+
+                        <span class="status-name">
+
+                            {{ element.statut }}
+
+                        </span>
+
+                        <span class="status-number">
+
+                            {{ element.nombre }}
+
+                        </span>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-dashboard">
+
+                Aucune donnée disponible.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     ACCÈS RAPIDES VENDEUR
+     ===================================================== -->
+
+<h2 class="management-title">
+    ⚡ Accès rapides
+</h2>
+
+
+<div class="management-grid">
+
+
+    <a
+        href="{{ url_for('produits') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            📦
+        </div>
+
+        <h3>
+            Produits
+        </h3>
+
+        <p>
+            Ajouter, modifier et consulter
+            les produits.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('afficher_services') }}"
+        class="management-card management-service"
+    >
+
+        <div class="management-icon">
+            🛠️
+        </div>
+
+        <h3>
+            Services
+        </h3>
+
+        <p>
+            Consulter et gérer les services
+            proposés aux clients.
+        </p>
+
+    </a>
+
+
+    <a
+        href="{{ url_for('commandes') }}"
+        class="management-card"
+    >
+
+        <div class="management-icon">
+            🛒
+        </div>
+
+        <h3>
+            Commandes
+        </h3>
+
+        <p>
+            Consulter et gérer les commandes
+            des clients.
+        </p>
+
+    </a>
+
+
+</div>
+
+
+</div>
+
+{% endif %}
+
+<!-- =========================================================
+     PIED DE PAGE
+     ========================================================= -->
+
+<footer>
+
+
+© 2026 — Ma Boutique
+
+<br>
+
+Votre espace de gestion et d'achat en ligne
+
+
+</footer>
+
+</body>
+
+</html>

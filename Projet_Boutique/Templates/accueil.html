@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>🛍️ Notre Boutique</title>
+
+
+    <style>
+
+        /* =====================================================
+           RÉINITIALISATION
+        ===================================================== */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        /* =====================================================
+           BODY
+        ===================================================== */
+
+        body {
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #f5f7fb;
+
+            color: #222;
+
+            overflow-x: hidden;
+        }
+
+
+        /* =====================================================
+           BARRE DE NAVIGATION
+        ===================================================== */
+
+        .navbar {
+
+            height: 72px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #071e3d,
+                    #0b5ed7
+                );
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding:
+                0 6%;
+
+            color: white;
+
+            position: sticky;
+
+            top: 0;
+
+            z-index: 1000;
+
+            box-shadow:
+                0 3px 15px
+                rgba(0,0,0,0.15);
+        }
+
+
+        /* =====================================================
+           LOGO
+        ===================================================== */
+
+        .logo {
+
+            font-size: 23px;
+
+            font-weight: bold;
+
+            letter-spacing: 0.5px;
+        }
+
+
+        /* =====================================================
+           BOUTONS NAVIGATION
+        ===================================================== */
+
+        .nav-buttons {
+
+            display: flex;
+
+            gap: 12px;
+
+            align-items: center;
+        }
+
+
+        .nav-button {
+
+            text-decoration: none;
+
+            color: white;
+
+            padding:
+                10px 18px;
+
+            border-radius: 25px;
+
+            font-weight: bold;
+
+            font-size: 14px;
+
+            transition:
+                0.25s;
+        }
+
+
+        .connexion {
+
+            border:
+                1px solid
+                rgba(255,255,255,0.6);
+        }
+
+
+        .connexion:hover {
+
+            background: white;
+
+            color: #0b5ed7;
+        }
+
+
+        .inscription {
+
+            background:
+                #ffb703;
+
+            color:
+                #111;
+        }
+
+
+        .inscription:hover {
+
+            background:
+                #ffc933;
+
+            transform:
+                translateY(-2px);
+        }
+
+
+        /* =====================================================
+           SECTION PHOTOS
+        ===================================================== */
+
+        .photos-section {
+
+            width: 100%;
+
+            padding:
+                30px 5% 10px;
+        }
+
+
+        .section-title {
+
+            text-align: center;
+
+            font-size: 26px;
+
+            margin-bottom: 20px;
+
+            color:
+                #071e3d;
+        }
+
+
+        .photos-carousel {
+
+            position: relative;
+
+            width: 100%;
+
+            height: 330px;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background:
+                #ddd;
+
+            box-shadow:
+                0 8px 30px
+                rgba(0,0,0,0.12);
+        }
+
+
+        .photo-slide {
+
+            position: absolute;
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+
+            opacity: 0;
+
+            transition:
+                opacity 1s ease;
+        }
+
+
+        .photo-slide.active {
+
+            opacity: 1;
+        }
+
+
+        /* =====================================================
+           FLÈCHES PHOTOS
+        ===================================================== */
+
+        .photo-arrow {
+
+            position: absolute;
+
+            top: 50%;
+
+            transform:
+                translateY(-50%);
+
+            width: 45px;
+
+            height: 45px;
+
+            border: none;
+
+            border-radius: 50%;
+
+            background:
+                rgba(0,0,0,0.45);
+
+            color: white;
+
+            font-size: 25px;
+
+            cursor: pointer;
+
+            z-index: 5;
+        }
+
+
+        .photo-arrow:hover {
+
+            background:
+                rgba(0,0,0,0.75);
+        }
+
+
+        .photo-prev {
+
+            left: 20px;
+        }
+
+
+        .photo-next {
+
+            right: 20px;
+        }
+
+
+        /* =====================================================
+           POINTS DU CAROUSEL
+        ===================================================== */
+
+        .photo-dots {
+
+            position: absolute;
+
+            bottom: 15px;
+
+            left: 50%;
+
+            transform:
+                translateX(-50%);
+
+            display: flex;
+
+            gap: 7px;
+
+            z-index: 5;
+        }
+
+
+        .photo-dot {
+
+            width: 9px;
+
+            height: 9px;
+
+            border: none;
+
+            border-radius: 50%;
+
+            background:
+                rgba(255,255,255,0.6);
+
+            cursor: pointer;
+
+            padding: 0;
+        }
+
+
+        .photo-dot.active {
+
+            background:
+                white;
+
+            transform:
+                scale(1.3);
+        }
+
+
+        /* =====================================================
+           PUBLICITÉ
+        ===================================================== */
+
+        .publicite-section {
+
+            padding:
+                35px 5%;
+
+            text-align: center;
+        }
+
+
+        .publicite-container {
+
+            max-width: 900px;
+
+            margin:
+                auto;
+
+            background:
+                #071e3d;
+
+            border-radius: 20px;
+
+            padding:
+                20px;
+
+            box-shadow:
+                0 10px 35px
+                rgba(0,0,0,0.18);
+        }
+
+
+        .publicite-label {
+
+            display: inline-block;
+
+            background:
+                #ffb703;
+
+            color:
+                #111;
+
+            padding:
+                7px 18px;
+
+            border-radius:
+                20px;
+
+            font-weight:
+                bold;
+
+            margin-bottom:
+                15px;
+        }
+
+
+        .video-container {
+
+            width: 100%;
+
+            height: 430px;
+
+            background:
+                #000;
+
+            border-radius:
+                15px;
+
+            overflow:
+                hidden;
+        }
+
+
+        #publicite-video {
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+        }
+
+
+        .video-indicators {
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            gap:
+                8px;
+
+            margin-top:
+                15px;
+        }
+
+
+        .video-indicator {
+
+            width:
+                9px;
+
+            height:
+                9px;
+
+            border-radius:
+                50%;
+
+            background:
+                #777;
+        }
+
+
+        .video-indicator.active {
+
+            background:
+                #ffb703;
+
+            transform:
+                scale(1.3);
+        }
+
+
+        /* =====================================================
+           PRODUITS
+        ===================================================== */
+
+        .produits-section {
+
+            padding:
+                35px 0 50px;
+
+            overflow:
+                hidden;
+        }
+
+
+        .produits-section
+        .section-title {
+
+            padding:
+                0 5%;
+        }
+
+
+        .produits-wrapper {
+
+            width: 100%;
+
+            overflow: hidden;
+
+            position: relative;
+        }
+
+
+        .produits-track {
+
+            display: flex;
+
+            width: max-content;
+
+            gap: 20px;
+
+            animation:
+                defilementProduits
+                35s linear infinite;
+        }
+
+
+        .produits-track:hover {
+
+            animation-play-state:
+                paused;
+        }
+
+
+        @keyframes defilementProduits {
+
+            from {
+
+                transform:
+                    translateX(0);
+
+            }
+
+            to {
+
+                transform:
+                    translateX(-50%);
+
+            }
+
+        }
+
+
+        /* =====================================================
+           CARTE PRODUIT
+        ===================================================== */
+
+        .produit-card {
+
+            width:
+                240px;
+
+            min-width:
+                240px;
+
+            background:
+                white;
+
+            border-radius:
+                15px;
+
+            overflow:
+                hidden;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.10);
+
+            transition:
+                0.3s;
+        }
+
+
+        .produit-card:hover {
+
+            transform:
+                translateY(-7px);
+
+            box-shadow:
+                0 12px 30px
+                rgba(0,0,0,0.18);
+        }
+
+
+        .produit-image {
+
+            width:
+                100%;
+
+            height:
+                190px;
+
+            object-fit:
+                cover;
+
+            background:
+                #eeeeee;
+        }
+
+
+        .produit-info {
+
+            padding:
+                15px;
+        }
+
+
+        .produit-categorie {
+
+            font-size:
+                12px;
+
+            color:
+                #0b5ed7;
+
+            font-weight:
+                bold;
+
+            margin-bottom:
+                5px;
+        }
+
+
+        .produit-nom {
+
+            font-size:
+                17px;
+
+            font-weight:
+                bold;
+
+            margin-bottom:
+                8px;
+        }
+
+
+        .produit-prix {
+
+            font-size:
+                18px;
+
+            color:
+                #0b5ed7;
+
+            font-weight:
+                bold;
+        }
+
+
+        .produit-stock {
+
+            margin-top:
+                7px;
+
+            font-size:
+                12px;
+
+            color:
+                #777;
+        }
+
+
+        /* =====================================================
+           MESSAGE SI AUCUN PRODUIT
+        ===================================================== */
+
+        .aucun-produit {
+
+            text-align:
+                center;
+
+            padding:
+                40px;
+
+            color:
+                #777;
+        }
+
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+
+        footer {
+
+            background:
+                #071e3d;
+
+            color:
+                white;
+
+            text-align:
+                center;
+
+            padding:
+                25px;
+
+            font-size:
+                14px;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 768px) {
+
+            .navbar {
+
+                padding:
+                    0 4%;
+            }
+
+
+            .logo {
+
+                font-size:
+                    18px;
+            }
+
+
+            .nav-button {
+
+                padding:
+                    8px 11px;
+
+                font-size:
+                    12px;
+            }
+
+
+            .photos-carousel {
+
+                height:
+                    240px;
+            }
+
+
+            .video-container {
+
+                height:
+                    250px;
+            }
+
+
+            .produit-card {
+
+                width:
+                    200px;
+
+                min-width:
+                    200px;
+            }
+
+
+            .produit-image {
+
+                height:
+                    160px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     NAVIGATION
+========================================================== -->
+
+<header class="navbar">
+
+    <div class="logo">
+
+        🛍️ Notre Boutique
+
+    </div>
+
+
+    <div class="nav-buttons">
+
+        {% if session.get("id_utilisateur") %}
+
+            <a
+                href="{{ url_for('tableau_de_bord') }}"
+                class="nav-button connexion"
+            >
+                👤 Mon espace
+            </a>
+
+            <a
+                href="{{ url_for('logout') }}"
+                class="nav-button inscription"
+            >
+                Déconnexion
+            </a>
+
+        {% else %}
+
+            <a
+                href="{{ url_for('login') }}"
+                class="nav-button connexion"
+            >
+                🔐 Se connecter
+            </a>
+
+            <a
+                href="{{ url_for('creer_compte') }}"
+                class="nav-button inscription"
+            >
+                📝 Créer un compte
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</header>
+
+
+
+<!-- =========================================================
+     PHOTOS DÉFILANTES
+========================================================== -->
+
+<section class="photos-section">
+
+    <h2 class="section-title">
+
+        ✨ Découvrez notre boutique
+
+    </h2>
+
+
+    {% if photos %}
+
+        <div class="photos-carousel">
+
+            {% for photo in photos %}
+
+                <img
+                    src="{{ url_for(
+                        'static',
+                        filename='accueil/photos/' + photo.nom_fichier
+                    ) }}"
+                    class="photo-slide {% if loop.first %}active{% endif %}"
+                    alt="Présentation de la boutique"
+                >
+
+            {% endfor %}
+
+
+            {% if photos|length > 1 %}
+
+                <button
+                    type="button"
+                    class="photo-arrow photo-prev"
+                    onclick="photoPrecedente()"
+                    aria-label="Photo précédente"
+                >
+                    ❮
+                </button>
+
+
+                <button
+                    type="button"
+                    class="photo-arrow photo-next"
+                    onclick="photoSuivante()"
+                    aria-label="Photo suivante"
+                >
+                    ❯
+                </button>
+
+
+                <div class="photo-dots">
+
+                    {% for photo in photos %}
+
+                        <button
+                            type="button"
+                            class="photo-dot {% if loop.first %}active{% endif %}"
+                            data-index="{{ loop.index0 }}"
+                            onclick="allerPhoto(this.dataset.index)"
+                            aria-label="Afficher la photo {{ loop.index }}"
+                        ></button>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% else %}
+
+        <div class="photos-carousel">
+
+            <div style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                height:100%;
+                color:#777;
+                background:#eeeeee;
+                text-align:center;
+                padding:20px;
+            ">
+
+                🖼️
+                Aucune photo disponible pour le moment.
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+
+<!-- =========================================================
+     PUBLICITÉ VIDÉO
+========================================================== -->
+
+<section class="publicite-section">
+
+    <h2 class="section-title">
+
+        📢 Publicité
+
+    </h2>
+
+
+    <div class="publicite-container">
+
+        <div class="publicite-label">
+
+            🎬 Découvrez nos offres
+
+        </div>
+
+
+        {% if videos %}
+
+            <div class="video-container">
+
+                <video
+                    id="publicite-video"
+                    autoplay
+                    muted
+                    playsinline
+                    controls
+                >
+
+                    <source
+                        src="{{ url_for(
+                            'static',
+                            filename='accueil/videos/' + videos[0].nom_fichier
+                        ) }}"
+                        type="video/mp4"
+                    >
+
+                    Votre navigateur ne supporte pas
+                    la lecture vidéo.
+
+                </video>
+
+            </div>
+
+
+            {% if videos|length > 1 %}
+
+                <div class="video-indicators">
+
+                    {% for video in videos %}
+
+                        <span
+                            class="video-indicator {% if loop.first %}active{% endif %}"
+                        ></span>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% else %}
+
+            <div
+                class="video-container"
+                style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:white;
+                    text-align:center;
+                "
+            >
+
+                <div>
+
+                    🎬
+
+                    <br><br>
+
+                    Aucune publicité vidéo
+                    n'est disponible pour le moment.
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     NOUVEAUX PRODUITS
+========================================================== -->
+
+<section class="produits-section">
+
+    <h2 class="section-title">
+
+        🆕 Nos nouveautés
+
+    </h2>
+
+
+    {% if produits %}
+
+        <div class="produits-wrapper">
+
+            <div class="produits-track">
+
+
+                {% for produit in produits %}
+
+                    <div class="produit-card">
+
+                        {% if produit.image %}
+
+                            <img
+                                src="{{ url_for(
+                                    'static',
+                                    filename='images/' + produit.image
+                                ) }}"
+                                class="produit-image"
+                                alt="{{ produit.designation }}"
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="produit-image"
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    font-size:50px;
+                                "
+                            >
+
+                                🛍️
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="produit-info">
+
+
+                            {% if produit.categorie %}
+
+                                <div class="produit-categorie">
+
+                                    {{ produit.categorie }}
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <div class="produit-nom">
+
+                                {{ produit.designation }}
+
+                            </div>
+
+
+                            <div class="produit-prix">
+
+                                {{ "%.2f"|format(
+                                    produit.prix_unitaire
+                                ) }}
+                                FCFA
+
+                            </div>
+
+
+                            <div class="produit-stock">
+
+                                {% if produit.stock > 0 %}
+
+                                    ✅ Disponible
+
+                                {% else %}
+
+                                    ❌ Rupture de stock
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+
+
+                <!-- =================================================
+                     DUPLICATION POUR LE DÉFILEMENT CONTINU
+                ================================================== -->
+
+                {% for produit in produits %}
+
+                    <div class="produit-card">
+
+                        {% if produit.image %}
+
+                            <img
+                                src="{{ url_for(
+                                    'static',
+                                    filename='images/' + produit.image
+                                ) }}"
+                                class="produit-image"
+                                alt="{{ produit.designation }}"
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="produit-image"
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    font-size:50px;
+                                "
+                            >
+
+                                🛍️
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="produit-info">
+
+                            {% if produit.categorie %}
+
+                                <div class="produit-categorie">
+
+                                    {{ produit.categorie }}
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <div class="produit-nom">
+
+                                {{ produit.designation }}
+
+                            </div>
+
+
+                            <div class="produit-prix">
+
+                                {{ "%.2f"|format(
+                                    produit.prix_unitaire
+                                ) }}
+                                FCFA
+
+                            </div>
+
+
+                            <div class="produit-stock">
+
+                                {% if produit.stock > 0 %}
+
+                                    ✅ Disponible
+
+                                {% else %}
+
+                                    ❌ Rupture de stock
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="aucun-produit">
+
+            Aucun produit disponible pour le moment.
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+
+<!-- =========================================================
+     DONNÉES DES VIDÉOS POUR JAVASCRIPT
+========================================================== -->
+
+{% if videos %}
+
+    <div
+        id="videos-data"
+        data-videos='{{ videos | map(attribute="nom_fichier") | list | tojson | safe }}'
+        style="display:none;"
+    ></div>
+
+{% endif %}
+
+
+
+<!-- =========================================================
+     FOOTER
+========================================================== -->
+
+<footer>
+
+    🛍️ Notre Boutique
+
+    <br><br>
+
+    Votre satisfaction, notre priorité ❤️
+
+</footer>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+
+<script>
+
+
+/* =========================================================
+   CAROUSEL DES PHOTOS
+========================================================== */
+
+const photos =
+    document.querySelectorAll(
+        ".photo-slide"
+    );
+
+const dots =
+    document.querySelectorAll(
+        ".photo-dot"
+    );
+
+let photoActuelle = 0;
+
+
+/* =========================================================
+   AFFICHER UNE PHOTO
+========================================================== */
+
+function afficherPhoto(index) {
+
+    if (photos.length === 0) {
+
+        return;
+
+    }
+
+
+    if (index < 0 || index >= photos.length) {
+
+        return;
+
+    }
+
+
+    photos.forEach(
+        photo =>
+            photo.classList.remove("active")
+    );
+
+
+    dots.forEach(
+        dot =>
+            dot.classList.remove("active")
+    );
+
+
+    photos[index].classList.add("active");
+
+
+    if (dots[index]) {
+
+        dots[index].classList.add("active");
+
+    }
+
+
+    photoActuelle = index;
+
+}
+
+
+/* =========================================================
+   PHOTO SUIVANTE
+========================================================== */
+
+function photoSuivante() {
+
+    if (photos.length === 0) {
+
+        return;
+
+    }
+
+
+    let suivante =
+        photoActuelle + 1;
+
+
+    if (suivante >= photos.length) {
+
+        suivante = 0;
+
+    }
+
+
+    afficherPhoto(suivante);
+
+}
+
+
+/* =========================================================
+   PHOTO PRÉCÉDENTE
+========================================================== */
+
+function photoPrecedente() {
+
+    if (photos.length === 0) {
+
+        return;
+
+    }
+
+
+    let precedente =
+        photoActuelle - 1;
+
+
+    if (precedente < 0) {
+
+        precedente =
+            photos.length - 1;
+
+    }
+
+
+    afficherPhoto(precedente);
+
+}
+
+
+/* =========================================================
+   ALLER DIRECTEMENT À UNE PHOTO
+========================================================== */
+
+function allerPhoto(index) {
+
+    afficherPhoto(
+        Number(index)
+    );
+
+}
+
+
+/* =========================================================
+   DÉFILEMENT AUTOMATIQUE DES PHOTOS
+========================================================== */
+
+if (photos.length > 1) {
+
+    setInterval(
+        photoSuivante,
+        4500
+    );
+
+}
+
+
+
+/* =========================================================
+   ROTATION DES VIDÉOS
+========================================================== */
+
+
+/* =========================================================
+   RÉCUPÉRATION DES DONNÉES
+========================================================== */
+
+const videosDataElement =
+    document.getElementById(
+        "videos-data"
+    );
+
+let videos = [];
+
+
+if (videosDataElement) {
+
+    try {
+
+        videos =
+            JSON.parse(
+                videosDataElement.dataset.videos || "[]"
+            );
+
+    } catch (erreur) {
+
+        console.error(
+            "Erreur lors du chargement des vidéos :",
+            erreur
+        );
+
+    }
+
+}
+
+
+const videoElement =
+    document.getElementById(
+        "publicite-video"
+    );
+
+
+const videoIndicators =
+    document.querySelectorAll(
+        ".video-indicator"
+    );
+
+
+let videoActuelle = 0;
+
+
+
+/* =========================================================
+   CHANGER DE VIDÉO
+========================================================== */
+
+function changerVideo(index) {
+
+    if (
+        !videoElement ||
+        videos.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        index < 0 ||
+        index >= videos.length
+    ) {
+
+        return;
+
+    }
+
+
+    videoActuelle = index;
+
+
+    videoElement.src =
+        "{{ url_for('static', filename='accueil/videos/') }}" +
+        videos[index];
+
+
+    videoElement.load();
+
+
+    videoElement.play().catch(
+        function() {}
+    );
+
+
+    videoIndicators.forEach(
+        indicator =>
+            indicator.classList.remove("active")
+    );
+
+
+    if (videoIndicators[index]) {
+
+        videoIndicators[index]
+            .classList.add("active");
+
+    }
+
+}
+
+
+
+/* =========================================================
+   PASSER AUTOMATIQUEMENT À LA VIDÉO SUIVANTE
+========================================================== */
+
+if (
+    videoElement &&
+    videos.length > 1
+) {
+
+    videoElement.addEventListener(
+        "ended",
+        function() {
+
+            let suivante =
+                videoActuelle + 1;
+
+
+            if (
+                suivante >= videos.length
+            ) {
+
+                suivante = 0;
+
+            }
+
+
+            changerVideo(
+                suivante
+            );
+
+        }
+    );
+
+}
+
+</script>
+
+
+</body>
+
+</html>

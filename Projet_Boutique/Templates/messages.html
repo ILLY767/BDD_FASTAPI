@@ -1,0 +1,1941 @@
+{% extends "base.html" %}
+
+{% block title %}
+Messagerie - Commande #{{ id_commande }}
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   CONTENEUR PRINCIPAL
+   ========================================================= */
+
+.messagerie-container {
+    max-width: 950px;
+    margin: 30px auto;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.messagerie-header {
+    background: linear-gradient(
+        135deg,
+        #075e54,
+        #128c7e
+    );
+
+    color: white;
+    padding: 20px 25px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.messagerie-header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.messagerie-header p {
+    margin: 5px 0 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.btn-retour {
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 9px 14px;
+    border-radius: 10px;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.btn-retour:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+
+/* =========================================================
+   BANDEAU STATUT NON LU
+   ========================================================= */
+
+.statut-conversation {
+    background: #f0fdf4;
+    border-bottom: 1px solid #d9f2df;
+
+    padding: 10px 20px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-size: 13px;
+    color: #075e54;
+    font-weight: 600;
+}
+
+.statut-conversation.non-lu {
+    background: #fff8df;
+    color: #856404;
+    border-bottom-color: #f4df9b;
+}
+
+
+/* =========================================================
+   ZONE DES MESSAGES
+   ========================================================= */
+
+.messages-zone {
+    background: #efeae2;
+
+    padding: 25px;
+
+    min-height: 500px;
+    max-height: 650px;
+
+    overflow-y: auto;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+/* =========================================================
+   SÉPARATEUR NOUVEAUX MESSAGES
+   ========================================================= */
+
+.separateur-nouveaux {
+    align-self: center;
+
+    background: #fff8df;
+    color: #856404;
+
+    padding: 6px 14px;
+
+    border-radius: 15px;
+
+    font-size: 12px;
+    font-weight: bold;
+
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+
+    margin: 8px 0;
+}
+
+
+/* =========================================================
+   LIGNE MESSAGE
+   ========================================================= */
+
+.message-ligne {
+    display: flex;
+    width: 100%;
+}
+
+.message-ligne.moi {
+    justify-content: flex-end;
+}
+
+.message-ligne.autre {
+    justify-content: flex-start;
+}
+
+
+/* =========================================================
+   BULLE
+   ========================================================= */
+
+.message-bulle {
+    max-width: 70%;
+
+    padding: 10px 13px;
+
+    border-radius: 12px;
+
+    position: relative;
+
+    word-wrap: break-word;
+
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+
+
+/* Mes messages */
+
+.message-ligne.moi .message-bulle {
+    background: #d9fdd3;
+    border-top-right-radius: 3px;
+}
+
+
+/* Messages reçus */
+
+.message-ligne.autre .message-bulle {
+    background: white;
+    border-top-left-radius: 3px;
+}
+
+
+/* =========================================================
+   MESSAGE NON LU
+   ========================================================= */
+
+.message-ligne.non-lu .message-bulle {
+    border-left: 4px solid #f0ad00;
+
+    box-shadow:
+        0 0 0 1px rgba(240,173,0,0.20),
+        0 2px 8px rgba(240,173,0,0.15);
+}
+
+
+/* =========================================================
+   EXPÉDITEUR
+   ========================================================= */
+
+.nom-expediteur {
+    font-size: 12px;
+
+    font-weight: bold;
+
+    margin-bottom: 4px;
+
+    color: #075e54;
+}
+
+
+/* =========================================================
+   TEXTE
+   ========================================================= */
+
+.message-texte {
+    font-size: 15px;
+
+    line-height: 1.45;
+
+    white-space: pre-wrap;
+}
+
+
+/* =========================================================
+   AUDIO
+   ========================================================= */
+
+.audio-message {
+    width: 260px;
+    max-width: 100%;
+
+    margin-top: 4px;
+}
+
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.message-date {
+    display: flex;
+
+    justify-content: flex-end;
+
+    align-items: center;
+
+    gap: 5px;
+
+    margin-top: 5px;
+
+    font-size: 10px;
+
+    color: #667781;
+}
+
+
+/* =========================================================
+   STATUT DU MESSAGE
+   ========================================================= */
+
+.statut-message {
+    font-size: 11px;
+
+    font-weight: 600;
+
+    margin-top: 3px;
+
+    text-align: right;
+}
+
+.statut-message.non-lu {
+    color: #b27a00;
+}
+
+.statut-message.lu {
+    color: #128c7e;
+}
+
+
+/* =========================================================
+   COCHES
+   ========================================================= */
+
+.message-coche {
+    font-size: 13px;
+}
+
+.message-coche.envoye {
+    color: #667781;
+}
+
+.message-coche.lu {
+    color: #53bdeb;
+}
+
+
+/* =========================================================
+   MESSAGE VIDE
+   ========================================================= */
+
+.aucun-message {
+    text-align: center;
+
+    color: #667781;
+
+    margin: auto;
+
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   ZONE DE SAISIE
+   ========================================================= */
+
+.zone-saisie {
+    background: #f0f2f5;
+
+    padding: 12px 15px;
+
+    border-top: 1px solid #ddd;
+}
+
+
+/* =========================================================
+   APERÇU AUDIO
+   ========================================================= */
+
+.audio-preview {
+    display: none;
+
+    background: white;
+
+    padding: 10px;
+
+    border-radius: 12px;
+
+    margin-bottom: 10px;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.audio-preview audio {
+    flex: 1;
+}
+
+.btn-annuler-audio {
+    border: none;
+
+    background: #ff4444;
+
+    color: white;
+
+    width: 35px;
+    height: 35px;
+
+    border-radius: 50%;
+
+    cursor: pointer;
+
+    font-size: 16px;
+}
+
+
+/* =========================================================
+   FORMULAIRE
+   ========================================================= */
+
+#messageForm {
+    display: flex;
+
+    align-items: flex-end;
+
+    gap: 8px;
+}
+
+
+/* =========================================================
+   TEXTAREA
+   ========================================================= */
+
+#messageInput {
+    flex: 1;
+
+    resize: none;
+
+    border: none;
+
+    outline: none;
+
+    background: white;
+
+    border-radius: 22px;
+
+    padding: 12px 16px;
+
+    min-height: 45px;
+
+    max-height: 120px;
+
+    font-family: inherit;
+
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
+
+.btn-vocal,
+.btn-envoyer {
+    border: none;
+
+    width: 45px;
+    height: 45px;
+
+    border-radius: 50%;
+
+    cursor: pointer;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 20px;
+
+    transition: 0.2s;
+}
+
+.btn-vocal {
+    background: #ffffff;
+}
+
+.btn-vocal:hover {
+    background: #e5e5e5;
+}
+
+.btn-vocal.enregistrement {
+    background: #ff4444;
+
+    color: white;
+
+    animation: pulse 1s infinite;
+}
+
+.btn-envoyer {
+    background: #128c7e;
+
+    color: white;
+}
+
+.btn-envoyer:hover {
+    background: #075e54;
+}
+
+.btn-envoyer:disabled {
+    opacity: 0.6;
+
+    cursor: wait;
+}
+
+
+/* =========================================================
+   ANIMATION ENREGISTREMENT
+   ========================================================= */
+
+@keyframes pulse {
+
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.08);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+
+/* =========================================================
+   COMPTEUR
+   ========================================================= */
+
+.timer-enregistrement {
+    display: none;
+
+    align-items: center;
+
+    gap: 5px;
+
+    font-size: 13px;
+
+    color: #ff4444;
+
+    font-weight: bold;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   NOTIFICATION
+   ========================================================= */
+
+.notification {
+    position: fixed;
+
+    top: 20px;
+    right: 20px;
+
+    background: #075e54;
+
+    color: white;
+
+    padding: 13px 18px;
+
+    border-radius: 10px;
+
+    box-shadow: 0 4px 15px rgba(0,0,0,0.20);
+
+    font-size: 14px;
+
+    display: none;
+
+    z-index: 9999;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .messagerie-container {
+        margin: 10px;
+
+        border-radius: 12px;
+    }
+
+    .messages-zone {
+        min-height: 450px;
+
+        padding: 15px;
+    }
+
+    .message-bulle {
+        max-width: 85%;
+    }
+
+    .messagerie-header {
+        padding: 15px;
+    }
+
+    .messagerie-header h2 {
+        font-size: 18px;
+    }
+
+    .audio-message {
+        width: 220px;
+    }
+
+}
+
+</style>
+
+<!-- =====================================================
+     NOTIFICATION
+     ===================================================== -->
+
+<div
+    id="notification"
+    class="notification"
+></div>
+
+<!-- =====================================================
+     CONTENEUR
+     ===================================================== -->
+
+<div class="messagerie-container">
+
+```
+<!-- =================================================
+     EN-TÊTE
+     ================================================= -->
+
+<div class="messagerie-header">
+
+    <div>
+
+        <h2>
+            💬 Messagerie
+        </h2>
+
+        <p>
+            Commande #{{ id_commande }}
+        </p>
+
+    </div>
+
+
+    <!-- =================================================
+         IMPORTANT :
+         history.back() fonctionne pour client,
+         vendeur et admin.
+         ================================================= -->
+
+    <a
+        href="#"
+        class="btn-retour"
+        onclick="
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+
+            return false;
+        "
+    >
+        ← Retour
+    </a>
+
+</div>
+
+
+<!-- =================================================
+     STATUT GLOBAL DE LA CONVERSATION
+     ================================================= -->
+
+<div
+    id="statutConversation"
+    class="statut-conversation"
+>
+
+    ✓ Conversation ouverte
+
+</div>
+
+
+<!-- =================================================
+     ZONE DES MESSAGES
+     ================================================= -->
+
+<div
+    id="messagesZone"
+    class="messages-zone"
+>
+
+    {% set nombre_non_lus = 0 %}
+
+    {% for message in messages %}
+
+        {% if
+            message.UTILISATEUR_destinataire_id
+            == session.get("id_utilisateur")
+            and not message.lu
+        %}
+
+            {% set nombre_non_lus =
+                nombre_non_lus + 1
+            %}
+
+        {% endif %}
+
+    {% endfor %}
+
+
+    {% if nombre_non_lus > 0 %}
+
+        <div
+            id="separateurNouveaux"
+            class="separateur-nouveaux"
+        >
+
+            🔵
+            {{ nombre_non_lus }}
+            nouveau{% if nombre_non_lus > 1 %}x{% endif %}
+            message{% if nombre_non_lus > 1 %}s{% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            {% set est_moi =
+                message.UTILISATEUR_id_utilisateur
+                == session.get("id_utilisateur")
+            %}
+
+
+            {% set est_destinataire =
+                message.UTILISATEUR_destinataire_id
+                == session.get("id_utilisateur")
+            %}
+
+
+            {% set est_non_lu =
+                est_destinataire
+                and not message.lu
+            %}
+
+
+            <div
+                class="
+                    message-ligne
+                    {% if est_moi %}
+                        moi
+                    {% else %}
+                        autre
+                    {% endif %}
+
+                    {% if est_non_lu %}
+                        non-lu
+                    {% endif %}
+                "
+
+                data-message-id="{{ message.id_message }}"
+
+                data-est-destinataire="{{
+                    'true' if est_destinataire
+                    else 'false'
+                }}"
+
+                data-lu="{{
+                    'true' if message.lu
+                    else 'false'
+                }}"
+            >
+
+                <div class="message-bulle">
+
+
+                    <!-- =================================
+                         EXPÉDITEUR
+                         ================================= -->
+
+                    <div class="nom-expediteur">
+
+                        {% if est_moi %}
+
+                            Vous
+
+                        {% else %}
+
+                            {{ message.prenom_utilisateur or "" }}
+                            {{ message.nom_utilisateur or "" }}
+
+                            {% if message.role_utilisateur %}
+
+                                <small>
+                                    ({{ message.role_utilisateur }})
+                                </small>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- =================================
+                         TEXTE
+                         ================================= -->
+
+                    {% if message.message %}
+
+                        <div class="message-texte">
+
+                            {{ message.message }}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================
+                         AUDIO
+                         ================================= -->
+
+                    {% if message.audio_url %}
+
+                        <audio
+                            class="audio-message"
+                            controls
+                            preload="metadata"
+                        >
+
+                            <source
+                                src="{{ API_URL }}{{ message.audio_url }}"
+                            >
+
+                            Votre navigateur ne supporte pas
+                            la lecture audio.
+
+                        </audio>
+
+                    {% endif %}
+
+
+                    <!-- =================================
+                         DATE + COCHES
+                         ================================= -->
+
+                    <div class="message-date">
+
+                        {{ message.date_message[:16]
+                           if message.date_message
+                           else ""
+                        }}
+
+
+                        {% if est_moi %}
+
+                            {% if message.lu %}
+
+                                <span
+                                    class="message-coche lu"
+                                    title="Lu"
+                                >
+                                    ✓✓
+                                </span>
+
+                            {% else %}
+
+                                <span
+                                    class="message-coche envoye"
+                                    title="Non lu"
+                                >
+                                    ✓
+                                </span>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- =================================
+                         STATUT LU / NON LU
+                         ================================= -->
+
+                    {% if est_moi %}
+
+                        {% if message.lu %}
+
+                            <div
+                                class="statut-message lu"
+                            >
+                                ✓✓ Lu
+                            </div>
+
+                        {% else %}
+
+                            <div
+                                class="statut-message non-lu"
+                            >
+                                ✓ Non lu
+                            </div>
+
+                        {% endif %}
+
+                    {% endif %}
+
+
+                    <!-- =================================
+                         MESSAGE REÇU NON LU
+                         ================================= -->
+
+                    {% if est_non_lu %}
+
+                        <div
+                            class="statut-message non-lu"
+                        >
+                            🔵 Non lu
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================
+                         SUPPRESSION
+                         ================================= -->
+
+                    {% if est_moi %}
+
+                        <form
+                            method="POST"
+                            action="{{ url_for(
+                                'supprimer_message',
+                                id_commande=id_commande,
+                                id_message=message.id_message
+                            ) }}"
+                            style="margin-top:5px;"
+                            onsubmit="
+                                return confirm(
+                                    'Supprimer ce message ?'
+                                );
+                            "
+                        >
+
+                            <button
+                                type="submit"
+                                style="
+                                    border:none;
+                                    background:none;
+                                    color:#999;
+                                    cursor:pointer;
+                                    font-size:11px;
+                                "
+                            >
+                                🗑️ Supprimer
+                            </button>
+
+                        </form>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="aucun-message">
+
+            💬 Aucun message pour cette commande.
+
+            <br>
+
+            Commencez la conversation.
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<!-- =================================================
+     ZONE DE SAISIE
+     ================================================= -->
+
+<div class="zone-saisie">
+
+
+    <!-- ===============================================
+         APERÇU VOCAL
+         =============================================== -->
+
+    <div
+        id="audioPreview"
+        class="audio-preview"
+    >
+
+        <audio
+            id="previewPlayer"
+            controls
+        ></audio>
+
+
+        <button
+            type="button"
+            id="cancelAudio"
+            class="btn-annuler-audio"
+            title="Annuler le vocal"
+        >
+            🗑️
+        </button>
+
+    </div>
+
+
+    <!-- ===============================================
+         FORMULAIRE
+         =============================================== -->
+
+    <form
+        id="messageForm"
+        method="POST"
+        action="{{ url_for(
+            'envoyer_message',
+            id_commande=id_commande
+        ) }}"
+    >
+
+        <textarea
+            id="messageInput"
+            name="message"
+            placeholder="Écrire un message..."
+            rows="1"
+        ></textarea>
+
+
+        <div
+            id="recordingTimer"
+            class="timer-enregistrement"
+        >
+
+            🔴
+
+            <span id="timerValue">
+                00:00
+            </span>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="recordButton"
+            class="btn-vocal"
+            title="Enregistrer un message vocal"
+        >
+            🎤
+        </button>
+
+
+        <button
+            type="submit"
+            id="sendButton"
+            class="btn-envoyer"
+            title="Envoyer"
+        >
+            ➤
+        </button>
+
+    </form>
+
+</div>
+
+
+</div>
+
+<!-- =====================================================
+     CONFIGURATION
+     ===================================================== -->
+
+<div
+    id="voiceConfig"
+    data-url="{{ url_for(
+        'envoyer_message_vocal',
+        id_commande=id_commande
+    ) }}"
+    style="display:none;"
+></div>
+
+<script>
+
+/* =========================================================
+   ÉLÉMENTS HTML
+   ========================================================= */
+
+const messageForm =
+    document.getElementById("messageForm");
+
+const messageInput =
+    document.getElementById("messageInput");
+
+const recordButton =
+    document.getElementById("recordButton");
+
+const sendButton =
+    document.getElementById("sendButton");
+
+const audioPreview =
+    document.getElementById("audioPreview");
+
+const previewPlayer =
+    document.getElementById("previewPlayer");
+
+const cancelAudio =
+    document.getElementById("cancelAudio");
+
+const recordingTimer =
+    document.getElementById("recordingTimer");
+
+const timerValue =
+    document.getElementById("timerValue");
+
+const messagesZone =
+    document.getElementById("messagesZone");
+
+const voiceConfig =
+    document.getElementById("voiceConfig");
+
+const notification =
+    document.getElementById("notification");
+
+const statutConversation =
+    document.getElementById(
+        "statutConversation"
+    );
+
+const separateurNouveaux =
+    document.getElementById(
+        "separateurNouveaux"
+    );
+
+
+/* =========================================================
+   URL VOCAL
+   ========================================================= */
+
+const voiceUrl =
+    voiceConfig.dataset.url;
+
+
+/* =========================================================
+   VARIABLES ENREGISTREMENT
+   ========================================================= */
+
+let mediaRecorder = null;
+
+let audioChunks = [];
+
+let recordedAudioBlob = null;
+
+let recordingInterval = null;
+
+let recordingSeconds = 0;
+
+
+/* =========================================================
+   FORMAT DU TEMPS
+   ========================================================= */
+
+function formatTime(seconds) {
+
+    const minutes =
+        Math.floor(seconds / 60);
+
+    const secondes =
+        seconds % 60;
+
+    return (
+        String(minutes).padStart(2, "0")
+        + ":"
+        + String(secondes).padStart(2, "0")
+    );
+}
+
+
+/* =========================================================
+   TIMER
+   ========================================================= */
+
+function updateTimer() {
+
+    timerValue.textContent =
+        formatTime(recordingSeconds);
+
+}
+
+
+/* =========================================================
+   DÉMARRER / ARRÊTER ENREGISTREMENT
+   ========================================================= */
+
+recordButton.addEventListener(
+    "click",
+    async function() {
+
+        /* ---------------------------------------------
+           Si enregistrement en cours :
+           arrêter uniquement.
+           --------------------------------------------- */
+
+        if (
+            mediaRecorder
+            &&
+            mediaRecorder.state === "recording"
+        ) {
+
+            mediaRecorder.stop();
+
+            return;
+        }
+
+
+        try {
+
+            /* -----------------------------------------
+               Accès microphone
+               ----------------------------------------- */
+
+            const stream =
+                await navigator.mediaDevices
+                    .getUserMedia({
+                        audio: true
+                    });
+
+
+            mediaRecorder =
+                new MediaRecorder(stream);
+
+
+            audioChunks = [];
+
+
+            /* -----------------------------------------
+               Réception audio
+               ----------------------------------------- */
+
+            mediaRecorder.addEventListener(
+                "dataavailable",
+                function(event) {
+
+                    if (event.data.size > 0) {
+
+                        audioChunks.push(
+                            event.data
+                        );
+
+                    }
+
+                }
+            );
+
+
+            /* -----------------------------------------
+               Fin enregistrement
+               ----------------------------------------- */
+
+            mediaRecorder.addEventListener(
+                "stop",
+                function() {
+
+                    /* arrêter microphone */
+
+                    stream
+                        .getTracks()
+                        .forEach(
+                            track => track.stop()
+                        );
+
+
+                    /* créer le blob */
+
+                    recordedAudioBlob =
+                        new Blob(
+                            audioChunks,
+                            {
+                                type:
+                                    mediaRecorder.mimeType
+                                    || "audio/webm"
+                            }
+                        );
+
+
+                    /* aperçu */
+
+                    const audioUrl =
+                        URL.createObjectURL(
+                            recordedAudioBlob
+                        );
+
+
+                    previewPlayer.src =
+                        audioUrl;
+
+
+                    audioPreview.style.display =
+                        "flex";
+
+
+                    /* bouton */
+
+                    recordButton.textContent =
+                        "🎤";
+
+                    recordButton.classList.remove(
+                        "enregistrement"
+                    );
+
+
+                    /* timer */
+
+                    recordingTimer.style.display =
+                        "none";
+
+
+                    clearInterval(
+                        recordingInterval
+                    );
+
+                    recordingInterval = null;
+
+                }
+            );
+
+
+            /* -----------------------------------------
+               Démarrer
+               ----------------------------------------- */
+
+            mediaRecorder.start();
+
+            recordingSeconds = 0;
+
+            updateTimer();
+
+
+            recordingTimer.style.display =
+                "flex";
+
+
+            recordButton.textContent =
+                "⏹️";
+
+
+            recordButton.classList.add(
+                "enregistrement"
+            );
+
+
+            /* compteur */
+
+            recordingInterval =
+                setInterval(
+                    function() {
+
+                        recordingSeconds++;
+
+                        updateTimer();
+
+                    },
+                    1000
+                );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Erreur microphone :",
+                error
+            );
+
+            alert(
+                "Impossible d'accéder au microphone."
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   ANNULER VOCAL
+   ========================================================= */
+
+cancelAudio.addEventListener(
+    "click",
+    function() {
+
+        recordedAudioBlob = null;
+
+        previewPlayer.src = "";
+
+        audioPreview.style.display =
+            "none";
+
+        messageInput.focus();
+
+    }
+);
+
+
+/* =========================================================
+   ENVOYER MESSAGE
+   ========================================================= */
+
+messageForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        /* =================================================
+           VOCAL
+           ================================================= */
+
+        if (recordedAudioBlob) {
+
+            try {
+
+                sendButton.disabled = true;
+
+                sendButton.textContent = "⏳";
+
+
+                const formData =
+                    new FormData();
+
+
+                formData.append(
+                    "fichier",
+                    recordedAudioBlob,
+                    "message_vocal.webm"
+                );
+
+
+                const response =
+                    await fetch(
+                        voiceUrl,
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    const erreur =
+                        await response.text();
+
+                    console.error(
+                        "Erreur vocal :",
+                        erreur
+                    );
+
+                    alert(
+                        "Erreur lors de l'envoi du message vocal."
+                    );
+
+                    sendButton.disabled =
+                        false;
+
+                    sendButton.textContent =
+                        "➤";
+
+                    return;
+                }
+
+
+                recordedAudioBlob = null;
+
+                previewPlayer.src = "";
+
+                audioPreview.style.display =
+                    "none";
+
+
+                sendButton.disabled =
+                    false;
+
+                sendButton.textContent =
+                    "➤";
+
+
+                window.location.reload();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Erreur vocal :",
+                    error
+                );
+
+                alert(
+                    "Impossible d'envoyer le message vocal."
+                );
+
+                sendButton.disabled =
+                    false;
+
+                sendButton.textContent =
+                    "➤";
+
+            }
+
+            return;
+        }
+
+
+        /* =================================================
+           TEXTE
+           ================================================= */
+
+        const texte =
+            messageInput.value.trim();
+
+
+        if (!texte) {
+
+            return;
+
+        }
+
+
+        try {
+
+            sendButton.disabled = true;
+
+            sendButton.textContent = "⏳";
+
+
+            const formData =
+                new FormData(messageForm);
+
+
+            const response =
+                await fetch(
+                    messageForm.action,
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                const erreur =
+                    await response.text();
+
+                console.error(
+                    "Erreur texte :",
+                    erreur
+                );
+
+                alert(
+                    "Erreur lors de l'envoi du message."
+                );
+
+                sendButton.disabled =
+                    false;
+
+                sendButton.textContent =
+                    "➤";
+
+                return;
+            }
+
+
+            messageInput.value = "";
+
+            window.location.reload();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Erreur texte :",
+                error
+            );
+
+            alert(
+                "Impossible d'envoyer le message."
+            );
+
+            sendButton.disabled =
+                false;
+
+            sendButton.textContent =
+                "➤";
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   TEXTAREA AUTO-HEIGHT
+   ========================================================= */
+
+messageInput.addEventListener(
+    "input",
+    function() {
+
+        this.style.height = "auto";
+
+        this.style.height =
+            Math.min(
+                this.scrollHeight,
+                120
+            ) + "px";
+
+    }
+);
+
+
+/* =========================================================
+   NOTIFICATION
+   ========================================================= */
+
+function afficherNotification(texte) {
+
+    notification.textContent =
+        texte;
+
+    notification.style.display =
+        "block";
+
+
+    setTimeout(
+        function() {
+
+            notification.style.display =
+                "none";
+
+        },
+        3000
+    );
+
+}
+
+
+/* =========================================================
+   MARQUER UN MESSAGE COMME LU
+   ========================================================= */
+
+async function marquerMessageCommeLu(
+    element
+) {
+
+    const messageId =
+        element.dataset.messageId;
+
+
+    if (!messageId) {
+
+        return false;
+
+    }
+
+
+    const url =
+        `/commandes/{{ id_commande }}/messages/`
+        + `${messageId}/lu`;
+
+
+    try {
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        lu: true
+                    })
+                }
+            );
+
+
+        if (!response.ok) {
+
+            console.error(
+                "Erreur marquage lu :",
+                await response.text()
+            );
+
+            return false;
+
+        }
+
+
+        /* ---------------------------------------------
+           Mise à jour visuelle immédiate
+           --------------------------------------------- */
+
+        element.classList.remove(
+            "non-lu"
+        );
+
+
+        element.dataset.lu =
+            "true";
+
+
+        const statut =
+            element.querySelector(
+                ".statut-message.non-lu"
+            );
+
+
+        if (statut) {
+
+            statut.classList.remove(
+                "non-lu"
+            );
+
+            statut.classList.add(
+                "lu"
+            );
+
+            statut.textContent =
+                "✓✓ Lu";
+
+        }
+
+
+        /* ---------------------------------------------
+           Recalcul du bandeau
+           --------------------------------------------- */
+
+        const restant =
+            document.querySelectorAll(
+                ".message-ligne.non-lu"
+            ).length;
+
+
+        if (restant === 0) {
+
+            if (separateurNouveaux) {
+
+                separateurNouveaux.remove();
+
+            }
+
+
+            statutConversation.classList.remove(
+                "non-lu"
+            );
+
+
+            statutConversation.textContent =
+                "✓ Tous les messages sont lus";
+
+        }
+
+        else {
+
+            statutConversation.textContent =
+                "🔵 "
+                + restant
+                + " message"
+                + (restant > 1 ? "s" : "")
+                + " non lu"
+                + (restant > 1 ? "s" : "");
+
+        }
+
+
+        return true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Erreur réseau lors du marquage :",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
+   MARQUER TOUS LES MESSAGES REÇUS COMME LUS
+   ========================================================= */
+
+async function marquerMessagesCommeLus() {
+
+    const messagesNonLus =
+        document.querySelectorAll(
+            ".message-ligne.non-lu"
+        );
+
+
+    if (!messagesNonLus.length) {
+
+        statutConversation.textContent =
+            "✓ Tous les messages sont lus";
+
+        return;
+
+    }
+
+
+    statutConversation.classList.add(
+        "non-lu"
+    );
+
+
+    statutConversation.textContent =
+        "🔵 "
+        + messagesNonLus.length
+        + " message"
+        + (
+            messagesNonLus.length > 1
+                ? "s"
+                : ""
+        )
+        + " non lu"
+        + (
+            messagesNonLus.length > 1
+                ? "s"
+                : ""
+        );
+
+
+    /*
+     * On laisse l'utilisateur voir clairement
+     * le statut NON LU avant de le modifier.
+     */
+
+    await new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                1500
+            )
+    );
+
+
+    let nombreMarques = 0;
+
+
+    for (
+        const element of messagesNonLus
+    ) {
+
+        const resultat =
+            await marquerMessageCommeLu(
+                element
+            );
+
+
+        if (resultat) {
+
+            nombreMarques++;
+
+        }
+
+    }
+
+
+    if (nombreMarques > 0) {
+
+        afficherNotification(
+            nombreMarques
+            + (
+                nombreMarques > 1
+                    ? " messages"
+                    : " message"
+            )
+            + " marqué"
+            + (
+                nombreMarques > 1
+                    ? "s"
+                    : ""
+            )
+            + " comme lu ✓"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ALLER EN BAS DE LA CONVERSATION
+   ========================================================= */
+
+function allerEnBas() {
+
+    messagesZone.scrollTop =
+        messagesZone.scrollHeight;
+
+}
+
+
+/* =========================================================
+   CHARGEMENT PAGE
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        allerEnBas();
+
+
+        /*
+         * Les messages restent visibles comme NON LU
+         * pendant 1,5 seconde.
+         *
+         * Ensuite ils sont réellement marqués
+         * comme lus dans la base.
+         */
+
+        setTimeout(
+            function() {
+
+                marquerMessagesCommeLus();
+
+            },
+            300
+        );
+
+    }
+);
+
+</script>
+
+{% endblock %}

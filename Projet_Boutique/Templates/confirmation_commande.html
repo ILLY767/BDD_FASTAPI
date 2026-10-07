@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block title %}
+Commande confirmée
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   PAGE DE CONFIRMATION
+   ========================================================= */
+
+.confirmation-page {
+
+    max-width: 1000px;
+
+    margin: 45px auto;
+
+    padding: 20px;
+}
+
+
+/* =========================================================
+   CARTE PRINCIPALE
+   ========================================================= */
+
+.confirmation-card {
+
+    background: white;
+
+    border-radius: 28px;
+
+    padding: 45px 35px;
+
+    text-align: center;
+
+    box-shadow:
+        0 15px 45px rgba(0, 0, 0, 0.08);
+
+    border: 1px solid #eeeeee;
+}
+
+
+/* =========================================================
+   ICÔNE DE SUCCÈS
+   ========================================================= */
+
+.success-icon {
+
+    width: 95px;
+
+    height: 95px;
+
+    margin: 0 auto 25px;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #16a34a,
+            #22c55e
+        );
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 48px;
+
+    color: white;
+
+    box-shadow:
+        0 12px 30px rgba(
+            34,
+            197,
+            94,
+            0.30
+        );
+}
+
+
+/* =========================================================
+   TITRE
+   ========================================================= */
+
+.confirmation-card h1 {
+
+    margin: 0;
+
+    font-size: 34px;
+
+    color: #172033;
+}
+
+
+.confirmation-card .message {
+
+    margin-top: 12px;
+
+    color: #667085;
+
+    font-size: 16px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   NUMÉRO COMMANDE
+   ========================================================= */
+
+.numero-commande {
+
+    display: inline-block;
+
+    margin-top: 22px;
+
+    padding: 12px 22px;
+
+    border-radius: 50px;
+
+    background: #f0fdf4;
+
+    color: #15803d;
+
+    font-weight: 700;
+
+    font-size: 17px;
+}
+
+
+/* =========================================================
+   INFORMATIONS
+   ========================================================= */
+
+.confirmation-details {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            1fr
+        );
+
+    gap: 18px;
+
+    margin-top: 38px;
+
+    text-align: left;
+}
+
+
+.detail-box {
+
+    background: #f8fafc;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 18px;
+
+    padding: 20px;
+}
+
+
+.detail-label {
+
+    font-size: 13px;
+
+    color: #667085;
+
+    margin-bottom: 7px;
+}
+
+
+.detail-value {
+
+    font-size: 17px;
+
+    font-weight: 700;
+
+    color: #172033;
+}
+
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 7px 12px;
+
+    border-radius: 30px;
+
+    font-size: 13px;
+
+    font-weight: 700;
+}
+
+
+.badge-attente {
+
+    background: #fff7ed;
+
+    color: #c2410c;
+}
+
+
+.badge-commande {
+
+    background: #eff6ff;
+
+    color: #1d4ed8;
+}
+
+
+/* =========================================================
+   MONTANT
+   ========================================================= */
+
+.total-box {
+
+    margin-top: 25px;
+
+    padding: 25px;
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f8fafc,
+            #f1f5f9
+        );
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+}
+
+
+.total-label {
+
+    font-size: 16px;
+
+    color: #667085;
+}
+
+
+.total-value {
+
+    font-size: 30px;
+
+    font-weight: 800;
+
+    color: #111827;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.actions {
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 15px;
+
+    margin-top: 35px;
+
+    flex-wrap: wrap;
+}
+
+
+.btn {
+
+    text-decoration: none;
+
+    padding: 14px 24px;
+
+    border-radius: 14px;
+
+    font-weight: 700;
+
+    transition: all 0.2s ease;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+}
+
+
+.btn-commandes {
+
+    background: #111827;
+
+    color: white;
+}
+
+
+.btn-commandes:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 20px
+        rgba(17, 24, 39, 0.18);
+}
+
+
+.btn-accueil {
+
+    background: #f3f4f6;
+
+    color: #374151;
+}
+
+
+.btn-accueil:hover {
+
+    background: #e5e7eb;
+
+    transform: translateY(-2px);
+}
+
+
+/* =========================================================
+   MESSAGE PAIEMENT
+   ========================================================= */
+
+.payment-info {
+
+    margin-top: 28px;
+
+    padding: 18px;
+
+    border-radius: 16px;
+
+    background: #fffbeb;
+
+    border: 1px solid #fde68a;
+
+    color: #92400e;
+
+    text-align: left;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (
+    max-width: 750px
+) {
+
+    .confirmation-card {
+
+        padding: 35px 20px;
+    }
+
+
+    .confirmation-card h1 {
+
+        font-size: 27px;
+    }
+
+
+    .confirmation-details {
+
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .total-box {
+
+        flex-direction: column;
+
+        gap: 8px;
+
+        text-align: center;
+    }
+
+}
+
+
+</style>
+
+
+<div class="confirmation-page">
+
+    <div class="confirmation-card">
+
+
+        <!-- =================================================
+             ICÔNE
+             ================================================= -->
+
+        <div class="success-icon">
+
+            ✓
+
+        </div>
+
+
+        <!-- =================================================
+             TITRE
+             ================================================= -->
+
+        <h1>
+
+            Commande confirmée !
+
+        </h1>
+
+
+        <p class="message">
+
+            Merci pour votre commande
+            {{ session.get("prenom", "") }}.
+
+            Votre commande a bien été enregistrée
+            dans notre système.
+
+        </p>
+
+
+        <!-- =================================================
+             NUMÉRO
+             ================================================= -->
+
+        <div class="numero-commande">
+
+            📦 Commande
+            #{{ commande.id_commande }}
+
+        </div>
+
+
+        <!-- =================================================
+             INFORMATIONS
+             ================================================= -->
+
+        <div class="confirmation-details">
+
+
+            <!-- COMMANDE -->
+
+            <div class="detail-box">
+
+                <div class="detail-label">
+
+                    Statut de la commande
+
+                </div>
+
+                <div class="detail-value">
+
+                    <span class="badge badge-commande">
+
+                        📦
+
+                        {{ commande.statut_commande
+                           | replace("_", " ")
+                           | title }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- PAIEMENT -->
+
+            <div class="detail-box">
+
+                <div class="detail-label">
+
+                    Mode de paiement
+
+                </div>
+
+                <div class="detail-value">
+
+                    {% if commande.methode_paiement
+                       == "livraison" %}
+
+                        💵 Paiement à la livraison
+
+                    {% elif commande.methode_paiement
+                       == "wave" %}
+
+                        📱 Wave
+
+                    {% elif commande.methode_paiement
+                       == "orange_money" %}
+
+                        🟠 Orange Money
+
+                    {% elif commande.methode_paiement
+                       == "carte" %}
+
+                        💳 Carte bancaire
+
+                    {% else %}
+
+                        {{ commande.methode_paiement }}
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- STATUT PAIEMENT -->
+
+            <div class="detail-box">
+
+                <div class="detail-label">
+
+                    Statut du paiement
+
+                </div>
+
+                <div class="detail-value">
+
+                    <span class="badge badge-attente">
+
+                        ⏳
+
+                        {{ commande.statut_paiement
+                           | replace("_", " ")
+                           | title }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =================================================
+             TOTAL
+             ================================================= -->
+
+        <div class="total-box">
+
+            <div class="total-label">
+
+                Montant total
+
+            </div>
+
+            <div class="total-value">
+
+                {{ "%.0f"|format(
+                    commande.total
+                ) }}
+                FCFA
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             INFORMATION PAIEMENT
+             ================================================= -->
+
+        {% if commande.methode_paiement == "livraison" %}
+
+        <div class="payment-info">
+
+            💡 <strong>Paiement à la livraison</strong>
+
+            <br>
+
+            Votre commande est enregistrée.
+            Le paiement sera effectué au moment
+            de la livraison.
+
+        </div>
+
+        {% else %}
+
+        <div class="payment-info">
+
+            💳 <strong>Paiement en attente</strong>
+
+            <br>
+
+            Le mode de paiement sélectionné est
+            actuellement en préparation.
+            Votre paiement sera confirmé après
+            validation de la transaction.
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             BOUTONS
+             ================================================= -->
+
+        <div class="actions">
+
+
+            <a
+                href="{{ url_for('mes_commandes') }}"
+                class="btn btn-commandes"
+            >
+
+                📦
+
+                Voir mes commandes
+
+            </a>
+
+
+            <a
+                href="{{ url_for('accueil') }}"
+                class="btn btn-accueil"
+            >
+
+                🏠
+
+                Retour à l'accueil
+
+            </a>
+
+
+        </div>
+
+
+    </div>
+
+</div>
+
+{% endblock %}

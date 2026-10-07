@@ -1,0 +1,533 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+Tableau de bord
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+.dashboard-container {
+    max-width: 1400px;
+    margin: 30px auto;
+    padding: 0 20px 50px;
+}
+
+
+/* =========================================================
+   EN-TETE
+   ========================================================= */
+
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    color: #222;
+}
+
+.dashboard-header p {
+    margin: 0;
+    color: #666;
+}
+
+
+/* =========================================================
+   CARTES STATISTIQUES
+   ========================================================= */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.08);
+
+    border: 1px solid #eee;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+.stat-label {
+    color: #777;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: #222;
+}
+
+
+/* =========================================================
+   CONTENU DU DASHBOARD
+   ========================================================= */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 2fr)
+        minmax(300px, 1fr);
+
+    gap: 25px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.08);
+
+    border: 1px solid #eee;
+}
+
+.dashboard-card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 21px;
+}
+
+
+/* =========================================================
+   TABLE COMMANDES
+   ========================================================= */
+
+.commandes-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.commandes-table th,
+.commandes-table td {
+    padding: 13px 10px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.commandes-table th {
+    color: #666;
+    font-size: 13px;
+}
+
+.commandes-table td {
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   STATUT
+   ========================================================= */
+
+.statut {
+    display: inline-block;
+
+    padding: 6px 10px;
+
+    border-radius: 20px;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   REPARTITION
+   ========================================================= */
+
+.statut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 14px 0;
+
+    border-bottom: 1px solid #eee;
+}
+
+.statut-row:last-child {
+    border-bottom: none;
+}
+
+.statut-nombre {
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+
+    .stats-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .dashboard-container {
+        padding:
+            0 12px 40px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 25px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-card {
+        padding: 17px;
+        overflow-x: auto;
+    }
+
+    .commandes-table {
+        min-width: 600px;
+    }
+
+    .stat-value {
+        font-size: 25px;
+    }
+}
+
+</style>
+
+
+<div class="dashboard-container">
+
+    <!-- =================================================
+         EN-TETE
+         ================================================= -->
+
+    <div class="dashboard-header">
+
+        <h1>
+            📊 Tableau de bord
+        </h1>
+
+        <p>
+            Vue générale de l'activité de votre boutique.
+        </p>
+
+    </div>
+
+
+    <!-- =================================================
+         CARTES PRINCIPALES
+         ================================================= -->
+
+    <div class="stats-grid">
+
+
+        <!-- CLIENTS -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                👥
+            </div>
+
+            <div class="stat-label">
+                Clients
+            </div>
+
+            <div class="stat-value">
+                {{ statistiques.nombre_clients }}
+            </div>
+
+        </div>
+
+
+        <!-- COMMANDES -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                📦
+            </div>
+
+            <div class="stat-label">
+                Commandes
+            </div>
+
+            <div class="stat-value">
+                {{ statistiques.nombre_commandes }}
+            </div>
+
+        </div>
+
+
+        <!-- PRODUITS -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                🛍️
+            </div>
+
+            <div class="stat-label">
+                Produits
+            </div>
+
+            <div class="stat-value">
+                {{ statistiques.nombre_produits }}
+            </div>
+
+        </div>
+
+
+        <!-- SERVICES -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                🧰
+            </div>
+
+            <div class="stat-label">
+                Services
+            </div>
+
+            <div class="stat-value">
+                {{ statistiques.nombre_services }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         CHIFFRE D'AFFAIRES
+         ================================================= -->
+
+    <div class="stat-card"
+         style="margin-bottom: 30px;">
+
+        <div class="stat-icon">
+            💰
+        </div>
+
+        <div class="stat-label">
+            Chiffre d'affaires
+        </div>
+
+        <div class="stat-value">
+
+            {{
+                "{:,.0f}".format(
+                    statistiques.chiffre_affaires
+                ).replace(",", " ")
+            }}
+
+            FCFA
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         DEUX COLONNES
+         ================================================= -->
+
+    <div class="dashboard-grid">
+
+
+        <!-- =================================================
+             DERNIERES COMMANDES
+             ================================================= -->
+
+        <div class="dashboard-card">
+
+            <h2>
+                📦 Dernières commandes
+            </h2>
+
+            {% if statistiques.dernieres_commandes %}
+
+            <table class="commandes-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Commande
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Statut
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for commande
+                       in statistiques.dernieres_commandes %}
+
+                    <tr>
+
+                        <td>
+                            #{{ commande.id_commande }}
+                        </td>
+
+                        <td>
+
+                            {% if commande.date_commande %}
+
+                                {{
+                                    commande.date_commande
+                                    [:16]
+                                    |replace("T", " ")
+                                }}
+
+                            {% else %}
+
+                                -
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <span class="statut">
+                                {{ commande.statut }}
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            {{
+                                "{:,.0f}".format(
+                                    commande.total
+                                ).replace(",", " ")
+                            }}
+
+                            FCFA
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <p>
+                    Aucune commande enregistrée.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================================
+             REPARTITION DES STATUTS
+             ================================================= -->
+
+        <div class="dashboard-card">
+
+            <h2>
+                📊 Commandes par statut
+            </h2>
+
+            {% if statistiques.repartition_statuts %}
+
+                {% for element
+                   in statistiques.repartition_statuts %}
+
+                <div class="statut-row">
+
+                    <span>
+                        {{ element.statut }}
+                    </span>
+
+                    <span class="statut-nombre">
+                        {{ element.nombre }}
+                    </span>
+
+                </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p>
+                    Aucune donnée disponible.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

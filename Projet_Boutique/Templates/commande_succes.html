@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Commande confirmée</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .confirmation {
+            width: 100%;
+            max-width: 550px;
+            background: white;
+            padding: 45px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .icone {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .numero-commande {
+            margin: 25px 0;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .btn-produits {
+            background: #222;
+            color: white;
+        }
+
+        .btn-commandes {
+            background: #eee;
+            color: #222;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="confirmation">
+
+    <div class="icone">
+        ✅
+    </div>
+
+    <h1>
+        Commande confirmée !
+    </h1>
+
+    <p>
+        Votre commande a été enregistrée
+        avec succès.
+    </p>
+
+    <div class="numero-commande">
+
+        Commande n° {{ id_commande }}
+
+    </div>
+
+    <p>
+        Merci pour votre achat.
+    </p>
+
+    <div class="actions">
+
+        <a
+            href="{{ url_for('produits') }}"
+            class="btn btn-produits"
+        >
+            Continuer mes achats
+        </a>
+
+        <!--
+            Cette page sera reliée à
+            "Mes commandes" à l'étape suivante.
+        -->
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

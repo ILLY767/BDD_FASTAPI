@@ -1,0 +1,2157 @@
+{% extends "base.html" %}
+
+{% block title %}
+Mes services
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   PAGE SERVICES
+   ========================================================= */
+
+.services-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 25px 20px 50px;
+}
+
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.services-header {
+    margin-bottom: 20px;
+}
+
+.services-header h1 {
+    margin: 0;
+    font-size: 36px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.services-header p {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 18px;
+}
+
+
+/* =========================================================
+   BARRE PANIER / COMMANDES
+   ========================================================= */
+
+.panier-barre {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    padding: 16px 20px;
+    margin: 20px 0 25px;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            120deg,
+            #174b35,
+            #238653
+        );
+
+    box-shadow:
+        0 5px 16px
+        rgba(
+            23,
+            75,
+            53,
+            0.18
+        );
+}
+
+
+/* =========================================================
+   BOUTON MON PANIER
+   ========================================================= */
+
+.btn-ouvrir-panier {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 11px 17px;
+
+    background: #ffffff;
+    color: #174b35;
+
+    border: 1px solid #ffffff;
+    border-radius: 9px;
+
+    font-weight: 700;
+    text-decoration: none;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.btn-ouvrir-panier:hover {
+    background: #eaf5ed;
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   COMPTEUR DU PANIER
+   ========================================================= */
+
+#nombrePanier {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-width: 27px;
+    height: 27px;
+
+    padding: 0 7px;
+
+    border-radius: 50px;
+
+    background: #f5c451;
+    color: #3c2b00;
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   BOUTON MES COMMANDES
+   ========================================================= */
+
+.btn-mes-commandes {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 11px 17px;
+
+    background: #f5c451;
+    color: #3c2b00;
+
+    border-radius: 9px;
+
+    font-weight: 700;
+    text-decoration: none;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.btn-mes-commandes:hover {
+    background: #ffda7b;
+    color: #3c2b00;
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   FILTRES
+   ========================================================= */
+
+.services-filtres {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        300px;
+
+    gap: 18px;
+
+    margin-bottom: 30px;
+}
+
+
+/* =========================================================
+   RECHERCHE
+   ========================================================= */
+
+.recherche-service {
+    position: relative;
+}
+
+.recherche-service input {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 16px 20px 16px 52px;
+
+    border:
+        1px solid
+        #cbd5e1;
+
+    border-radius: 14px;
+
+    background: white;
+
+    font-size: 17px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.recherche-service input:focus {
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(
+            37,
+            99,
+            235,
+            0.10
+        );
+}
+
+.recherche-icon {
+    position: absolute;
+
+    left: 19px;
+    top: 50%;
+
+    transform:
+        translateY(-50%);
+
+    font-size: 20px;
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   CATÉGORIES
+   ========================================================= */
+
+.select-categorie {
+    width: 100%;
+
+    padding: 16px 18px;
+
+    border:
+        1px solid
+        #cbd5e1;
+
+    border-radius: 14px;
+
+    background: white;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    outline: none;
+}
+
+
+/* =========================================================
+   GRILLE DES SERVICES
+   ========================================================= */
+
+.services-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            auto-fill,
+            minmax(280px, 1fr)
+        );
+
+    gap: 24px;
+}
+
+
+/* =========================================================
+   CARTE SERVICE
+   ========================================================= */
+
+.service-card {
+    background: white;
+
+    border:
+        1px solid
+        #e2e8f0;
+
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 5px 18px
+        rgba(
+            15,
+            23,
+            42,
+            0.06
+        );
+
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s,
+        border-color 0.2s;
+}
+
+.service-card:hover {
+    transform:
+        translateY(-5px);
+
+    border-color:
+        #bfdbfe;
+
+    box-shadow:
+        0 12px 30px
+        rgba(
+            15,
+            23,
+            42,
+            0.11
+        );
+}
+
+
+/* =========================================================
+   MEDIA SERVICE
+   ========================================================= */
+
+.service-media {
+    width: 100%;
+    height: 210px;
+
+    background: #f1f5f9;
+
+    overflow: hidden;
+}
+
+.service-media img,
+.service-media video {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+}
+
+.service-media-placeholder {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 55px;
+
+    color: #94a3b8;
+}
+
+
+/* =========================================================
+   CONTENU CARTE
+   ========================================================= */
+
+.service-body {
+    padding: 20px;
+}
+
+.service-categorie {
+    display: inline-block;
+
+    padding: 5px 10px;
+
+    margin-bottom: 10px;
+
+    border-radius: 20px;
+
+    background: #eff6ff;
+    color: #1d4ed8;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    text-transform: uppercase;
+}
+
+.service-body h3 {
+    margin: 0 0 9px;
+
+    color: #0f172a;
+
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.service-description {
+    min-height: 48px;
+
+    margin: 0 0 15px;
+
+    color: #64748b;
+
+    line-height: 1.5;
+}
+
+.service-prix {
+    margin-bottom: 16px;
+
+    color: #176b42;
+
+    font-size: 23px;
+    font-weight: 900;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.service-actions {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 9px;
+}
+
+.btn-service {
+    width: 100%;
+
+    border: none;
+
+    padding: 12px 15px;
+
+    border-radius: 10px;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.btn-commander {
+    background: #198754;
+    color: white;
+}
+
+.btn-commander:hover {
+    background: #146c43;
+
+    transform:
+        translateY(-1px);
+}
+
+.btn-details {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.btn-details:hover {
+    background: #dbeafe;
+}
+
+
+/* =========================================================
+   ADMINISTRATION
+   ========================================================= */
+
+.gestion-services {
+    margin-top: 40px;
+
+    background: white;
+
+    border:
+        1px solid
+        #e2e8f0;
+
+    border-radius: 18px;
+
+    padding: 25px;
+
+    box-shadow:
+        0 5px 18px
+        rgba(
+            15,
+            23,
+            42,
+            0.05
+        );
+}
+
+.gestion-services h2 {
+    margin-top: 0;
+
+    color: #0f172a;
+}
+
+
+/* =========================================================
+   TABLE ADMIN
+   ========================================================= */
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table-services {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    min-width: 850px;
+}
+
+.table-services th {
+    padding: 13px;
+
+    background: #f8fafc;
+
+    border-bottom:
+        1px solid
+        #e2e8f0;
+
+    text-align: left;
+
+    color: #475569;
+
+    font-size: 13px;
+}
+
+.table-services td {
+    padding: 13px;
+
+    border-bottom:
+        1px solid
+        #f1f5f9;
+
+    vertical-align: middle;
+}
+
+.table-services tr:hover {
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   STATUT
+   ========================================================= */
+
+.statut-actif {
+    display: inline-block;
+
+    padding: 5px 10px;
+
+    border-radius: 20px;
+
+    background: #dcfce7;
+    color: #166534;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.statut-inactif {
+    display: inline-block;
+
+    padding: 5px 10px;
+
+    border-radius: 20px;
+
+    background: #fee2e2;
+    color: #991b1b;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   BOUTONS ADMIN
+   ========================================================= */
+
+.admin-actions {
+    display: flex;
+
+    gap: 7px;
+
+    flex-wrap: wrap;
+}
+
+.btn-admin {
+    border: none;
+
+    padding: 8px 11px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    font-size: 12px;
+
+    font-weight: 700;
+}
+
+.btn-modifier {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.btn-supprimer {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.btn-statut {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.modal-service {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(
+            15,
+            23,
+            42,
+            0.65
+        );
+}
+
+.modal-service.active {
+    display: flex;
+}
+
+.modal-contenu-service {
+    position: relative;
+
+    width: min(
+        700px,
+        100%
+    );
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    background: white;
+
+    border-radius: 20px;
+
+    padding: 30px;
+
+    box-shadow:
+        0 20px 60px
+        rgba(
+            0,
+            0,
+            0,
+            0.25
+        );
+}
+
+.modal-fermer {
+    position: absolute;
+
+    right: 18px;
+    top: 15px;
+
+    width: 38px;
+    height: 38px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #f1f5f9;
+
+    font-size: 24px;
+
+    cursor: pointer;
+}
+
+.modal-service-media {
+    width: 100%;
+    max-height: 320px;
+
+    overflow: hidden;
+
+    border-radius: 14px;
+
+    margin-bottom: 20px;
+}
+
+.modal-service-media img,
+.modal-service-media video {
+    width: 100%;
+    max-height: 320px;
+
+    object-fit: cover;
+}
+
+
+/* =========================================================
+   FORMULAIRE AJOUT / MODIFICATION
+   ========================================================= */
+
+.form-service {
+    display: grid;
+
+    gap: 15px;
+}
+
+.form-service label {
+    font-weight: 700;
+
+    color: #334155;
+}
+
+.form-service input,
+.form-service textarea,
+.form-service select {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    margin-top: 6px;
+
+    padding: 11px 13px;
+
+    border:
+        1px solid
+        #cbd5e1;
+
+    border-radius: 9px;
+
+    outline: none;
+}
+
+.form-service textarea {
+    min-height: 100px;
+
+    resize: vertical;
+}
+
+.form-actions-service {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 10px;
+}
+
+
+/* =========================================================
+   MESSAGE AUCUN SERVICE
+   ========================================================= */
+
+.aucun-service {
+    grid-column: 1 / -1;
+
+    padding: 55px 20px;
+
+    text-align: center;
+
+    background: white;
+
+    border:
+        1px dashed
+        #cbd5e1;
+
+    border-radius: 18px;
+
+    color: #64748b;
+}
+
+.aucun-service-icon {
+    font-size: 50px;
+
+    margin-bottom: 12px;
+}
+
+.aucun-service h3 {
+    margin: 0 0 7px;
+
+    color: #334155;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+    .services-header h1 {
+        font-size: 29px;
+    }
+
+    .services-header p {
+        font-size: 16px;
+    }
+
+    .services-filtres {
+        grid-template-columns: 1fr;
+    }
+
+    .panier-barre {
+        justify-content: stretch;
+    }
+
+    .panier-barre a {
+        flex: 1;
+    }
+}
+
+
+@media (max-width: 550px) {
+
+    .services-page {
+        padding:
+            20px 12px 40px;
+    }
+
+    .panier-barre {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .panier-barre a {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .service-media {
+        height: 190px;
+    }
+
+}
+
+</style>
+
+
+<div class="services-page">
+
+
+    <!-- =====================================================
+         EN-TÊTE
+         ===================================================== -->
+
+    <div class="services-header">
+
+        <h1>
+            🛠️ Mes services
+        </h1>
+
+        <p>
+            Découvrez nos services et trouvez facilement
+            celui qui répond à vos besoins.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         PANIER ET COMMANDES
+         CLIENT UNIQUEMENT
+         ===================================================== -->
+
+    {% if session.get("role") == "client" %}
+
+    <div class="panier-barre">
+
+        <a
+            href="{{ url_for('panier') }}"
+            class="btn-ouvrir-panier"
+        >
+
+            🛒 Mon panier
+
+            <span id="nombrePanier">
+
+                {{ nombre_articles_panier|default(0) }}
+
+            </span>
+
+        </a>
+
+
+        <a
+            href="{{ url_for('mes_commandes') }}"
+            class="btn-mes-commandes"
+        >
+
+            📦 Mes commandes
+
+        </a>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         RECHERCHE ET FILTRE
+         ===================================================== -->
+
+    <div class="services-filtres">
+
+        <div class="recherche-service">
+
+            <span class="recherche-icon">
+                🔎
+            </span>
+
+            <input
+                type="text"
+                id="rechercheService"
+                placeholder="Rechercher un service..."
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <select
+            id="filtreCategorie"
+            class="select-categorie"
+        >
+
+            <option value="">
+                Toutes les catégories
+            </option>
+
+            {% set categories = [] %}
+
+            {% for service in services %}
+
+                {% if service.categorie
+                    and service.categorie not in categories %}
+
+                    {% set _ = categories.append(
+                        service.categorie
+                    ) %}
+
+                {% endif %}
+
+            {% endfor %}
+
+            {% for categorie in categories|sort %}
+
+                <option value="{{ categorie }}">
+                    {{ categorie }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+
+    <!-- =====================================================
+         CATALOGUE
+         ===================================================== -->
+
+    <div
+        class="services-grid"
+        id="servicesGrid"
+    >
+
+        {% for service in services %}
+
+        {% if service.actif or session.get("role")
+            in ["admin", "vendeur"] %}
+
+        <article
+            class="service-card"
+            data-nom="{{ service.nom_service|lower }}"
+            data-categorie="{{ service.categorie|default('')|lower }}"
+        >
+
+
+            <!-- =================================================
+                 MEDIA
+                 ================================================= -->
+
+            <div class="service-media">
+
+                {% if service.image %}
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='services/images/' ~ service.image
+                        ) }}"
+                        alt="{{ service.nom_service }}"
+                    >
+
+                {% elif service.video %}
+
+                    <video
+                        controls
+                        preload="metadata"
+                    >
+
+                        <source
+                            src="{{ url_for(
+                                'static',
+                                filename='services/videos/' ~ service.video
+                            ) }}"
+                        >
+
+                        Votre navigateur ne prend pas
+                        en charge la vidéo.
+
+                    </video>
+
+                {% else %}
+
+                    <div class="service-media-placeholder">
+                        🛠️
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- =================================================
+                 CONTENU
+                 ================================================= -->
+
+            <div class="service-body">
+
+                {% if service.categorie %}
+
+                <span class="service-categorie">
+
+                    {{ service.categorie }}
+
+                </span>
+
+                {% endif %}
+
+
+                <h3>
+                    {{ service.nom_service }}
+                </h3>
+
+
+                <p class="service-description">
+
+                    {{ service.description
+                        or
+                        "Aucune description disponible." }}
+
+                </p>
+
+
+                <div class="service-prix">
+
+                    {{ "{:,.0f}".format(
+                        service.prix
+                    ).replace(",", " ") }}
+
+                    FCFA
+
+                </div>
+
+
+                <!-- =================================================
+                     ACTIONS
+                     ================================================= -->
+
+                <div class="service-actions">
+
+                    {% if session.get("role") == "client" %}
+
+                    <button
+                        type="button"
+                        class="btn-service btn-commander"
+                        data-service-id="{{ service.id_service }}"
+                        onclick="ajouterServiceAuPanier(this)"
+                    >
+
+                        🛒 Ajouter au panier
+
+                    </button>
+
+                    {% endif %}
+
+
+                    <button
+                        type="button"
+                        class="btn-service btn-details"
+                        data-service-id="{{ service.id_service }}"
+                        onclick="ouvrirDetailsService(this.dataset.serviceId)"
+                        )"
+                    >
+
+                        👁️ Voir les détails
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </article>
+
+        {% endif %}
+
+        {% endfor %}
+
+
+        <!-- =====================================================
+             AUCUN SERVICE
+             ===================================================== -->
+
+        <div
+            id="aucunService"
+            class="aucun-service"
+            style="display: none;"
+        >
+
+            <div class="aucun-service-icon">
+                🔎
+            </div>
+
+            <h3>
+                Aucun service trouvé
+            </h3>
+
+            <p>
+                Aucun service ne correspond à votre recherche.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GESTION ADMIN / VENDEUR
+         ===================================================== -->
+
+    {% if session.get("role") in ["admin", "vendeur"] %}
+
+    <section class="gestion-services">
+
+        <h2>
+            ⚙️ Gestion des services
+        </h2>
+
+
+        <!-- =================================================
+             AJOUTER UN SERVICE
+             ================================================= -->
+
+        <form
+            method="POST"
+            action="{{ url_for('ajouter_service') }}"
+            enctype="multipart/form-data"
+            class="form-service"
+        >
+
+            <h3>
+                ➕ Ajouter un service
+            </h3>
+
+
+            <label>
+
+                Nom du service
+
+                <input
+                    type="text"
+                    name="nom_service"
+                    required
+                    maxlength="150"
+                >
+
+            </label>
+
+
+            <label>
+
+                Prix
+
+                <input
+                    type="number"
+                    name="prix"
+                    min="0"
+                    step="0.01"
+                    required
+                >
+
+            </label>
+
+
+            <label>
+
+                Catégorie
+
+                <input
+                    type="text"
+                    name="categorie"
+                    maxlength="100"
+                >
+
+            </label>
+
+
+            <label>
+
+                Description
+
+                <textarea
+                    name="description"
+                    maxlength="500"
+                ></textarea>
+
+            </label>
+
+
+            <label>
+
+                Image
+
+                <input
+                    type="file"
+                    name="image"
+                    accept=".jpg,.jpeg,.png,.webp"
+                >
+
+            </label>
+
+
+            <label>
+
+                Vidéo
+
+                <input
+                    type="file"
+                    name="video"
+                    accept=".mp4,.webm,.mov"
+                >
+
+            </label>
+
+
+            <label>
+
+                <input
+                    type="checkbox"
+                    name="actif"
+                    value="1"
+                    checked
+                >
+
+                Service disponible
+
+            </label>
+
+
+            <div class="form-actions-service">
+
+                <button
+                    type="submit"
+                    class="btn-service btn-commander"
+                >
+
+                    ➕ Ajouter le service
+
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <!-- =================================================
+             TABLEAU DE GESTION
+             ================================================= -->
+
+        <br>
+
+        <h3>
+            📋 Services enregistrés
+        </h3>
+
+
+        <div class="table-responsive">
+
+            <table class="table-services">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            Service
+                        </th>
+
+                        <th>
+                            Catégorie
+                        </th>
+
+                        <th>
+                            Prix
+                        </th>
+
+                        <th>
+                            Statut
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for service in services %}
+
+                    <tr>
+
+                        <td>
+                            #{{ service.id_service }}
+                        </td>
+
+                        <td>
+                            {{ service.nom_service }}
+                        </td>
+
+                        <td>
+                            {{ service.categorie
+                                or
+                                "—" }}
+                        </td>
+
+                        <td>
+
+                            {{ "{:,.0f}".format(
+                                service.prix
+                            ).replace(",", " ") }}
+
+                            FCFA
+
+                        </td>
+
+                        <td>
+
+                            {% if service.actif %}
+
+                                <span class="statut-actif">
+                                    Actif
+                                </span>
+
+                            {% else %}
+
+                                <span class="statut-inactif">
+                                    Inactif
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <div class="admin-actions">
+
+                                <!-- MODIFIER -->
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'modifier_service',
+                                        id_service=service.id_service
+                                    ) }}"
+                                    enctype="multipart/form-data"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="nom_service"
+                                        value="{{ service.nom_service }}"
+                                    >
+
+                                    <input
+                                        type="hidden"
+                                        name="prix"
+                                        value="{{ service.prix }}"
+                                    >
+
+                                    <input
+                                        type="hidden"
+                                        name="description"
+                                        value="{{ service.description or '' }}"
+                                    >
+
+                                    <input
+                                        type="hidden"
+                                        name="categorie"
+                                        value="{{ service.categorie or '' }}"
+                                    >
+
+                                    <input
+                                        type="hidden"
+                                        name="actif"
+                                        value="{{ 1 if service.actif else 0 }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn-admin btn-modifier"
+                                        onclick="
+                                            return confirmerModificationService(
+                                                '{{ service.nom_service|e }}'
+                                            );
+                                        "
+                                    >
+
+                                        ✏️ Modifier
+
+                                    </button>
+
+                                </form>
+
+
+                                <!-- ACTIVER / DÉSACTIVER -->
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'modifier_statut_service',
+                                        id_service=service.id_service
+                                    ) }}"
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="btn-admin btn-statut"
+                                    >
+
+                                        {% if service.actif %}
+
+                                            🔴 Désactiver
+
+                                        {% else %}
+
+                                            🟢 Activer
+
+                                        {% endif %}
+
+                                    </button>
+
+                                </form>
+
+
+                                <!-- SUPPRIMER -->
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'supprimer_service',
+                                        id_service=service.id_service
+                                    ) }}"
+                                    onsubmit="
+                                        return confirmerSuppressionService(
+                                            '{{ service.nom_service|e }}'
+                                        );
+                                    "
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="btn-admin btn-supprimer"
+                                    >
+
+                                        🗑️ Supprimer
+
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                            style="text-align:center;"
+                        >
+
+                            Aucun service enregistré.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    {% endif %}
+
+</div>
+
+
+<!-- =========================================================
+     MODAL DÉTAILS SERVICE
+     ========================================================= -->
+
+<div
+    id="modalService"
+    class="modal-service"
+    onclick="fermerDetailsServiceExterieur(event)"
+>
+
+    <div
+        class="modal-contenu-service"
+        onclick="event.stopPropagation()"
+    >
+
+        <button
+            type="button"
+            class="modal-fermer"
+            onclick="fermerDetailsService()"
+        >
+            ×
+        </button>
+
+
+        <div id="modalServiceContenu">
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     DONNÉES SERVICES POUR JAVASCRIPT
+     ========================================================= -->
+
+<script
+    type="application/json"
+    id="servicesDataJson"
+>{{ services|tojson }}</script>
+
+
+<script>
+
+/* =========================================================
+   RÉCUPÉRER LES SERVICES
+   ========================================================= */
+
+const servicesDataElement =
+    document.getElementById(
+        "servicesDataJson"
+    );
+
+let servicesData = [];
+
+try {
+
+    servicesData = JSON.parse(
+        servicesDataElement.textContent
+    );
+
+} catch (erreur) {
+
+    console.error(
+        "Impossible de lire les services :",
+        erreur
+    );
+
+}
+
+
+/* =========================================================
+   AJOUTER UN SERVICE AU PANIER
+   ========================================================= */
+
+function ajouterServiceAuPanier(
+    boutonElement
+) {
+
+    const idService =
+        boutonElement.dataset.serviceId;
+
+
+    boutonElement.disabled = true;
+
+    const texteOriginal =
+        boutonElement.innerHTML;
+
+    boutonElement.innerHTML =
+        "⏳ Ajout...";
+
+
+    fetch(
+        `/panier/services/ajouter/${idService}`,
+        {
+            method: "POST",
+
+            headers: {
+                "X-Requested-With":
+                    "XMLHttpRequest"
+            }
+        }
+    )
+
+    .then(response => {
+
+        return response.json();
+
+    })
+
+    .then(data => {
+
+        if (!data.success) {
+
+            alert(
+                data.message ||
+                "Impossible d'ajouter le service."
+            );
+
+            return;
+        }
+
+
+        /* ---------------------------------------------
+           Mettre à jour le compteur
+           --------------------------------------------- */
+
+        const compteur =
+            document.getElementById(
+                "nombrePanier"
+            );
+
+        if (compteur) {
+
+            compteur.textContent =
+                data.nombre_articles;
+
+        }
+
+
+        /* ---------------------------------------------
+           Notification
+           --------------------------------------------- */
+
+        alert(
+            data.message
+        );
+
+    })
+
+    .catch(erreur => {
+
+        console.error(
+            "Erreur lors de l'ajout du service :",
+            erreur
+        );
+
+        alert(
+            "Une erreur est survenue lors de l'ajout du service."
+        );
+
+    })
+
+    .finally(() => {
+
+        boutonElement.disabled = false;
+
+        boutonElement.innerHTML =
+            texteOriginal;
+
+    });
+
+}
+
+
+/* =========================================================
+   RECHERCHE SERVICE
+   ========================================================= */
+
+const rechercheService =
+    document.getElementById(
+        "rechercheService"
+    );
+
+const filtreCategorie =
+    document.getElementById(
+        "filtreCategorie"
+    );
+
+const cartesServices =
+    document.querySelectorAll(
+        ".service-card"
+    );
+
+const aucunService =
+    document.getElementById(
+        "aucunService"
+    );
+
+
+function filtrerServices() {
+
+    const recherche =
+        rechercheService.value
+        .toLowerCase()
+        .trim();
+
+
+    const categorie =
+        filtreCategorie.value
+        .toLowerCase()
+        .trim();
+
+
+    let nombreVisible = 0;
+
+
+    cartesServices.forEach(
+        carte => {
+
+            const nom =
+                carte.dataset.nom || "";
+
+            const categorieCarte =
+                carte.dataset.categorie || "";
+
+
+            const correspondRecherche =
+                !recherche ||
+                nom.includes(recherche);
+
+
+            const correspondCategorie =
+                !categorie ||
+                categorieCarte === categorie;
+
+
+            if (
+                correspondRecherche &&
+                correspondCategorie
+            ) {
+
+                carte.style.display =
+                    "";
+
+                nombreVisible++;
+
+            } else {
+
+                carte.style.display =
+                    "none";
+
+            }
+
+        }
+    );
+
+
+    if (aucunService) {
+
+        aucunService.style.display =
+            nombreVisible === 0
+                ? "block"
+                : "none";
+
+    }
+
+}
+
+
+if (rechercheService) {
+
+    rechercheService.addEventListener(
+        "input",
+        filtrerServices
+    );
+
+}
+
+
+if (filtreCategorie) {
+
+    filtreCategorie.addEventListener(
+        "change",
+        filtrerServices
+    );
+
+}
+
+
+/* =========================================================
+   OUVRIR LES DÉTAILS
+   ========================================================= */
+
+function ouvrirDetailsService(
+    idService
+) {
+
+    const service =
+        servicesData.find(
+            s =>
+                Number(s.id_service) ===
+                Number(idService)
+        );
+
+
+    if (!service) {
+
+        return;
+
+    }
+
+
+    const modal =
+        document.getElementById(
+            "modalService"
+        );
+
+    const contenu =
+        document.getElementById(
+            "modalServiceContenu"
+        );
+
+
+    let mediaHTML = "";
+
+
+    if (service.image) {
+
+        mediaHTML = `
+
+            <div class="modal-service-media">
+
+                <img
+                    src="/static/services/images/${encodeURIComponent(
+                        service.image
+                    )}"
+                    alt="${echapperHTML(
+                        service.nom_service
+                    )}"
+                >
+
+            </div>
+
+        `;
+
+    }
+
+    else if (service.video) {
+
+        mediaHTML = `
+
+            <div class="modal-service-media">
+
+                <video controls>
+
+                    <source
+                        src="/static/services/videos/${encodeURIComponent(
+                            service.video
+                        )}"
+                    >
+
+                </video>
+
+            </div>
+
+        `;
+
+    }
+
+
+    contenu.innerHTML = `
+
+        ${mediaHTML}
+
+        ${
+            service.categorie
+                ? `
+                    <span class="service-categorie">
+                        ${echapperHTML(
+                            service.categorie
+                        )}
+                    </span>
+                `
+                : ""
+        }
+
+
+        <h2>
+            ${echapperHTML(
+                service.nom_service
+            )}
+        </h2>
+
+
+        <p
+            style="
+                color:#64748b;
+                line-height:1.7;
+            "
+        >
+
+            ${
+                service.description
+                    ? echapperHTML(
+                        service.description
+                    )
+                    : "Aucune description disponible."
+            }
+
+        </p>
+
+
+        <div
+            style="
+                margin:20px 0;
+                font-size:26px;
+                font-weight:900;
+                color:#176b42;
+            "
+        >
+
+            ${formatPrix(service.prix)}
+            FCFA
+
+        </div>
+
+
+        ${
+            service.actif
+            && "{{ session.get('role') }}"
+                === "client"
+
+                ? `
+
+                    <button
+                        type="button"
+                        class="btn-service btn-commander"
+                        data-service-id="${service.id_service}"
+                        onclick="
+                            ajouterServiceAuPanier(this)
+                        "
+                    >
+
+                        🛒 Ajouter au panier
+
+                    </button>
+
+                `
+                : ""
+        }
+
+    `;
+
+
+    modal.classList.add(
+        "active"
+    );
+
+}
+
+
+/* =========================================================
+   FERMER LE MODAL
+   ========================================================= */
+
+function fermerDetailsService() {
+
+    const modal =
+        document.getElementById(
+            "modalService"
+        );
+
+    modal.classList.remove(
+        "active"
+    );
+
+}
+
+
+function fermerDetailsServiceExterieur(
+    event
+) {
+
+    if (
+        event.target.id ===
+        "modalService"
+    ) {
+
+        fermerDetailsService();
+
+    }
+
+}
+
+
+/* =========================================================
+   ÉCHAPPER LE HTML
+   ========================================================= */
+
+function echapperHTML(
+    valeur
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        valeur ?? "";
+
+    return div.innerHTML;
+
+}
+
+
+/* =========================================================
+   FORMAT PRIX
+   ========================================================= */
+
+function formatPrix(
+    prix
+) {
+
+    return Number(prix || 0)
+        .toLocaleString(
+            "fr-FR"
+        );
+
+}
+
+
+/* =========================================================
+   CONFIRMATION SUPPRESSION
+   ========================================================= */
+
+function confirmerSuppressionService(
+    nom
+) {
+
+    return confirm(
+        "Voulez-vous vraiment supprimer le service « "
+        + nom
+        + " » ?"
+    );
+
+}
+
+
+/* =========================================================
+   CONFIRMATION MODIFICATION
+   ========================================================= */
+
+function confirmerModificationService(
+    nom
+) {
+
+    return confirm(
+        "Voulez-vous modifier le service « "
+        + nom
+        + " » ?"
+    );
+
+}
+
+
+/* =========================================================
+   ÉCHAPPEMENT TOUCHE ESC
+   ========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Escape"
+        ) {
+
+            fermerDetailsService();
+
+        }
+
+    }
+);
+
+</script>
+
+{% endblock %}

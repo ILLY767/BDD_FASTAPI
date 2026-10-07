@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Gestion de la page d'accueil
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f5f7fa,
+                    #e8ecf3
+                );
+
+            color: #222;
+        }
+
+
+        .container {
+
+            max-width: 1250px;
+
+            margin:
+                40px auto;
+
+            padding:
+                0 20px;
+        }
+
+
+        .header {
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+
+            margin-bottom: 30px;
+        }
+
+
+        .header h1 {
+
+            margin: 0;
+
+            font-size: 32px;
+        }
+
+
+        .btn-retour {
+
+            text-decoration: none;
+
+            background: #212529;
+
+            color: white;
+
+            padding:
+                12px 18px;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+        }
+
+
+        .card {
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 16px;
+
+            margin-bottom: 30px;
+
+            box-shadow:
+                0 8px 25px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        .card h2 {
+
+            margin-top: 0;
+
+            margin-bottom: 20px;
+        }
+
+
+        .form-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 20px;
+        }
+
+
+        .form-group {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 8px;
+        }
+
+
+        .form-group.full {
+
+            grid-column:
+                1 / -1;
+        }
+
+
+        label {
+
+            font-weight: bold;
+        }
+
+
+        input[type="file"],
+        input[type="text"] {
+
+            padding: 12px;
+
+            border:
+                1px solid #ccc;
+
+            border-radius: 8px;
+
+            background: #fafafa;
+        }
+
+
+        .btn-ajouter {
+
+            border: none;
+
+            padding:
+                13px 22px;
+
+            border-radius: 8px;
+
+            background:
+                #198754;
+
+            color: white;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .btn-ajouter:hover {
+
+            background:
+                #157347;
+        }
+
+
+        .photos-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fill,
+                    minmax(220px, 1fr)
+                );
+
+            gap: 20px;
+        }
+
+
+        .media-card {
+
+            border:
+                1px solid #ddd;
+
+            border-radius: 12px;
+
+            overflow: hidden;
+
+            background: white;
+        }
+
+
+        .media-card img {
+
+            width: 100%;
+
+            height: 180px;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+
+        .video-preview {
+
+            width: 100%;
+
+            height: 180px;
+
+            object-fit: cover;
+
+            display: block;
+
+            background: #111;
+        }
+
+
+        .media-info {
+
+            padding: 15px;
+        }
+
+
+        .media-name {
+
+            font-weight: bold;
+
+            word-break: break-word;
+
+            margin-bottom: 12px;
+        }
+
+
+        .btn-supprimer {
+
+            border: none;
+
+            background:
+                #dc3545;
+
+            color: white;
+
+            padding:
+                9px 14px;
+
+            border-radius: 7px;
+
+            cursor: pointer;
+        }
+
+
+        .btn-supprimer:hover {
+
+            background:
+                #bb2d3b;
+        }
+
+
+        .empty {
+
+            padding: 30px;
+
+            text-align: center;
+
+            color: #777;
+
+            background: #f8f9fa;
+
+            border-radius: 10px;
+        }
+
+
+        .info {
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            background:
+                #eef6ff;
+
+            color: #174a7e;
+
+            margin-bottom: 20px;
+        }
+
+
+        @media (max-width: 700px) {
+
+            .form-grid {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .form-group.full {
+
+                grid-column: auto;
+            }
+
+
+            .header {
+
+                flex-direction: column;
+
+                align-items: flex-start;
+
+                gap: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- ================================================= -->
+    <!-- EN-TÊTE -->
+    <!-- ================================================= -->
+
+    <div class="header">
+
+        <h1>
+            🎨 Gestion de la page d'accueil
+        </h1>
+
+
+        <a
+            href="{{ url_for('accueil') }}"
+            class="btn-retour"
+        >
+            ← Voir l'accueil
+        </a>
+
+    </div>
+
+
+
+    <!-- ================================================= -->
+    <!-- PHOTOS -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>
+            🖼️ Photos du carrousel
+        </h2>
+
+
+        <div class="info">
+
+            Les photos ajoutées ici seront
+            automatiquement affichées dans le
+            carrousel de la page d'accueil.
+
+        </div>
+
+
+        <form
+            action="{{ url_for('ajouter_photo_accueil') }}"
+            method="POST"
+            enctype="multipart/form-data"
+        >
+
+            <div class="form-grid">
+
+                <div class="form-group">
+
+                    <label>
+                        Choisir une photo
+                    </label>
+
+                    <input
+                        type="file"
+                        name="photo"
+                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    class="form-group"
+                    style="justify-content:end;"
+                >
+
+                    <button
+                        type="submit"
+                        class="btn-ajouter"
+                    >
+                        ➕ Ajouter la photo
+                    </button>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+    <!-- ================================================= -->
+    <!-- LISTE DES PHOTOS -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>
+            📸 Photos actuellement disponibles
+        </h2>
+
+
+        {% if photos %}
+
+        <div class="photos-grid">
+
+
+            {% for photo in photos %}
+
+            <div class="media-card">
+
+                <img
+                    src="{{ url_for(
+                        'static',
+                        filename='accueil/photos/' + photo.nom_fichier
+                    ) }}"
+                    alt="Photo accueil"
+                >
+
+
+                <div class="media-info">
+
+                    <div class="media-name">
+
+                        {{ photo.nom_fichier }}
+
+                    </div>
+
+
+                    <form
+                        action="{{ url_for(
+                            'supprimer_photo_accueil',
+                            id_photo=photo.id_photo
+                        ) }}"
+                        method="POST"
+                        onsubmit="return confirm(
+                            'Voulez-vous vraiment supprimer cette photo ?'
+                        );"
+                    >
+
+                        <button
+                            type="submit"
+                            class="btn-supprimer"
+                        >
+                            🗑️ Supprimer
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+
+        </div>
+
+        {% else %}
+
+        <div class="empty">
+
+            Aucune photo d'accueil
+            n'est actuellement disponible.
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- ================================================= -->
+    <!-- VIDÉOS -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>
+            🎬 Publicités vidéo
+        </h2>
+
+
+        <div class="info">
+
+            Vous pouvez avoir au maximum
+            <strong>3 publicités vidéo actives</strong>.
+
+            Elles seront automatiquement
+            diffusées sur la page d'accueil.
+
+        </div>
+
+
+        <form
+            action="{{ url_for('ajouter_publicite') }}"
+            method="POST"
+            enctype="multipart/form-data"
+        >
+
+            <div class="form-grid">
+
+
+                <div class="form-group">
+
+                    <label>
+                        Titre de la publicité
+                    </label>
+
+                    <input
+                        type="text"
+                        name="titre"
+                        placeholder="Ex : Promotion spéciale"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Choisir la vidéo
+                    </label>
+
+                    <input
+                        type="file"
+                        name="video"
+                        accept=".mp4,.webm,.ogg"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group full">
+
+                    <button
+                        type="submit"
+                        class="btn-ajouter"
+                    >
+                        🎬 Ajouter la publicité
+                    </button>
+
+                </div>
+
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+    <!-- ================================================= -->
+    <!-- LISTE DES VIDÉOS -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+        <h2>
+            📺 Publicités actuellement disponibles
+        </h2>
+
+
+        {% if publicites %}
+
+        <div class="photos-grid">
+
+
+            {% for publicite in publicites %}
+
+            <div class="media-card">
+
+
+                <video
+                    class="video-preview"
+                    controls
+                    muted
+                >
+
+                    <source
+                        src="{{ url_for(
+                            'static',
+                            filename='accueil/videos/' + publicite.nom_fichier
+                        ) }}"
+                    >
+
+                </video>
+
+
+                <div class="media-info">
+
+
+                    <div class="media-name">
+
+                        {% if publicite.titre %}
+
+                            {{ publicite.titre }}
+
+                        {% else %}
+
+                            {{ publicite.nom_fichier }}
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <small>
+
+                        {{ publicite.nom_fichier }}
+
+                    </small>
+
+
+                    <br><br>
+
+
+                    <form
+                        action="{{ url_for(
+                            'supprimer_publicite',
+                            id_publicite=publicite.id_publicite
+                        ) }}"
+                        method="POST"
+                        onsubmit="return confirm(
+                            'Voulez-vous vraiment supprimer cette vidéo ?'
+                        );"
+                    >
+
+                        <button
+                            type="submit"
+                            class="btn-supprimer"
+                        >
+                            🗑️ Supprimer
+                        </button>
+
+                    </form>
+
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+
+        </div>
+
+        {% else %}
+
+        <div class="empty">
+
+            Aucune publicité vidéo
+            n'est actuellement disponible.
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>

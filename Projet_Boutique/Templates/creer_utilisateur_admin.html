@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Créer un utilisateur</title>
+
+</head>
+
+<body>
+
+    <h1>➕ Créer un utilisateur</h1>
+
+    {% if erreur %}
+
+        <p style="color:red;">
+            {{ erreur }}
+        </p>
+
+    {% endif %}
+
+    <form method="POST"
+          action="{{ url_for('creer_utilisateur_admin') }}">
+
+        <label>Nom</label><br>
+        <input type="text" name="nom" required>
+
+        <br><br>
+
+        <label>Prénom</label><br>
+        <input type="text" name="prenom" required>
+
+        <br><br>
+
+        <label>Email</label><br>
+        <input type="email" name="email" required>
+
+        <br><br>
+
+        <label>Mot de passe</label><br>
+        <input type="password" name="mot_de_passe" required>
+
+        <br><br>
+
+        <label>Confirmer le mot de passe</label><br>
+        <input type="password" name="confirmation" required>
+
+        <br><br>
+
+        <label>Rôle</label><br>
+
+        <select name="role" required>
+
+            <option value="client">Client</option>
+
+            <option value="vendeur">Vendeur</option>
+
+            <option value="admin">Administrateur</option>
+
+        </select>
+
+        <br><br>
+
+        <button type="submit">
+            Créer l'utilisateur
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="{{ url_for('utilisateurs') }}">
+        ↩️ Retour à la liste des utilisateurs
+    </a>
+
+</body>
+
+</html>

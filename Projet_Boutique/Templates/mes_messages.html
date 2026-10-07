@@ -1,0 +1,1285 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+    Mes conversations
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   CONTENEUR PRINCIPAL
+   ========================================================= */
+
+.conversations-container {
+
+    max-width: 950px;
+
+    margin: 30px auto;
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 8px 30px
+        rgba(0, 0, 0, 0.08);
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.conversations-header {
+
+    background:
+        linear-gradient(
+            135deg,
+            #075e54,
+            #128c7e
+        );
+
+    color: white;
+
+    padding: 25px 28px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+}
+
+
+.conversations-titre {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+}
+
+
+.conversations-icone {
+
+    width: 48px;
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.15
+        );
+
+    border-radius: 14px;
+
+    font-size: 24px;
+}
+
+
+.conversations-header h2 {
+
+    margin: 0;
+
+    color: white;
+
+    font-size: 23px;
+
+    font-weight: 800;
+}
+
+
+.conversations-header p {
+
+    margin: 4px 0 0;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.85
+    );
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   COMPTEUR GLOBAL
+   ========================================================= */
+
+.compteur-global {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 42px;
+
+    height: 42px;
+
+    padding: 0 12px;
+
+    border-radius: 50px;
+
+    background: #e53935;
+
+    color: white;
+
+    font-size: 14px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 3px 10px
+        rgba(
+            220,
+            38,
+            38,
+            0.30
+        );
+}
+
+
+/* =========================================================
+   ZONE DE RECHERCHE
+   ========================================================= */
+
+.recherche-conversations {
+
+    padding: 16px 20px;
+
+    background: #f8fafc;
+
+    border-bottom:
+        1px solid #e5e7eb;
+}
+
+
+#rechercheConversation {
+
+    width: 100%;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 12px;
+
+    padding: 12px 16px;
+
+    background: white;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        0.2s;
+}
+
+
+#rechercheConversation:focus {
+
+    border-color: #128c7e;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(
+            18,
+            140,
+            126,
+            0.10
+        );
+}
+
+
+/* =========================================================
+   LISTE DES CONVERSATIONS
+   ========================================================= */
+
+.liste-conversations {
+
+    background: #ffffff;
+}
+
+
+/* =========================================================
+   UNE CONVERSATION
+   ========================================================= */
+
+.conversation-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+
+    padding: 17px 22px;
+
+    border-bottom:
+        1px solid #edf0f2;
+
+    text-decoration: none;
+
+    color: inherit;
+
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease;
+
+    cursor: pointer;
+}
+
+
+.conversation-item:hover {
+
+    background: #f8fafc;
+}
+
+
+.conversation-item:last-child {
+
+    border-bottom: none;
+}
+
+
+/* =========================================================
+   AVATAR
+   ========================================================= */
+
+.conversation-avatar {
+
+    width: 52px;
+
+    height: 52px;
+
+    min-width: 52px;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #128c7e,
+            #075e54
+        );
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 21px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   CONTENU
+   ========================================================= */
+
+.conversation-contenu {
+
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   LIGNE SUPÉRIEURE
+   ========================================================= */
+
+.conversation-ligne-haut {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 4px;
+}
+
+
+.conversation-commande {
+
+    font-size: 15px;
+
+    font-weight: 800;
+
+    color: #0f172a;
+}
+
+
+.conversation-date {
+
+    flex-shrink: 0;
+
+    font-size: 11px;
+
+    color: #64748b;
+}
+
+
+/* =========================================================
+   APERÇU MESSAGE
+   ========================================================= */
+
+.conversation-apercu {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    color: #64748b;
+
+    font-size: 13px;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    max-width: 100%;
+}
+
+
+.conversation-item.non-lu
+.conversation-apercu {
+
+    color: #0f172a;
+
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   EXPÉDITEUR
+   ========================================================= */
+
+.conversation-expediteur {
+
+    font-size: 11px;
+
+    color: #94a3b8;
+
+    margin-top: 3px;
+}
+
+
+/* =========================================================
+   PARTIE DROITE
+   ========================================================= */
+
+.conversation-droite {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-end;
+
+    gap: 6px;
+}
+
+
+/* =========================================================
+   BADGE NON LU
+   ========================================================= */
+
+.badge-non-lu {
+
+    min-width: 22px;
+
+    height: 22px;
+
+    padding: 0 6px;
+
+    border-radius: 50px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: #e53935;
+
+    color: white;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 2px 5px
+        rgba(
+            220,
+            38,
+            38,
+            0.25
+        );
+}
+
+
+/* =========================================================
+   STATUT COMMANDE
+   ========================================================= */
+
+.statut-commande {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 3px 8px;
+
+    border-radius: 20px;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+}
+
+
+.statut-en-attente {
+
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+
+.statut-confirmee {
+
+    background: #dbeafe;
+
+    color: #1d4ed8;
+}
+
+
+.statut-livree {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+
+.statut-annulee {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+
+/* =========================================================
+   AUCUNE CONVERSATION
+   ========================================================= */
+
+.aucune-conversation {
+
+    padding: 70px 25px;
+
+    text-align: center;
+
+    color: #64748b;
+}
+
+
+.aucune-conversation-icone {
+
+    font-size: 55px;
+
+    margin-bottom: 15px;
+
+    opacity: 0.7;
+}
+
+
+.aucune-conversation h3 {
+
+    margin: 0 0 7px;
+
+    color: #334155;
+
+    font-size: 18px;
+}
+
+
+.aucune-conversation p {
+
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   MESSAGE "AUCUN RÉSULTAT"
+   ========================================================= */
+
+.aucun-resultat {
+
+    display: none;
+
+    padding: 45px 20px;
+
+    text-align: center;
+
+    color: #64748b;
+}
+
+
+/* =========================================================
+   PIED DE PAGE DE LA LISTE
+   ========================================================= */
+
+.conversations-footer {
+
+    padding: 14px 20px;
+
+    background: #f8fafc;
+
+    border-top:
+        1px solid #edf0f2;
+
+    text-align: center;
+
+    font-size: 11px;
+
+    color: #94a3b8;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .conversations-container {
+
+        margin: 10px;
+
+        border-radius: 13px;
+    }
+
+
+    .conversations-header {
+
+        padding: 18px;
+
+    }
+
+
+    .conversations-header h2 {
+
+        font-size: 19px;
+    }
+
+
+    .conversations-header p {
+
+        font-size: 11px;
+    }
+
+
+    .conversation-item {
+
+        padding: 14px;
+
+        gap: 11px;
+    }
+
+
+    .conversation-avatar {
+
+        width: 45px;
+
+        height: 45px;
+
+        min-width: 45px;
+
+        font-size: 18px;
+    }
+
+
+    .conversation-commande {
+
+        font-size: 14px;
+    }
+
+
+    .conversation-date {
+
+        font-size: 10px;
+    }
+
+
+    .conversation-apercu {
+
+        font-size: 12px;
+    }
+
+
+    .statut-commande {
+
+        display: none;
+    }
+
+}
+
+</style>
+
+
+<!-- =========================================================
+     CONTENEUR PRINCIPAL
+     ========================================================= -->
+
+<div class="conversations-container">
+
+
+    <!-- =====================================================
+         EN-TÊTE
+         ===================================================== -->
+
+    <div class="conversations-header">
+
+        <div class="conversations-titre">
+
+            <div class="conversations-icone">
+                💬
+            </div>
+
+
+            <div>
+
+                <h2>
+                    Mes conversations
+                </h2>
+
+                <p>
+                    Toutes vos discussions liées aux commandes
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             COMPTEUR GLOBAL
+             ================================================= -->
+
+        {% if nombre_non_lus > 0 %}
+
+            <div
+                class="compteur-global"
+                title="Messages non lus"
+            >
+
+                🔴
+                {{ nombre_non_lus }}
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- =====================================================
+         RECHERCHE
+         ===================================================== -->
+
+    {% if conversations %}
+
+        <div class="recherche-conversations">
+
+            <input
+                type="search"
+                id="rechercheConversation"
+                placeholder="🔎 Rechercher une commande ou un message..."
+                autocomplete="off"
+            >
+
+        </div>
+
+    {% endif %}
+
+
+
+    <!-- =====================================================
+         LISTE
+         ===================================================== -->
+
+    <div
+        class="liste-conversations"
+        id="listeConversations"
+    >
+
+
+        {% if conversations %}
+
+
+            {% for conversation in conversations %}
+
+                <!--
+                    Toute la conversation est cliquable.
+
+                    On ouvre directement :
+                    /commandes/{id}/messages
+                -->
+
+                <a
+                    href="/commandes/{{ conversation.id_commande }}/messages"
+                    class="
+                        conversation-item
+                        {% if conversation.nombre_non_lus > 0 %}
+                            non-lu
+                        {% endif %}
+                    "
+                    data-recherche="
+                        commande {{ conversation.id_commande }}
+                        {{ conversation.dernier_message }}
+                        {{ conversation.nom_expediteur or '' }}
+                        {{ conversation.prenom_expediteur or '' }}
+                    "
+                >
+
+
+                    <!-- =====================================
+                         AVATAR
+                         ===================================== -->
+
+                    <div class="conversation-avatar">
+
+                        {% if conversation.nombre_non_lus > 0 %}
+
+                            🔔
+
+                        {% else %}
+
+                            💬
+
+                        {% endif %}
+
+                    </div>
+
+
+
+                    <!-- =====================================
+                         CONTENU
+                         ===================================== -->
+
+                    <div class="conversation-contenu">
+
+
+                        <!-- ---------------------------------
+                             COMMANDE + DATE
+                             --------------------------------- -->
+
+                        <div
+                            class="conversation-ligne-haut"
+                        >
+
+                            <div
+                                class="conversation-commande"
+                            >
+
+                                Commande
+                                #{{ conversation.id_commande }}
+
+                            </div>
+
+
+                            <div
+                                class="conversation-date"
+                            >
+
+                                {% if conversation.date_dernier_message %}
+
+                                    {{ conversation.date_dernier_message[:16] }}
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- ---------------------------------
+                             APERÇU DU DERNIER MESSAGE
+                             --------------------------------- -->
+
+                        <div
+                            class="conversation-apercu"
+                            title="{{ conversation.dernier_message }}"
+                        >
+
+                            {% if conversation.dernier_message.startswith("🎤") %}
+
+                                🎤
+
+                            {% endif %}
+
+                            <span>
+
+                                {{ conversation.dernier_message }}
+
+                            </span>
+
+                        </div>
+
+
+
+                        <!-- ---------------------------------
+                             EXPÉDITEUR
+                             --------------------------------- -->
+
+                        {% if conversation.prenom_expediteur
+                            or conversation.nom_expediteur %}
+
+                            <div
+                                class="conversation-expediteur"
+                            >
+
+                                Dernier message :
+
+                                {{ conversation.prenom_expediteur or "" }}
+                                {{ conversation.nom_expediteur or "" }}
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+
+                    <!-- =====================================
+                         PARTIE DROITE
+                         ===================================== -->
+
+                    <div class="conversation-droite">
+
+
+                        <!-- ---------------------------------
+                             BADGE NON LU
+                             --------------------------------- -->
+
+                        {% if conversation.nombre_non_lus > 0 %}
+
+                            <span
+                                class="badge-non-lu"
+                                title="Messages non lus"
+                            >
+
+                                {{ conversation.nombre_non_lus }}
+
+                            </span>
+
+                        {% endif %}
+
+
+
+                        <!-- ---------------------------------
+                             STATUT COMMANDE
+                             --------------------------------- -->
+
+                        {% if conversation.statut_commande %}
+
+                            {% set statut =
+                                conversation.statut_commande
+                                | lower
+                            %}
+
+
+                            <span
+                                class="
+                                    statut-commande
+
+                                    {% if statut == 'en_attente' %}
+                                        statut-en-attente
+
+                                    {% elif statut == 'confirmee'
+                                        or statut == 'confirmée' %}
+
+                                        statut-confirmee
+
+                                    {% elif statut == 'livree'
+                                        or statut == 'livrée' %}
+
+                                        statut-livree
+
+                                    {% elif statut == 'annulee'
+                                        or statut == 'annulée' %}
+
+                                        statut-annulee
+
+                                    {% endif %}
+                                "
+                            >
+
+                                {{ conversation.statut_commande }}
+
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                </a>
+
+            {% endfor %}
+
+
+        {% else %}
+
+
+            <!-- =================================================
+                 AUCUNE CONVERSATION
+                 ================================================= -->
+
+            <div class="aucune-conversation">
+
+                <div
+                    class="aucune-conversation-icone"
+                >
+                    💬
+                </div>
+
+
+                <h3>
+                    Aucune conversation
+                </h3>
+
+
+                <p>
+                    Vous n'avez encore aucun message
+                    associé à vos commandes.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+
+        <!-- =====================================================
+             AUCUN RÉSULTAT DE RECHERCHE
+             ===================================================== -->
+
+        {% if conversations %}
+
+            <div
+                id="aucunResultat"
+                class="aucun-resultat"
+            >
+
+                🔎
+
+                <br><br>
+
+                Aucune conversation ne correspond
+                à votre recherche.
+
+            </div>
+
+        {% endif %}
+
+
+    </div>
+
+
+
+    <!-- =====================================================
+         PIED
+         ===================================================== -->
+
+    {% if conversations %}
+
+        <div class="conversations-footer">
+
+            {{ conversations|length }}
+
+            conversation
+            {% if conversations|length > 1 %}
+                s
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+</div>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT
+     ========================================================= -->
+
+<script>
+
+/* =========================================================
+   RECHERCHE DES CONVERSATIONS
+   ========================================================= */
+
+const rechercheConversation =
+    document.getElementById(
+        "rechercheConversation"
+    );
+
+
+const conversations =
+    document.querySelectorAll(
+        ".conversation-item"
+    );
+
+
+const aucunResultat =
+    document.getElementById(
+        "aucunResultat"
+    );
+
+
+/*
+ * Si la zone de recherche existe,
+ * on active la recherche instantanée.
+ */
+
+if (rechercheConversation) {
+
+    rechercheConversation.addEventListener(
+        "input",
+        function() {
+
+            const recherche =
+                this.value
+                    .toLowerCase()
+                    .trim();
+
+
+            let nombreVisible = 0;
+
+
+            conversations.forEach(
+                function(conversation) {
+
+                    const texte =
+                        (
+                            conversation.dataset.recherche
+                            || ""
+                        ).toLowerCase();
+
+
+                    /*
+                     * Recherche dans :
+                     *
+                     * - numéro commande
+                     * - dernier message
+                     * - nom
+                     * - prénom
+                     */
+
+                    if (
+                        recherche === ""
+                        ||
+                        texte.includes(recherche)
+                    ) {
+
+                        conversation.style.display =
+                            "flex";
+
+                        nombreVisible++;
+
+                    } else {
+
+                        conversation.style.display =
+                            "none";
+                    }
+
+                }
+            );
+
+
+            /*
+             * Afficher "aucun résultat"
+             * si nécessaire.
+             */
+
+            if (aucunResultat) {
+
+                if (nombreVisible === 0) {
+
+                    aucunResultat.style.display =
+                        "block";
+
+                } else {
+
+                    aucunResultat.style.display =
+                        "none";
+                }
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ACTUALISER LE BADGE GLOBAL
+   ========================================================= */
+
+/*
+ * Lorsque l'utilisateur revient sur cette page,
+ * on recharge le nombre de messages non lus.
+ */
+
+async function actualiserBadgeGlobal() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/messages/non-lus/count",
+                {
+                    method: "GET",
+
+                    headers: {
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+                    }
+                }
+            );
+
+
+        if (!response.ok) {
+
+            return;
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const nombre =
+            Number(
+                data.nombre_non_lus || 0
+            );
+
+
+        const badge =
+            document.getElementById(
+                "badgeMessagesNonLus"
+            );
+
+
+        /*
+         * Le badge se trouve normalement
+         * dans base.html.
+         */
+
+        if (!badge) {
+
+            return;
+        }
+
+
+        if (nombre <= 0) {
+
+            badge.style.display =
+                "none";
+
+            return;
+        }
+
+
+        badge.textContent =
+            nombre > 99
+                ? "99+"
+                : nombre;
+
+
+        badge.style.display =
+            "inline-flex";
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Erreur badge global :",
+            error
+        );
+
+    }
+
+}
+
+
+/*
+ * Première actualisation.
+ */
+
+actualiserBadgeGlobal();
+
+
+/*
+ * Actualisation toutes les 5 secondes.
+ */
+
+setInterval(
+    actualiserBadgeGlobal,
+    5000
+);
+
+</script>
+
+{% endblock %}

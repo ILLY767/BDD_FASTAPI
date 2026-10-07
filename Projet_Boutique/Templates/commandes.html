@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Commandes - Gestion de Boutique
+
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    .commandes-container {
+        max-width: 1100px;
+        margin: 30px auto;
+    }
+
+
+    .titre-page {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+
+    .titre-page h2 {
+        margin: 0;
+        font-size: 28px;
+    }
+
+
+    .card {
+        background: white;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-radius: 12px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    }
+
+
+    .card h3 {
+        margin-top: 0;
+    }
+
+
+    /* ================================================
+       FORMULAIRE
+       ================================================ */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 15px;
+        align-items: end;
+    }
+
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .form-group label {
+        margin-bottom: 7px;
+        font-weight: bold;
+    }
+
+
+    .form-group select,
+    .form-group input {
+        padding: 11px;
+        border: 1px solid #ccc;
+        border-radius: 7px;
+        font-size: 15px;
+    }
+
+
+    .btn-ajouter {
+        background: #198754;
+        color: white;
+        border: none;
+        border-radius: 7px;
+        padding: 12px 20px;
+        cursor: pointer;
+    }
+
+
+    /* ================================================
+       TABLEAU
+       ================================================ */
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+
+    th {
+        background: #343a40;
+        color: white;
+        padding: 14px;
+        text-align: left;
+    }
+
+
+    td {
+        padding: 13px;
+        border-bottom: 1px solid #ddd;
+    }
+
+
+    tr:hover {
+        background: #f8f9fa;
+    }
+
+
+    .btn-voir {
+        background: #0d6efd;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+    }
+
+
+    .aucun {
+        text-align: center;
+        padding: 25px;
+        color: #777;
+    }
+
+</style>
+
+
+<div class="commandes-container">
+
+
+    <!-- =================================================
+         TITRE
+         ================================================= -->
+
+    <div class="titre-page">
+
+        <h2>🛒 Gestion des commandes</h2>
+
+        <strong>
+            {{ commandes|length }} commande(s)
+        </strong>
+
+    </div>
+
+
+    <!-- =================================================
+         CRÉER UNE COMMANDE
+         ================================================= -->
+
+    <div class="card">
+
+        <h3>➕ Nouvelle commande</h3>
+
+
+        <form method="POST"
+              action="{{ url_for('ajouter_commande') }}">
+
+
+            <div class="form-grid">
+
+
+                <div class="form-group">
+
+                    <label>
+                        Client
+                    </label>
+
+
+                    <select
+                        name="id_client"
+                        required
+                    >
+
+                        <option value="">
+                            -- Sélectionner un client --
+                        </option>
+
+
+                        {% for client in clients %}
+
+                        <option
+                            value="{{ client.id_client }}"
+                        >
+
+                            {{ client.nom }}
+                            {{ client.prenom }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Date de commande
+                    </label>
+
+                    <input
+                        type="date"
+                        name="date_commande"
+                        value="{{ date_aujourdhui }}"
+                        required
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn-ajouter"
+                >
+
+                    ➕ Créer
+
+                </button>
+
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- =================================================
+         LISTE DES COMMANDES
+         ================================================= -->
+
+    <div class="card">
+
+        <h3>📋 Liste des commandes</h3>
+
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+
+                    <th>Client</th>
+
+                    <th>Date</th>
+
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+
+                {% for commande in commandes %}
+
+                <tr>
+
+
+                    <td>
+
+                        <strong>
+                            #{{ commande.id_commande }}
+                        </strong>
+
+                    </td>
+
+
+                    <td>
+
+                        {% for client in clients %}
+
+                            {% if client.id_client
+                                  == commande.CLIENT_id_client %}
+
+                                {{ client.nom }}
+                                {{ client.prenom }}
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </td>
+
+
+                    <td>
+                        {{ commande.date_commande }}
+                    </td>
+
+
+                    <td>
+
+                        <a
+                            href="{{ url_for(
+                                'detail_commande',
+                                id_commande=commande['id_commande']
+                            ) }}"
+                            class="btn-voir"
+                        >
+
+                            👁️ Voir
+
+                        </a>
+
+                    </td>
+
+
+                </tr>
+
+
+                {% else %}
+
+                <tr>
+
+                    <td
+                        colspan="4"
+                        class="aucun"
+                    >
+
+                        Aucune commande trouvée.
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+</div>
+
+{% endblock %}

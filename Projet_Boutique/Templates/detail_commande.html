@@ -1,0 +1,1579 @@
+{% extends "base.html" %}
+
+{% block title %}
+Commande #{{ commande.id_commande }}
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    /* =========================================================
+       CONTENEUR PRINCIPAL
+       ========================================================= */
+
+    .detail-container {
+
+        max-width: 1150px;
+
+        margin: 30px auto;
+
+        padding: 0 15px;
+    }
+
+
+    /* =========================================================
+       CARTES
+       ========================================================= */
+
+    .card {
+
+        background: white;
+
+        padding: 25px;
+
+        margin-bottom: 25px;
+
+        border-radius: 16px;
+
+        box-shadow:
+            0 6px 25px rgba(0, 0, 0, 0.07);
+
+        border: 1px solid #edf0f3;
+    }
+
+
+    .card h2,
+    .card h3,
+    .card h4 {
+
+        margin-top: 0;
+    }
+
+
+    /* =========================================================
+       BOUTON RETOUR
+       ========================================================= */
+
+    .btn-retour {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 8px;
+
+        background: #212529;
+
+        color: white;
+
+        padding: 11px 17px;
+
+        border-radius: 9px;
+
+        text-decoration: none;
+
+        font-weight: 600;
+
+        transition: 0.2s;
+    }
+
+
+    .btn-retour:hover {
+
+        background: #000;
+
+        transform: translateY(-1px);
+    }
+
+
+    /* =========================================================
+       EN-TÊTE COMMANDE
+       ========================================================= */
+
+    .commande-titre {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        gap: 20px;
+
+        margin-bottom: 25px;
+    }
+
+
+    .commande-titre h2 {
+
+        margin: 0;
+
+        font-size: 25px;
+    }
+
+
+    .commande-sous-titre {
+
+        margin-top: 6px;
+
+        color: #6c757d;
+
+        font-size: 14px;
+    }
+
+
+    /* =========================================================
+       INFORMATIONS
+       ========================================================= */
+
+    .info {
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(3, 1fr);
+
+        gap: 18px;
+    }
+
+
+    .info-box {
+
+        background: #f8f9fa;
+
+        padding: 18px;
+
+        border-radius: 12px;
+
+        border: 1px solid #edf0f3;
+    }
+
+
+    .info-label {
+
+        display: block;
+
+        margin-bottom: 8px;
+
+        color: #6c757d;
+
+        font-size: 13px;
+
+        font-weight: 600;
+
+        text-transform: uppercase;
+    }
+
+
+    .info-valeur {
+
+        font-size: 15px;
+
+        font-weight: 600;
+
+        color: #212529;
+    }
+
+
+    /* =========================================================
+       STATUTS
+       ========================================================= */
+
+    .statut-badge {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        padding: 7px 13px;
+
+        border-radius: 20px;
+
+        font-weight: bold;
+
+        font-size: 13px;
+    }
+
+
+    .statut-en_attente {
+
+        background: #fff3cd;
+
+        color: #856404;
+    }
+
+
+    .statut-confirmee {
+
+        background: #cff4fc;
+
+        color: #055160;
+    }
+
+
+    .statut-en_preparation {
+
+        background: #cfe2ff;
+
+        color: #084298;
+    }
+
+
+    .statut-prete {
+
+        background: #d1e7dd;
+
+        color: #0f5132;
+    }
+
+
+    .statut-livree {
+
+        background: #198754;
+
+        color: white;
+    }
+
+
+    .statut-annulee {
+
+        background: #f8d7da;
+
+        color: #842029;
+    }
+
+
+    /* =========================================================
+       FORMULAIRES
+       ========================================================= */
+
+    select,
+    input[type="number"],
+    input[type="date"],
+    textarea {
+
+        padding: 10px 12px;
+
+        border: 1px solid #ced4da;
+
+        border-radius: 8px;
+
+        margin: 5px 10px 10px 0;
+
+        font-family: inherit;
+
+        font-size: 14px;
+
+        background: white;
+    }
+
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+
+        outline: none;
+
+        border-color: #86b7fe;
+
+        box-shadow:
+            0 0 0 3px rgba(
+                13,
+                110,
+                253,
+                0.12
+            );
+    }
+
+
+    textarea {
+
+        width: 100%;
+
+        min-height: 100px;
+
+        resize: vertical;
+
+        box-sizing: border-box;
+    }
+
+
+    /* =========================================================
+       BOUTONS
+       ========================================================= */
+
+    button {
+
+        padding: 9px 14px;
+
+        border: none;
+
+        border-radius: 8px;
+
+        cursor: pointer;
+
+        font-family: inherit;
+
+        font-weight: 600;
+
+        transition: 0.2s;
+    }
+
+
+    button:hover {
+
+        transform: translateY(-1px);
+    }
+
+
+    .btn-primary {
+
+        background: #0d6efd;
+
+        color: white;
+    }
+
+
+    .btn-primary:hover {
+
+        background: #0b5ed7;
+    }
+
+
+    .btn-success {
+
+        background: #198754;
+
+        color: white;
+    }
+
+
+    .btn-success:hover {
+
+        background: #157347;
+    }
+
+
+    .btn-danger {
+
+        background: #dc3545;
+
+        color: white;
+    }
+
+
+    .btn-danger:hover {
+
+        background: #bb2d3b;
+    }
+
+
+    .btn-secondary {
+
+        background: #6c757d;
+
+        color: white;
+    }
+
+
+    .btn-warning {
+
+        background: #ffc107;
+
+        color: #212529;
+    }
+
+
+    /* =========================================================
+       TABLE PRODUITS
+       ========================================================= */
+
+    .table-container {
+
+        width: 100%;
+
+        overflow-x: auto;
+    }
+
+
+    table {
+
+        width: 100%;
+
+        border-collapse: collapse;
+
+        min-width: 800px;
+    }
+
+
+    th {
+
+        background: #212529;
+
+        color: white;
+
+        padding: 13px;
+
+        text-align: left;
+
+        font-size: 13px;
+    }
+
+
+    td {
+
+        padding: 13px;
+
+        border-bottom: 1px solid #edf0f3;
+
+        vertical-align: middle;
+
+        font-size: 14px;
+    }
+
+
+    tbody tr:hover {
+
+        background: #f8f9fa;
+    }
+
+
+    /* =========================================================
+       IMAGE PRODUIT
+       ========================================================= */
+
+    .produit-image {
+
+        width: 65px;
+
+        height: 65px;
+
+        object-fit: cover;
+
+        border-radius: 9px;
+
+        border: 1px solid #ddd;
+
+        display: block;
+    }
+
+
+    .image-placeholder {
+
+        width: 65px;
+
+        height: 65px;
+
+        background: #f1f3f5;
+
+        border-radius: 9px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 25px;
+
+        color: #777;
+
+        border: 1px solid #ddd;
+    }
+
+
+    /* =========================================================
+       ACTIONS
+       ========================================================= */
+
+    .actions {
+
+        display: flex;
+
+        gap: 6px;
+
+        align-items: center;
+
+        flex-wrap: wrap;
+    }
+
+
+    .actions form {
+
+        display: inline;
+    }
+
+
+    /* =========================================================
+       TOTAL
+       ========================================================= */
+
+    .total {
+
+        display: flex;
+
+        justify-content: flex-end;
+
+        align-items: center;
+
+        gap: 10px;
+
+        margin-top: 20px;
+
+        padding-top: 20px;
+
+        border-top: 1px solid #edf0f3;
+
+        font-size: 22px;
+
+        color: #198754;
+    }
+
+
+    /* =========================================================
+       MESSAGERIE
+       ========================================================= */
+
+    .messagerie-card {
+
+        background:
+            linear-gradient(
+                135deg,
+                #f8fff9,
+                #ffffff
+            );
+
+        border: 1px solid #d8f3e2;
+    }
+
+
+    .messagerie-entete {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        gap: 20px;
+
+        margin-bottom: 15px;
+    }
+
+
+    .messagerie-titre {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 12px;
+    }
+
+
+    .messagerie-icone {
+
+        width: 48px;
+
+        height: 48px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        background: #d1e7dd;
+
+        color: #198754;
+
+        border-radius: 13px;
+
+        font-size: 23px;
+    }
+
+
+    .messagerie-titre h3 {
+
+        margin: 0;
+
+        font-size: 19px;
+    }
+
+
+    .messagerie-description {
+
+        margin: 4px 0 0;
+
+        color: #6c757d;
+
+        font-size: 13px;
+    }
+
+
+    .btn-messagerie {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 8px;
+
+        padding: 11px 18px;
+
+        background: #198754;
+
+        color: white;
+
+        text-decoration: none;
+
+        border-radius: 9px;
+
+        font-weight: 700;
+
+        transition: 0.2s;
+
+        white-space: nowrap;
+    }
+
+
+    .btn-messagerie:hover {
+
+        background: #157347;
+
+        transform: translateY(-1px);
+    }
+
+
+    .messagerie-info {
+
+        margin-top: 15px;
+
+        padding: 13px 15px;
+
+        background: #f8f9fa;
+
+        border-radius: 9px;
+
+        color: #6c757d;
+
+        font-size: 13px;
+    }
+
+
+    /* =========================================================
+       ZONE DANGEREUSE
+       ========================================================= */
+
+    .zone-dangereuse {
+
+        border: 1px solid #f5c2c7;
+
+        background: #fff8f8;
+    }
+
+
+    .zone-dangereuse h3 {
+
+        color: #842029;
+    }
+
+
+    .zone-description {
+
+        color: #6c757d;
+
+        font-size: 13px;
+
+        margin-bottom: 15px;
+    }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 800px) {
+
+        .info {
+
+            grid-template-columns: 1fr;
+        }
+
+
+        .commande-titre {
+
+            flex-direction: column;
+
+            align-items: flex-start;
+        }
+
+
+        .messagerie-entete {
+
+            flex-direction: column;
+
+            align-items: flex-start;
+        }
+
+
+        .btn-messagerie {
+
+            width: 100%;
+
+            justify-content: center;
+        }
+    }
+
+
+    @media (max-width: 600px) {
+
+        .detail-container {
+
+            margin-top: 15px;
+        }
+
+
+        .card {
+
+            padding: 18px;
+
+            border-radius: 12px;
+        }
+
+
+        .commande-titre h2 {
+
+            font-size: 21px;
+        }
+
+
+        .total {
+
+            justify-content: flex-start;
+
+            flex-direction: column;
+
+            align-items: flex-start;
+
+            font-size: 19px;
+        }
+
+    }
+
+</style>
+
+
+<div class="detail-container">
+
+
+    <!-- =========================================================
+         RETOUR
+         ========================================================= -->
+
+    <a
+        href="{{ url_for('commandes') }}"
+        class="btn-retour"
+    >
+        ← Retour aux commandes
+    </a>
+
+
+    <br>
+    <br>
+
+
+    <!-- =========================================================
+         INFORMATIONS DE LA COMMANDE
+         ========================================================= -->
+
+    <div class="card">
+
+
+        <div class="commande-titre">
+
+            <div>
+
+                <h2>
+                    🛒 Commande #{{ commande.id_commande }}
+                </h2>
+
+                <div class="commande-sous-titre">
+                    Informations générales de la commande
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="info">
+
+
+            <!-- CLIENT -->
+
+            <div class="info-box">
+
+                <span class="info-label">
+                    Client
+                </span>
+
+                <div class="info-valeur">
+
+                    {% for client in clients %}
+
+                        {% if client.id_client == commande.CLIENT_id_client %}
+
+                            {{ client.nom }}
+                            {{ client.prenom }}
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- DATE -->
+
+            <div class="info-box">
+
+                <span class="info-label">
+                    Date de commande
+                </span>
+
+                <div class="info-valeur">
+
+                    {{ commande.date_commande }}
+
+                </div>
+
+            </div>
+
+
+            <!-- STATUT -->
+
+            <div class="info-box">
+
+                <span class="info-label">
+                    Statut actuel
+                </span>
+
+
+                {% set statut_affichage = {
+
+                    "en_attente": "En attente",
+
+                    "confirmee": "Confirmée",
+
+                    "en_preparation": "En préparation",
+
+                    "prete": "Prête",
+
+                    "livree": "Livrée",
+
+                    "annulee": "Annulée"
+
+                } %}
+
+
+                <span
+                    class="statut-badge statut-{{ commande.statut }}"
+                >
+
+                    {{ statut_affichage.get(
+                        commande.statut,
+                        commande.statut
+                    ) }}
+
+                </span>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         MODIFIER LA COMMANDE
+         ========================================================= -->
+
+    <div class="card">
+
+
+        <h3>
+            ✏️ Modifier la commande
+        </h3>
+
+
+        <form
+            action="{{ url_for(
+                'modifier_commande',
+                id_commande=commande.id_commande
+            ) }}"
+            method="POST"
+        >
+
+
+            <label>
+                Client :
+            </label>
+
+
+            <select
+                name="id_client"
+                required
+            >
+
+                {% for client in clients %}
+
+                    <option
+                        value="{{ client.id_client }}"
+                        {% if client.id_client == commande.CLIENT_id_client %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ client.nom }}
+                        {{ client.prenom }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <label>
+                Date :
+            </label>
+
+
+            <input
+                type="date"
+                name="date_commande"
+                value="{{ commande.date_commande }}"
+                required
+            >
+
+
+            <button
+                type="submit"
+                class="btn-warning"
+            >
+
+                💾 Enregistrer
+
+            </button>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- =========================================================
+         MODIFIER LE STATUT
+         ========================================================= -->
+
+    <div class="card">
+
+
+        <h3>
+            🔄 Modifier le statut de la commande
+        </h3>
+
+
+        <form
+            action="{{ url_for(
+                'modifier_statut_commande',
+                id_commande=commande.id_commande
+            ) }}"
+            method="POST"
+        >
+
+
+            <label>
+                Nouveau statut :
+            </label>
+
+
+            <select
+                name="nouveau_statut"
+                required
+            >
+
+
+                <option
+                    value="en_attente"
+                    {% if commande.statut == "en_attente" %}
+                        selected
+                    {% endif %}
+                >
+                    En attente
+                </option>
+
+
+                <option
+                    value="confirmee"
+                    {% if commande.statut == "confirmee" %}
+                        selected
+                    {% endif %}
+                >
+                    Confirmée
+                </option>
+
+
+                <option
+                    value="en_preparation"
+                    {% if commande.statut == "en_preparation" %}
+                        selected
+                    {% endif %}
+                >
+                    En préparation
+                </option>
+
+
+                <option
+                    value="prete"
+                    {% if commande.statut == "prete" %}
+                        selected
+                    {% endif %}
+                >
+                    Prête
+                </option>
+
+
+                <option
+                    value="livree"
+                    {% if commande.statut == "livree" %}
+                        selected
+                    {% endif %}
+                >
+                    Livrée
+                </option>
+
+
+                <option
+                    value="annulee"
+                    {% if commande.statut == "annulee" %}
+                        selected
+                    {% endif %}
+                >
+                    Annulée
+                </option>
+
+
+            </select>
+
+
+            <button
+                type="submit"
+                class="btn-primary"
+            >
+
+                🔄 Modifier le statut
+
+            </button>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- =========================================================
+         AJOUTER UN PRODUIT
+         ========================================================= -->
+
+    <div class="card">
+
+
+        <h3>
+            ➕ Ajouter un produit
+        </h3>
+
+
+        <form
+            action="{{ url_for(
+                'ajouter_produit_commande',
+                id_commande=commande.id_commande
+            ) }}"
+            method="POST"
+        >
+
+
+            <label>
+                Produit :
+            </label>
+
+
+            <select
+                name="id_produit"
+                required
+            >
+
+                <option value="">
+                    -- Sélectionner un produit --
+                </option>
+
+
+                {% for produit in liste_produits %}
+
+                    <option
+                        value="{{ produit.id_produit }}"
+                    >
+
+                        {{ produit.designation }}
+
+                        —
+
+                        {{ "{:,.0f}".format(
+                            produit.prix_unitaire
+                        ) }}
+
+                        FCFA
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <label>
+                Quantité :
+            </label>
+
+
+            <input
+                type="number"
+                name="quantite"
+                min="1"
+                value="1"
+                required
+            >
+
+
+            <button
+                type="submit"
+                class="btn-success"
+            >
+
+                ➕ Ajouter
+
+            </button>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- =========================================================
+         PRODUITS DE LA COMMANDE
+         ========================================================= -->
+
+    <div class="card">
+
+
+        <h3>
+            📦 Produits de la commande
+        </h3>
+
+
+        <div class="table-container">
+
+
+            <table>
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Image
+                        </th>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            Désignation
+                        </th>
+
+                        <th>
+                            Prix unitaire
+                        </th>
+
+                        <th>
+                            Quantité
+                        </th>
+
+                        <th>
+                            Montant
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for produit in produits %}
+
+
+                    <tr>
+
+
+                        <!-- IMAGE -->
+
+                        <td>
+
+                            {% if produit.image %}
+
+                                <img
+                                    src="{{ url_for(
+                                        'static',
+                                        filename='images/' ~ produit.image
+                                    ) }}"
+                                    alt="{{ produit.designation }}"
+                                    class="produit-image"
+                                >
+
+                            {% else %}
+
+                                <div class="image-placeholder">
+                                    📦
+                                </div>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ID -->
+
+                        <td>
+
+                            #{{ produit.id_produit }}
+
+                        </td>
+
+
+                        <!-- DÉSIGNATION -->
+
+                        <td>
+
+                            <strong>
+                                {{ produit.designation }}
+                            </strong>
+
+                        </td>
+
+
+                        <!-- PRIX -->
+
+                        <td>
+
+                            {{ "{:,.0f}".format(
+                                produit.prix_unitaire
+                            ) }}
+
+                            FCFA
+
+                        </td>
+
+
+                        <!-- QUANTITÉ -->
+
+                        <td>
+
+
+                            <form
+                                action="{{ url_for(
+                                    'modifier_quantite_produit',
+                                    id_commande=commande.id_commande,
+                                    id_produit=produit.id_produit
+                                ) }}"
+                                method="POST"
+                            >
+
+
+                                <input
+                                    type="number"
+                                    name="quantite"
+                                    value="{{ produit.quantite }}"
+                                    min="1"
+                                    style="width:70px;"
+                                    required
+                                >
+
+
+                                <button
+                                    type="submit"
+                                    class="btn-primary"
+                                >
+
+                                    💾
+
+                                </button>
+
+
+                            </form>
+
+
+                        </td>
+
+
+                        <!-- MONTANT -->
+
+                        <td>
+
+                            <strong>
+
+                                {{ "{:,.0f}".format(
+                                    produit.montant
+                                ) }}
+
+                                FCFA
+
+                            </strong>
+
+                        </td>
+
+
+                        <!-- ACTIONS -->
+
+                        <td>
+
+
+                            <form
+                                action="{{ url_for(
+                                    'supprimer_produit_commande',
+                                    id_commande=commande.id_commande,
+                                    id_produit=produit.id_produit
+                                ) }}"
+                                method="POST"
+                                onsubmit="
+                                    return confirm(
+                                        'Supprimer ce produit de la commande ?'
+                                    );
+                                "
+                            >
+
+                                <button
+                                    type="submit"
+                                    class="btn-danger"
+                                >
+
+                                    🗑️ Supprimer
+
+                                </button>
+
+                            </form>
+
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% else %}
+
+
+                    <tr>
+
+                        <td
+                            colspan="7"
+                            class="aucun"
+                        >
+
+                            Aucun produit dans cette commande.
+
+                        </td>
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+        <!-- =====================================================
+             TOTAL
+             ===================================================== -->
+
+        {% if produits %}
+
+            <div class="total">
+
+                <span>
+                    Total de la commande :
+                </span>
+
+                <strong>
+
+                    {{ "{:,.0f}".format(
+                        total_commande
+                    ) }}
+
+                    FCFA
+
+                </strong>
+
+            </div>
+
+        {% endif %}
+
+
+    </div>
+
+
+    <!-- =========================================================
+         NOUVELLE MESSAGERIE
+         ========================================================= -->
+
+    <div class="card messagerie-card">
+
+
+        <div class="messagerie-entete">
+
+
+            <div class="messagerie-titre">
+
+
+                <div class="messagerie-icone">
+                    💬
+                </div>
+
+
+                <div>
+
+                    <h3>
+                        Messagerie de la commande
+                    </h3>
+
+                    <p class="messagerie-description">
+
+                        Échangez directement avec le client concernant
+                        cette commande.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+            <a
+                href="{{ url_for(
+                    'messages_commande',
+                    id_commande=commande.id_commande
+                ) }}"
+                class="btn-messagerie"
+            >
+
+                💬
+
+                Ouvrir la messagerie
+
+            </a>
+
+
+        </div>
+
+
+        <div class="messagerie-info">
+
+            🔒
+
+            La conversation est associée uniquement à la
+            commande #{{ commande.id_commande }}.
+
+            Vous pourrez consulter les messages, répondre au client,
+            écouter les messages vocaux et gérer leur statut de lecture.
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =========================================================
+         ZONE DANGEREUSE
+         ========================================================= -->
+
+    <div class="card zone-dangereuse">
+
+
+        <h3>
+            ⚠️ Zone dangereuse
+        </h3>
+
+
+        <p class="zone-description">
+
+            La suppression de cette commande est une opération
+            importante. Vérifiez les informations avant de continuer.
+
+        </p>
+
+
+        <form
+            action="{{ url_for(
+                'supprimer_commande',
+                id_commande=commande.id_commande
+            ) }}"
+            method="POST"
+            onsubmit="
+                return confirm(
+                    'Êtes-vous sûr de vouloir supprimer cette commande ?'
+                );
+            "
+        >
+
+
+            <button
+                type="submit"
+                class="btn-danger"
+            >
+
+                🗑️ Supprimer la commande
+
+            </button>
+
+
+        </form>
+
+
+    </div>
+
+
+</div>
+
+{% endblock %}
