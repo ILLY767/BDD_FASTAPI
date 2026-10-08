@@ -1,6 +1,5 @@
 
 import os
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -8,20 +7,27 @@ from sqlalchemy.orm import sessionmaker
 # =========================================================
 # CONFIGURATION DE LA BASE DE DONNÉES
 # =========================================================
+#
+# LOCAL :
+#   SQL Server
+#
+# RENDER :
+#   PostgreSQL via DATABASE_URL
+#
+# La base existante n'est ni recréée ni migrée ici.
+# =========================================================
 
-# En ligne, Render fournit DATABASE_URL.
-# En local, si cette variable n'existe pas, on utilise SQL Server.
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 # =========================================================
-# CONNEXION LOCALE OU EN LIGNE
+# 1. CONFIGURATION POSTGRESQL (RENDER)
 # =========================================================
 
 if DATABASE_URL:
 
-    # Adaptation de l'URL PostgreSQL pour SQLAlchemy
+    # Compatibilité avec les anciennes URL PostgreSQL.
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace(
             "postgres://",
@@ -36,9 +42,22 @@ if DATABASE_URL:
             1
         )
 
+    # Vérification du type de base configuré.
+    if not DATABASE_URL.startswith(
+        "postgresql+psycopg2://"
+    ):
+        raise ValueError(
+            "DATABASE_URL doit contenir une URL PostgreSQL "
+            "valide pour l'environnement Render."
+        )
+
+
+# =========================================================
+# 2. CONFIGURATION SQL SERVER (LOCAL)
+# =========================================================
+
 else:
 
-    # Configuration SQL Server utilisée en local
     serveur = r"DESKTOP-9I8V1RP\BASE_APPLI"
     base = "Base de boutique"
 
@@ -52,37 +71,39 @@ else:
 
 
 # =========================================================
-# MOTEUR SQLALCHEMY
+# 3. CRÉATION DU MOTEUR SQLALCHEMY
 # =========================================================
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True
+    pool_pre_ping=True,
 )
 
 
 # =========================================================
-# FABRIQUE DE SESSIONS
+# 4. FABRIQUE DE SESSIONS
 # =========================================================
 
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
 
 # =========================================================
-# GESTION DES SESSIONS
+# 5. DÉPENDANCE FASTAPI
 # =========================================================
 
 def get_db():
-
+    """
+    Fournit une session SQLAlchemy à une route FastAPI,
+    puis la ferme systématiquement.
+    """
     db = SessionLocal()
 
     try:
         yield db
-
     finally:
         db.close()
 

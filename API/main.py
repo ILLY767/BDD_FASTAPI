@@ -2,9 +2,15 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.staticfiles import StaticFiles
+from urllib.parse import urlparse
 
 from sqlalchemy import func
 from pydantic import BaseModel
+
+
+import cloudinary
+import cloudinary.uploader
+
 
 
 import os
@@ -165,15 +171,31 @@ os.makedirs(
     exist_ok=True
 )
 
+
+
+# =========================================================
+# CONFIGURATION CLOUDINARY POUR LE STOCKAGE EN LIGNE
+# =========================================================
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+
+
+
 # =========================================================
 # DOSSIER POUR LES FICHIERS STATIQUES
 # =========================================================
 
-os.makedirs("static/audio", exist_ok=True)
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
 app.mount(
     "/static",
-    StaticFiles(directory="static"),
+    StaticFiles(directory=STATIC_DIR),
     name="static"
 )
 
@@ -181,11 +203,25 @@ app.mount(
 # CONFIGURATION CORS
 # =========================================================
 
+# En local, le front tourne sur 127.0.0.1:5000.
+# En production, définir FRONTEND_URL dans les variables Render.
+_origines_autorisees = {
+    "http://127.0.0.1:5000",
+    "http://localhost:5000",
+}
+_origine_production = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
+if _origine_production:
+    _origines_autorisees.add(_origine_production)
+_origines_extra = os.getenv("CORS_ORIGINS", "")
+_origines_autorisees.update(
+    origine.strip().rstrip("/")
+    for origine in _origines_extra.split(",")
+    if origine.strip()
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5000"
-    ],
+    allow_origins=sorted(_origines_autorisees),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -308,29 +344,30 @@ def modifier_client(
 @app.delete("/clients/{id_client}")
 def supprimer_client(
     id_client: int,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur")
-    ),
-    db: Session = Depends(get_db)
+    utilisateur=Depends(role_autorise("admin", "vendeur")),
+    db: Session = Depends(get_db),
 ):
-
-    client = db.query(Client).filter(
-        Client.id_client == id_client
-    ).first()
-
+    client = db.query(Client).filter(Client.id_client == id_client).first()
     if client is None:
+        raise HTTPException(status_code=404, detail="Client introuvable.")
 
-        return {
-            "message": "Client introuvable"
-        }
+    commande_existante = db.query(Commande).filter(
+        Commande.CLIENT_id_client == id_client
+    ).first()
+    if commande_existante is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Ce client possède un historique de commandes et ne peut pas être supprimé.",
+        )
 
-    db.delete(client)
-
-    db.commit()
-
-    return {
-        "message": f"Client {id_client} supprimé avec succès"
-    }
+    try:
+        db.delete(client)
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur suppression client :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible de supprimer le client.")
+    return {"message": f"Client {id_client} supprimé avec succès."}
 
 
 # =========================================================
@@ -350,6 +387,7 @@ def liste_produits(
     return produits
 
 
+
 # =========================================================
 # ROUTE : AJOUTER UN PRODUIT
 # =========================================================
@@ -362,9 +400,47 @@ def ajouter_produit(
     ),
     db: Session = Depends(get_db)
 ):
+    """
+    Ajoute un produit dans la boutique.
+
+    Accessible à l'administrateur et au vendeur.
+    L'image peut être une URL, notamment une URL Cloudinary.
+    """
+
+    # -----------------------------------------------------
+    # 1. VALIDATION DES DONNÉES
+    # -----------------------------------------------------
+
+    designation = (
+        produit.designation.strip()
+        if produit.designation
+        else ""
+    )
+
+    if not designation:
+        raise HTTPException(
+            status_code=422,
+            detail="La désignation du produit est obligatoire."
+        )
+
+    if produit.prix_unitaire is None or produit.prix_unitaire < 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Le prix doit être positif ou nul."
+        )
+
+    if produit.stock is None or produit.stock < 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Le stock doit être positif ou nul."
+        )
+
+    # -----------------------------------------------------
+    # 2. PRÉPARER LE PRODUIT
+    # -----------------------------------------------------
 
     nouveau_produit = Produit(
-        designation=produit.designation,
+        designation=designation,
         prix_unitaire=produit.prix_unitaire,
         description=produit.description,
         image=produit.image,
@@ -373,13 +449,35 @@ def ajouter_produit(
         actif=produit.actif
     )
 
-    db.add(nouveau_produit)
+    # -----------------------------------------------------
+    # 3. ENREGISTRER DANS LA BASE
+    # -----------------------------------------------------
 
-    db.commit()
+    try:
+        db.add(nouveau_produit)
+        db.commit()
+        db.refresh(nouveau_produit)
 
-    db.refresh(nouveau_produit)
+    except Exception as erreur:
+        db.rollback()
+
+        print(
+            "Erreur lors de l'ajout du produit :",
+            str(erreur)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Une erreur est survenue lors de l'ajout du produit."
+        )
+
+    # -----------------------------------------------------
+    # 4. RETOURNER LE PRODUIT CRÉÉ
+    # -----------------------------------------------------
 
     return nouveau_produit
+
+
 
 
 # =========================================================
@@ -395,63 +493,136 @@ def modifier_produit(
     ),
     db: Session = Depends(get_db)
 ):
+    """
+    Modifie les informations d'un produit existant.
+
+    - Réservé à l'administrateur et au vendeur.
+    - Conserve l'image actuelle si aucune nouvelle image
+      n'est transmise.
+    - Vérifie les valeurs avant l'enregistrement.
+    - Annule la transaction en cas d'erreur.
+    """
 
     # -----------------------------------------------------
-    # RECHERCHE DU PRODUIT
+    # 1. RECHERCHER LE PRODUIT
     # -----------------------------------------------------
 
-    produit_existant = db.query(Produit).filter(
-        Produit.id_produit == id_produit
-    ).first()
+    produit_existant = (
+        db.query(Produit)
+        .filter(Produit.id_produit == id_produit)
+        .first()
+    )
 
     if produit_existant is None:
-
         raise HTTPException(
             status_code=404,
             detail="Produit introuvable."
         )
 
     # -----------------------------------------------------
-    # MODIFICATION DES INFORMATIONS
+    # 2. RÉCUPÉRER UNIQUEMENT LES CHAMPS FOURNIS
     # -----------------------------------------------------
 
-    produit_existant.designation = produit.designation
-
-    produit_existant.prix_unitaire = produit.prix_unitaire
-
-    produit_existant.description = produit.description
-
-    produit_existant.image = produit.image
-
-    produit_existant.stock = produit.stock
-
-    produit_existant.categorie = produit.categorie
-
-    produit_existant.actif = produit.actif
+    # exclude_unset évite d'écraser des champs non transmis.
+    if hasattr(produit, "model_dump"):
+        donnees = produit.model_dump(exclude_unset=True)
+    else:  # Compatibilité Pydantic v1
+        donnees = produit.dict(exclude_unset=True)
 
     # -----------------------------------------------------
-    # ENREGISTREMENT
+    # 3. VÉRIFIER LES DONNÉES
+    # -----------------------------------------------------
+
+    if "designation" in donnees:
+        designation = donnees["designation"]
+
+        if designation is None or not str(designation).strip():
+            raise HTTPException(
+                status_code=422,
+                detail="La désignation du produit est obligatoire."
+            )
+
+        donnees["designation"] = str(designation).strip()
+
+    if "prix_unitaire" in donnees:
+        prix = donnees["prix_unitaire"]
+
+        if prix is None or prix < 0:
+            raise HTTPException(
+                status_code=422,
+                detail="Le prix doit être positif ou nul."
+            )
+
+    if "stock" in donnees:
+        stock = donnees["stock"]
+
+        if stock is None or stock < 0:
+            raise HTTPException(
+                status_code=422,
+                detail="Le stock doit être positif ou nul."
+            )
+
+    if "categorie" in donnees and donnees["categorie"] is not None:
+        donnees["categorie"] = str(donnees["categorie"]).strip()
+
+    if "description" in donnees and donnees["description"] is not None:
+        donnees["description"] = str(donnees["description"]).strip()
+
+    # Si image vaut None, on conserve l'image existante.
+    # Une chaîne vide permet, si nécessaire, de supprimer
+    # l'URL enregistrée.
+    if donnees.get("image") is None:
+        donnees.pop("image", None)
+
+    # -----------------------------------------------------
+    # 4. APPLIQUER LES MODIFICATIONS
+    # -----------------------------------------------------
+
+    champs_autorises = {
+        "designation",
+        "prix_unitaire",
+        "description",
+        "image",
+        "stock",
+        "categorie",
+        "actif",
+    }
+
+    for champ, valeur in donnees.items():
+        if champ in champs_autorises:
+            setattr(produit_existant, champ, valeur)
+
+    # -----------------------------------------------------
+    # 5. ENREGISTRER LES MODIFICATIONS
     # -----------------------------------------------------
 
     try:
-
         db.commit()
-
         db.refresh(produit_existant)
 
-    except Exception:
-
+    except Exception as erreur:
         db.rollback()
+
+        # L'erreur détaillée reste côté serveur.
+        print(
+            "Erreur lors de la modification du produit :",
+            str(erreur)
+        )
 
         raise HTTPException(
             status_code=500,
             detail=(
-                "Une erreur est survenue lors "
-                "de la modification du produit."
+                "Une erreur est survenue lors de "
+                "la modification du produit."
             )
         )
 
+    # -----------------------------------------------------
+    # 6. RETOURNER LE PRODUIT MODIFIÉ
+    # -----------------------------------------------------
+
     return produit_existant
+
 
 
 # =========================================================
@@ -642,8 +813,9 @@ def liste_services(
     return services
 
 
+
 # =========================================================
-# AJOUTER UN SERVICE
+# ROUTE : AJOUTER UN SERVICE
 # =========================================================
 
 @app.post("/services")
@@ -655,13 +827,43 @@ def ajouter_service(
     db: Session = Depends(get_db)
 ):
     """
-    Ajoute un nouveau service.
+    Ajoute un nouveau service dans la boutique.
 
-    Seul l'administrateur peut créer un service.
+    - Accessible uniquement à l'administrateur.
+    - Vérifie le nom et le prix.
+    - Accepte des URL d'image et de vidéo, notamment
+      des URL hébergées sur Cloudinary.
+    - Annule la transaction en cas d'erreur.
     """
 
+    # -----------------------------------------------------
+    # 1. VALIDATION DES DONNÉES
+    # -----------------------------------------------------
+
+    nom_service = (
+        service.nom_service.strip()
+        if service.nom_service
+        else ""
+    )
+
+    if not nom_service:
+        raise HTTPException(
+            status_code=422,
+            detail="Le nom du service est obligatoire."
+        )
+
+    if service.prix is None or service.prix < 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Le prix du service doit être positif ou nul."
+        )
+
+    # -----------------------------------------------------
+    # 2. CRÉER LE SERVICE
+    # -----------------------------------------------------
+
     nouveau_service = Service(
-        nom_service=service.nom_service,
+        nom_service=nom_service,
         prix=service.prix,
         description=service.description,
         categorie=service.categorie,
@@ -670,15 +872,41 @@ def ajouter_service(
         actif=service.actif
     )
 
-    db.add(nouveau_service)
-    db.commit()
-    db.refresh(nouveau_service)
+    # -----------------------------------------------------
+    # 3. ENREGISTRER DANS LA BASE
+    # -----------------------------------------------------
+
+    try:
+        db.add(nouveau_service)
+        db.commit()
+        db.refresh(nouveau_service)
+
+    except Exception as erreur:
+        db.rollback()
+
+        print(
+            "Erreur lors de l'ajout du service :",
+            str(erreur)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Une erreur est survenue lors "
+                "de l'ajout du service."
+            )
+        )
+
+    # -----------------------------------------------------
+    # 4. RETOURNER LE SERVICE CRÉÉ
+    # -----------------------------------------------------
 
     return nouveau_service
 
 
+
 # =========================================================
-# MODIFIER UN SERVICE
+# ROUTE : MODIFIER UN SERVICE
 # =========================================================
 
 @app.put("/services/{id_service}")
@@ -693,30 +921,220 @@ def modifier_service(
     """
     Modifie un service existant.
 
-    Seul l'administrateur peut modifier un service.
+    - Réservé à l'administrateur.
+    - Conserve les champs non transmis.
+    - Conserve les URL de l'image et de la vidéo
+      si aucune nouvelle URL n'est fournie.
+    - Annule la transaction en cas d'erreur.
     """
 
-    service_existant = db.query(Service).filter(
-        Service.id_service == id_service
-    ).first()
+    # -----------------------------------------------------
+    # 1. RECHERCHER LE SERVICE
+    # -----------------------------------------------------
+
+    service_existant = (
+        db.query(Service)
+        .filter(Service.id_service == id_service)
+        .first()
+    )
 
     if service_existant is None:
-        return {
-            "message": "Service introuvable"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Service introuvable."
+        )
 
-    service_existant.nom_service = service.nom_service
-    service_existant.prix = service.prix
-    service_existant.description = service.description
-    service_existant.categorie = service.categorie
-    service_existant.image = service.image
-    service_existant.video = service.video
-    service_existant.actif = service.actif
+    # -----------------------------------------------------
+    # 2. RÉCUPÉRER LES CHAMPS TRANSMIS
+    # -----------------------------------------------------
 
-    db.commit()
-    db.refresh(service_existant)
+    if hasattr(service, "model_dump"):
+        donnees = service.model_dump(exclude_unset=True)
+    else:  # Compatibilité Pydantic v1
+        donnees = service.dict(exclude_unset=True)
+
+    # -----------------------------------------------------
+    # 3. VALIDER LES DONNÉES
+    # -----------------------------------------------------
+
+    if "nom_service" in donnees:
+        nom = donnees["nom_service"]
+
+        if nom is None or not str(nom).strip():
+            raise HTTPException(
+                status_code=422,
+                detail="Le nom du service est obligatoire."
+            )
+
+        donnees["nom_service"] = str(nom).strip()
+
+    if "prix" in donnees:
+        prix = donnees["prix"]
+
+        if prix is None or prix < 0:
+            raise HTTPException(
+                status_code=422,
+                detail="Le prix du service doit être positif ou nul."
+            )
+
+    if "categorie" in donnees and donnees["categorie"] is not None:
+        donnees["categorie"] = str(donnees["categorie"]).strip()
+
+    if "description" in donnees and donnees["description"] is not None:
+        donnees["description"] = str(donnees["description"]).strip()
+
+    # Conserver les médias existants si aucune nouvelle URL
+    # n'est fournie ou si la valeur reçue est None.
+    if donnees.get("image") is None:
+        donnees.pop("image", None)
+
+    if donnees.get("video") is None:
+        donnees.pop("video", None)
+
+    # -----------------------------------------------------
+    # 4. APPLIQUER LES MODIFICATIONS AUTORISÉES
+    # -----------------------------------------------------
+
+    champs_autorises = {
+        "nom_service",
+        "prix",
+        "description",
+        "categorie",
+        "image",
+        "video",
+        "actif",
+    }
+
+    for champ, valeur in donnees.items():
+        if champ in champs_autorises:
+            setattr(service_existant, champ, valeur)
+
+    # -----------------------------------------------------
+    # 5. ENREGISTRER LES MODIFICATIONS
+    # -----------------------------------------------------
+
+    try:
+        db.commit()
+        db.refresh(service_existant)
+
+    except Exception as erreur:
+        db.rollback()
+
+        print(
+            "Erreur lors de la modification du service :",
+            str(erreur)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Une erreur est survenue lors "
+                "de la modification du service."
+            )
+        )
+
+    # -----------------------------------------------------
+    # 6. RETOURNER LE SERVICE MODIFIÉ
+    # -----------------------------------------------------
 
     return service_existant
+
+
+
+
+# =========================================================
+# TÉLÉVERSER L'IMAGE D'UN PRODUIT (ORDINATEUR / TÉLÉPHONE)
+# =========================================================
+
+@app.post("/produits/{id_produit}/image")
+def televerser_image_produit(
+    id_produit: int,
+    fichier: UploadFile = File(...),
+    utilisateur=Depends(role_autorise("admin", "vendeur")),
+    db: Session = Depends(get_db),
+):
+    produit = db.query(Produit).filter(Produit.id_produit == id_produit).first()
+    if produit is None:
+        raise HTTPException(status_code=404, detail="Produit introuvable.")
+    if not (fichier.content_type or "").lower().startswith("image/"):
+        raise HTTPException(status_code=400, detail="Veuillez sélectionner un fichier image.")
+
+    resultat = televerser_vers_cloudinary(fichier, "boutique/produits", "image")
+    nouvelle_url = resultat.get("secure_url")
+    if not nouvelle_url:
+        raise HTTPException(status_code=502, detail="Cloudinary n'a pas retourné l'URL de l'image.")
+    ancienne_url = produit.image
+    try:
+        produit.image = nouvelle_url
+        db.commit()
+        db.refresh(produit)
+    except Exception as erreur:
+        db.rollback()
+        supprimer_media_cloudinary(nouvelle_url, "image")
+        print("Erreur sauvegarde image produit :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible d'enregistrer l'image du produit.")
+    if ancienne_url and ancienne_url != nouvelle_url:
+        supprimer_media_cloudinary(ancienne_url, "image")
+    return {"message": "Image du produit mise à jour.", "id_produit": id_produit, "image": nouvelle_url}
+
+
+# =========================================================
+# TÉLÉVERSER L'IMAGE ET/OU LA VIDÉO D'UN SERVICE
+# =========================================================
+
+@app.post("/services/{id_service}/medias")
+def televerser_medias_service(
+    id_service: int,
+    image: UploadFile | None = File(None),
+    video: UploadFile | None = File(None),
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db),
+):
+    service = db.query(Service).filter(Service.id_service == id_service).first()
+    if service is None:
+        raise HTTPException(status_code=404, detail="Service introuvable.")
+    if image is None and video is None:
+        raise HTTPException(status_code=400, detail="Sélectionnez une image et/ou une vidéo.")
+    if image is not None and not (image.content_type or "").lower().startswith("image/"):
+        raise HTTPException(status_code=400, detail="Le fichier image sélectionné n'est pas une image.")
+    if video is not None and not (video.content_type or "").lower().startswith("video/"):
+        raise HTTPException(status_code=400, detail="Le fichier vidéo sélectionné n'est pas une vidéo.")
+
+    nouvelles_urls = {}
+    anciennes_urls = {"image": service.image, "video": service.video}
+    try:
+        if image is not None:
+            upload_image = televerser_vers_cloudinary(image, "boutique/services/images", "image")
+            nouvelles_urls["image"] = upload_image.get("secure_url")
+            if not nouvelles_urls["image"]:
+                raise HTTPException(status_code=502, detail="Cloudinary n'a pas retourné l'URL de l'image.")
+        if video is not None:
+            upload_video = televerser_vers_cloudinary(video, "boutique/services/videos", "video")
+            nouvelles_urls["video"] = upload_video.get("secure_url")
+            if not nouvelles_urls["video"]:
+                raise HTTPException(status_code=502, detail="Cloudinary n'a pas retourné l'URL de la vidéo.")
+        if "image" in nouvelles_urls:
+            service.image = nouvelles_urls["image"]
+        if "video" in nouvelles_urls:
+            service.video = nouvelles_urls["video"]
+        db.commit()
+        db.refresh(service)
+    except HTTPException:
+        db.rollback()
+        for cle, url in nouvelles_urls.items():
+            supprimer_media_cloudinary(url, "image" if cle == "image" else "video")
+        raise
+    except Exception as erreur:
+        db.rollback()
+        for cle, url in nouvelles_urls.items():
+            supprimer_media_cloudinary(url, "image" if cle == "image" else "video")
+        print("Erreur sauvegarde médias service :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible d'enregistrer les médias du service.")
+
+    for cle, ancienne_url in anciennes_urls.items():
+        if cle in nouvelles_urls and ancienne_url and ancienne_url != nouvelles_urls[cle]:
+            supprimer_media_cloudinary(ancienne_url, "image" if cle == "image" else "video")
+    return {"message": "Médias du service mis à jour.", "id_service": id_service, "image": service.image, "video": service.video}
 
 
 # =========================================================
@@ -726,47 +1144,35 @@ def modifier_service(
 @app.delete("/services/{id_service}")
 def supprimer_service(
     id_service: int,
-    utilisateur=Depends(
-        role_autorise("admin")
-    ),
-    db: Session = Depends(get_db)
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db),
 ):
-    """
-    Supprime un service.
-
-    Seul l'administrateur peut supprimer un service.
-    """
-
-    service_existant = db.query(Service).filter(
+    service = db.query(Service).filter(
         Service.id_service == id_service
     ).first()
+    if service is None:
+        raise HTTPException(status_code=404, detail="Service introuvable.")
 
-    if service_existant is None:
-        return {
-            "message": "Service introuvable"
-        }
-
-    # Vérifier si le service est utilisé dans une commande
-    ligne_commande = db.query(
-        CommandeHasService
-    ).filter(
+    utilise = db.query(CommandeHasService).filter(
         CommandeHasService.SERVICE_id_service == id_service
     ).first()
+    try:
+        if utilise:
+            service.actif = False
+            db.commit()
+            return {
+                "message": "Le service a été désactivé car il figure dans l'historique des commandes.",
+                "action": "desactivation",
+                "id_service": id_service,
+            }
+        db.delete(service)
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur suppression service :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible de supprimer le service.")
 
-    if ligne_commande is not None:
-        return {
-            "message": (
-                "Impossible de supprimer ce service "
-                "car il est déjà associé à une commande."
-            )
-        }
-
-    db.delete(service_existant)
-    db.commit()
-
-    return {
-        "message": "Service supprimé avec succès"
-    }
+    return {"message": "Service supprimé avec succès.", "action": "suppression"}
 
 
 # =========================================================
@@ -936,70 +1342,32 @@ def modifier_commande(
 @app.delete("/commandes/{id_commande}")
 def supprimer_commande(
     id_commande: int,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur")
-    ),
-    db: Session = Depends(get_db)
+    utilisateur=Depends(role_autorise("admin", "vendeur")),
+    db: Session = Depends(get_db),
 ):
-
-    # -----------------------------------------------------
-    # 1. Rechercher la commande
-    # -----------------------------------------------------
-
     commande = db.query(Commande).filter(
         Commande.id_commande == id_commande
     ).first()
-
     if commande is None:
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
 
-        return {
-            "message": "Commande introuvable"
-        }
+    try:
+        # Supprimer les dépendances avant la commande pour respecter
+        # les clés étrangères sur PostgreSQL et SQL Server.
+        for modele in (CommandeHasProduit, CommandeHasService, MessageCommande, Paiement):
+            lignes = db.query(modele).filter(
+                modele.COMMANDE_id_commande == id_commande
+            ).all()
+            for ligne in lignes:
+                db.delete(ligne)
+        db.delete(commande)
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur suppression commande :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible de supprimer la commande et ses éléments associés.")
 
-    # -----------------------------------------------------
-    # 2. Supprimer les lignes de commande
-    # -----------------------------------------------------
-
-    produits_commande = db.query(
-        CommandeHasProduit
-    ).filter(
-        CommandeHasProduit.COMMANDE_id_commande
-        == id_commande
-    ).all()
-
-    for ligne in produits_commande:
-
-        db.delete(ligne)
-
-    # -----------------------------------------------------
-    # 3. Supprimer les messages de la commande
-    # -----------------------------------------------------
-
-    messages = db.query(
-        MessageCommande
-    ).filter(
-        MessageCommande.COMMANDE_id_commande
-        == id_commande
-    ).all()
-
-    for message in messages:
-
-        db.delete(message)
-
-    # -----------------------------------------------------
-    # 4. Supprimer la commande
-    # -----------------------------------------------------
-
-    db.delete(commande)
-
-    db.commit()
-
-    return {
-        "message": (
-            f"Commande {id_commande} "
-            "supprimée avec succès"
-        )
-    }
+    return {"message": f"Commande {id_commande} supprimée avec succès."}
 
 
 # =========================================================
@@ -1656,7 +2024,7 @@ def creer_utilisateur(
     # ---------------------------------------------------------
 
     utilisateur_existant = db.query(Utilisateur).filter(
-        Utilisateur.email == utilisateur.email
+        func.lower(Utilisateur.email) == utilisateur.email.strip().lower()
     ).first()
 
     if utilisateur_existant is not None:
@@ -1778,99 +2146,66 @@ def liste_utilisateurs(
 @app.post("/utilisateurs/admin")
 def creer_utilisateur_admin(
     utilisateur: UtilisateurCreate,
-    utilisateur_connecte=Depends(
-        role_autorise("admin")
-    ),
-    db: Session = Depends(get_db)
+    utilisateur_connecte=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db),
 ):
+    roles_autorises = {"admin", "vendeur", "client"}
+    role = (utilisateur.role or "").strip().lower()
+    if role not in roles_autorises:
+        raise HTTPException(status_code=400, detail="Rôle invalide.")
 
-    # -----------------------------------------------------
-    # 1. Vérifier le rôle
-    # -----------------------------------------------------
-
-    roles_autorises = [
-        "admin",
-        "vendeur",
-        "client"
-    ]
-
-    if utilisateur.role not in roles_autorises:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Rôle invalide."
-        )
-
-    # -----------------------------------------------------
-    # 2. Vérifier l'email
-    # -----------------------------------------------------
-
-    utilisateur_existant = db.query(
-        Utilisateur
-    ).filter(
-        Utilisateur.email == utilisateur.email
+    email = utilisateur.email.strip().lower()
+    existant = db.query(Utilisateur).filter(
+        func.lower(Utilisateur.email) == email
     ).first()
-
-    if utilisateur_existant:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Cet email est déjà utilisé."
-        )
-
-    # -----------------------------------------------------
-    # 3. Sécuriser le mot de passe
-    # -----------------------------------------------------
+    if existant:
+        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé.")
 
     mot_de_passe_hash = bcrypt.hashpw(
-        utilisateur.mot_de_passe.encode("utf-8"),
-        bcrypt.gensalt()
-    )
-
-    # -----------------------------------------------------
-    # 4. Créer l'utilisateur
-    # -----------------------------------------------------
-
+        utilisateur.mot_de_passe.encode("utf-8"), bcrypt.gensalt()
+    ).decode("utf-8")
     nouvel_utilisateur = Utilisateur(
-        nom=utilisateur.nom,
-        prenom=utilisateur.prenom,
-        email=utilisateur.email,
-        mot_de_passe=(
-            mot_de_passe_hash.decode("utf-8")
-        ),
-        role=utilisateur.role
+        nom=utilisateur.nom.strip(),
+        prenom=utilisateur.prenom.strip(),
+        email=email,
+        mot_de_passe=mot_de_passe_hash,
+        role=role,
     )
 
-    db.add(nouvel_utilisateur)
+    try:
+        db.add(nouvel_utilisateur)
+        db.flush()
+        nouveau_client = None
+        if role == "client":
+            nouveau_client = Client(
+                nom=nouvel_utilisateur.nom,
+                prenom=nouvel_utilisateur.prenom,
+                email=email,
+                telephone=None,
+                date_naissance=None,
+                id_utilisateur=nouvel_utilisateur.id_utilisateur,
+            )
+            db.add(nouveau_client)
+        db.commit()
+        db.refresh(nouvel_utilisateur)
+        if nouveau_client is not None:
+            db.refresh(nouveau_client)
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur création utilisateur admin :", str(erreur))
+        raise HTTPException(status_code=500, detail="Impossible de créer cet utilisateur.")
 
-    db.commit()
-
-    db.refresh(nouvel_utilisateur)
-
-    # -----------------------------------------------------
-    # 5. Retourner le résultat
-    # -----------------------------------------------------
-
-    return {
-
-        "message":
-            "Utilisateur créé avec succès",
-
-        "id_utilisateur":
-            nouvel_utilisateur.id_utilisateur,
-
-        "nom":
-            nouvel_utilisateur.nom,
-
-        "prenom":
-            nouvel_utilisateur.prenom,
-
-        "email":
-            nouvel_utilisateur.email,
-
-        "role":
-            nouvel_utilisateur.role
+    resultat = {
+        "message": "Utilisateur créé avec succès.",
+        "id_utilisateur": nouvel_utilisateur.id_utilisateur,
+        "nom": nouvel_utilisateur.nom,
+        "prenom": nouvel_utilisateur.prenom,
+        "email": nouvel_utilisateur.email,
+        "role": nouvel_utilisateur.role,
     }
+    if nouveau_client is not None:
+        resultat["id_client"] = nouveau_client.id_client
+    return resultat
 
 
 # =========================================================
@@ -2390,587 +2725,164 @@ METHODES_PAIEMENT = [
 
 @app.post("/commandes/depuis-panier")
 def creer_commande_depuis_panier(
-
     panier: CommandeDepuisPanierCreate,
-
-    utilisateur=Depends(
-        role_autorise("client")
-    ),
-
+    utilisateur=Depends(role_autorise("client")),
     db: Session = Depends(get_db)
 ):
-
-    # =====================================================
-    # 💳 VÉRIFIER LE MODE DE PAIEMENT
-    # =====================================================
-
+    """Crée une commande unique contenant produits et/ou services."""
     if panier.methode_paiement not in METHODES_PAIEMENT:
+        raise HTTPException(status_code=400, detail="Mode de paiement invalide.")
 
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Mode de paiement invalide."
-            )
-        )
-
-    # =====================================================
-    # 1. VÉRIFIER QUE LE PANIER N'EST PAS VIDE
-    # =====================================================
-
-    if not panier.lignes and not panier.services:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Le panier est vide."
-        )
-
-
-    # =====================================================
-    # 2. RETROUVER LE CLIENT CONNECTÉ
-    # =====================================================
+    lignes_panier = list(panier.lignes or [])
+    services_panier = list(panier.services or [])
+    if not lignes_panier and not services_panier:
+        raise HTTPException(status_code=400, detail="Le panier est vide.")
 
     client = db.query(Client).filter(
-
-        Client.id_utilisateur
-        == utilisateur.id_utilisateur
-
+        Client.id_utilisateur == utilisateur.id_utilisateur
     ).first()
-
-
     if client is None:
+        raise HTTPException(status_code=404, detail="Aucun client associé à cet utilisateur.")
 
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "Aucun client associé "
-                "à cet utilisateur."
-            )
-        )
-
-
-    # =====================================================
-    # 3. PRÉPARER LES PRODUITS
-    # =====================================================
+    # Regrouper les lignes identiques pour éviter les doublons et valider
+    # le stock total demandé pour chaque produit.
+    quantites_produits = {}
+    for ligne in lignes_panier:
+        qte = int(ligne.quantite)
+        if qte <= 0:
+            raise HTTPException(status_code=400, detail="Chaque quantité doit être supérieure à zéro.")
+        quantites_produits[ligne.id_produit] = quantites_produits.get(ligne.id_produit, 0) + qte
 
     produits_commandes = []
-
-
-    # =====================================================
-    # 4. VÉRIFIER LES PRODUITS DU PANIER
-    # =====================================================
-
-    for ligne in panier.lignes:
-
+    for id_produit, quantite in quantites_produits.items():
         produit = db.query(Produit).filter(
-
-            Produit.id_produit
-            == ligne.id_produit
-
-        ).first()
-
-
-        # -------------------------------------------------
-        # Produit inexistant
-        # -------------------------------------------------
-
+            Produit.id_produit == id_produit
+        ).with_for_update().first()
         if produit is None:
-
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    f"Le produit "
-                    f"{ligne.id_produit} "
-                    "n'existe pas."
-                )
-            )
-
-
-        # -------------------------------------------------
-        # Produit désactivé
-        # -------------------------------------------------
-
+            raise HTTPException(status_code=404, detail=f"Le produit {id_produit} n'existe pas.")
         if not produit.actif:
-
+            raise HTTPException(status_code=400, detail=f"Le produit « {produit.designation} » n'est plus disponible.")
+        stock = int(produit.stock or 0)
+        if stock < quantite:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    f"Le produit « "
-                    f"{produit.designation} » "
-                    "n'est plus disponible."
-                )
+                detail=f"Stock insuffisant pour « {produit.designation} ». Stock disponible : {stock}.",
             )
+        produits_commandes.append((produit, quantite, stock))
 
-
-        # -------------------------------------------------
-        # Vérification du stock
-        # -------------------------------------------------
-
-        if produit.stock < ligne.quantite:
-
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Stock insuffisant pour "
-                    f"« {produit.designation} ». "
-                    f"Stock disponible : "
-                    f"{produit.stock}."
-                )
-            )
-
-
-        # -------------------------------------------------
-        # Ajouter le produit à la liste validée
-        # -------------------------------------------------
-
-        produits_commandes.append(
-            (
-                produit,
-                ligne.quantite
-            )
-        )
-
-
-    # =====================================================
-    # 5. PRÉPARER LES SERVICES
-    # =====================================================
+    quantites_services = {}
+    for ligne in services_panier:
+        qte = int(ligne.quantite)
+        if qte <= 0:
+            raise HTTPException(status_code=400, detail="Chaque quantité de service doit être supérieure à zéro.")
+        quantites_services[ligne.id_service] = quantites_services.get(ligne.id_service, 0) + qte
 
     services_commandes = []
-
-
-    # =====================================================
-    # 6. VÉRIFIER LES SERVICES DU PANIER
-    # =====================================================
-
-    for ligne in panier.services:
-
+    for id_service, quantite in quantites_services.items():
         service = db.query(Service).filter(
-
-            Service.id_service
-            == ligne.id_service
-
+            Service.id_service == id_service
         ).first()
-
-
-        # -------------------------------------------------
-        # Service inexistant
-        # -------------------------------------------------
-
         if service is None:
-
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    f"Le service "
-                    f"{ligne.id_service} "
-                    "n'existe pas."
-                )
-            )
-
-
-        # -------------------------------------------------
-        # Service désactivé
-        # -------------------------------------------------
-
+            raise HTTPException(status_code=404, detail=f"Le service {id_service} n'existe pas.")
         if not service.actif:
+            raise HTTPException(status_code=400, detail=f"Le service « {service.nom_service} » n'est plus disponible.")
+        services_commandes.append((service, quantite))
 
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Le service « "
-                    f"{service.nom_service} » "
-                    "n'est actuellement "
-                    "plus disponible."
-                )
-            )
-
-
-        # -------------------------------------------------
-        # Ajouter le service à la liste validée
-        # -------------------------------------------------
-
-        services_commandes.append(
-            (
-                service,
-                ligne.quantite
-            )
-        )
-
-
-    # =====================================================
-    # 7. CRÉER UNE SEULE COMMANDE
-    # =====================================================
-
+    total_commande = 0
     nouvelle_commande = Commande(
-
         date_commande=date.today(),
-
         CLIENT_id_client=client.id_client,
-
-        statut="en_attente"
+        statut="en_attente",
     )
 
+    try:
+        db.add(nouvelle_commande)
+        db.flush()  # Obtient l'identifiant avant de créer les lignes.
 
-    db.add(
-        nouvelle_commande
-    )
+        for produit, quantite, ancien_stock in produits_commandes:
+            prix = produit.prix_unitaire
+            db.add(CommandeHasProduit(
+                COMMANDE_id_commande=nouvelle_commande.id_commande,
+                PRODUIT_id_produit=produit.id_produit,
+                quantite=quantite,
+                prix_unitaire=prix,
+            ))
+            produit.stock = ancien_stock - quantite
+            verifier_stock_faible(db, produit, ancien_stock, seuil=5)
+            total_commande += float(prix or 0) * quantite
 
+        for service, quantite in services_commandes:
+            prix = service.prix
+            db.add(CommandeHasService(
+                COMMANDE_id_commande=nouvelle_commande.id_commande,
+                SERVICE_id_service=service.id_service,
+                quantite=quantite,
+                prix_unitaire=prix,
+            ))
+            total_commande += float(prix or 0) * quantite
 
-    # -----------------------------------------------------
-    # IMPORTANT
-    # -----------------------------------------------------
-    #
-    # flush() permet de récupérer immédiatement
-    # l'identifiant de la commande avant le commit.
-    #
-    # Cet identifiant sera utilisé pour :
-    #
-    # COMMANDE_has_PRODUIT
-    #
-    # et
-    #
-    # COMMANDE_has_SERVICE
-    #
-    # -----------------------------------------------------
-
-    db.flush()
-
-
-    # =========================================================
-    # 🔔 NOTIFICATIONS — NOUVELLE COMMANDE
-    # =========================================================
-
-    # ---------------------------------------------------------
-    # 1. Notification pour le client
-    # ---------------------------------------------------------
-
-    creer_notification(
-        db=db,
-        id_utilisateur=utilisateur.id_utilisateur,
-        titre="Commande confirmée",
-        message=(
-            f"Votre commande #{nouvelle_commande.id_commande} "
-            "a été enregistrée avec succès."
-        ),
-        type_notification="success",
-        lien="/mes-commandes"
-    )
-
-
-    # ---------------------------------------------------------
-    # 2. Récupérer tous les administrateurs et vendeurs
-    # ---------------------------------------------------------
-
-    destinataires = (
-        db.query(Utilisateur)
-        .filter(
-            Utilisateur.role.in_(
-                ["admin", "vendeur"]
-            )
+        nouveau_paiement = Paiement(
+            COMMANDE_id_commande=nouvelle_commande.id_commande,
+            UTILISATEUR_id_utilisateur=utilisateur.id_utilisateur,
+            montant=total_commande,
+            methode=panier.methode_paiement,
+            statut="en_attente",
+            reference=None,
         )
-        .all()
-    )
-
-
-    # ---------------------------------------------------------
-    # 3. Notification pour chaque administrateur/vendeur
-    # ---------------------------------------------------------
-
-    for destinataire in destinataires:
+        db.add(nouveau_paiement)
 
         creer_notification(
             db=db,
-            id_utilisateur=destinataire.id_utilisateur,
-            titre="Nouvelle commande",
-            message=(
-                f"La commande #{nouvelle_commande.id_commande} "
-                "vient d'être passée par un client."
-            ),
-            type_notification="commande",
-            lien="/commandes"
+            id_utilisateur=utilisateur.id_utilisateur,
+            titre="Commande enregistrée",
+            message=f"Votre commande #{nouvelle_commande.id_commande} a été enregistrée.",
+            type_notification="success",
+            lien="/mes-commandes",
         )
-
-
-        # =====================================================
-        # 8. CALCUL DU TOTAL
-        # =====================================================
-
-        total_commande = 0
-
-
-        # =====================================================
-        # 9. CRÉER LES LIGNES PRODUITS
-        # =====================================================
-
-        for produit, quantite in produits_commandes:
-
-            prix = produit.prix_unitaire
-
-
-            ligne_commande = CommandeHasProduit(
-
-                COMMANDE_id_commande=
-                    nouvelle_commande.id_commande,
-
-                PRODUIT_id_produit=
-                    produit.id_produit,
-
-                quantite=quantite,
-
-                prix_unitaire=prix
-            )
-
-
-            db.add(
-                ligne_commande
-            )
-
-
-            # ---------------------------------------------------------
-            # Sauvegarder le stock avant la vente
-            # ---------------------------------------------------------
-
-            ancien_stock = produit.stock or 0
-
-
-            # ---------------------------------------------------------
-            # Déduire la quantité commandée
-            # ---------------------------------------------------------
-
-            produit.stock -= ligne.quantite
-
-
-            # ---------------------------------------------------------
-            # Vérifier si le seuil est franchi
-            # ---------------------------------------------------------
-
-            verifier_stock_faible(
+        destinataires = db.query(Utilisateur).filter(
+            Utilisateur.role.in_(["admin", "vendeur"])
+        ).all()
+        for destinataire in destinataires:
+            creer_notification(
                 db=db,
-                produit=produit,
-                ancien_stock=ancien_stock,
-                seuil=5
+                id_utilisateur=destinataire.id_utilisateur,
+                titre="Nouvelle commande",
+                message=f"La commande #{nouvelle_commande.id_commande} vient d'être passée.",
+                type_notification="commande",
+                lien="/commandes",
             )
 
-            # -------------------------------------------------
-            # Ajouter au total
-            # -------------------------------------------------
+        db.commit()
+        db.refresh(nouvelle_commande)
+        db.refresh(nouveau_paiement)
 
-            total_commande += (
-                prix * quantite
-            )
-
-
-        # =====================================================
-        # 10. CRÉER LES LIGNES SERVICES
-        # =====================================================
-
-        for service, quantite in services_commandes:
-
-            prix = service.prix
-
-
-            ligne_service = CommandeHasService(
-
-                COMMANDE_id_commande=
-                    nouvelle_commande.id_commande,
-
-                SERVICE_id_service=
-                    service.id_service,
-
-                quantite=quantite,
-
-                prix_unitaire=prix
-            )
-
-
-            db.add(
-                ligne_service
-            )
-
-
-            # -------------------------------------------------
-            # Ajouter le service au total
-            # -------------------------------------------------
-
-            total_commande += (
-                prix * quantite
-            )
-
-
-        # =====================================================
-        # 11. CRÉER LE PAIEMENT
-        # =====================================================
-
-        # -----------------------------------------------------
-        # Vérifier le mode de paiement
-        # -----------------------------------------------------
-
-        METHODES_PAIEMENT = [
-            "livraison",
-            "wave",
-            "orange_money",
-            "carte"
-        ]
-
-        if panier.methode_paiement not in METHODES_PAIEMENT:
-
-            raise HTTPException(
-                status_code=400,
-                detail="Mode de paiement invalide."
-            )
-
-
-        # -----------------------------------------------------
-        # Déterminer le statut initial du paiement
-        # -----------------------------------------------------
-
-        # Pour le moment :
-        #
-        # livraison     → paiement en attente
-        # wave          → paiement en attente
-        # orange_money  → paiement en attente
-        # carte         → paiement en attente
-        #
-        # Les paiements électroniques ne seront considérés
-        # comme réellement payés qu'après confirmation
-        # d'un véritable prestataire de paiement.
-
-        statut_paiement = "en_attente"
-
-
-        # -----------------------------------------------------
-        # Créer la ligne PAIEMENT
-        # -----------------------------------------------------
-
-        nouveau_paiement = Paiement(
-
-            COMMANDE_id_commande=(
-                nouvelle_commande.id_commande
-            ),
-
-            UTILISATEUR_id_utilisateur=(
-                utilisateur.id_utilisateur
-            ),
-
-            montant=total_commande,
-
-            methode=panier.methode_paiement,
-
-            statut=statut_paiement,
-
-            reference=None
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur création commande depuis panier :", str(erreur))
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer la commande et son paiement. Réessayez.",
         )
 
-
-        db.add(nouveau_paiement)
-
-
-        # =====================================================
-        # 12. ENREGISTRER COMMANDE + PAIEMENT
-        # =====================================================
-
-        try:
-
-            db.commit()
-
-        except Exception:
-
-            db.rollback()
-
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    "Une erreur est survenue lors "
-                    "de l'enregistrement de la commande "
-                    "et du paiement."
-                )
-            )
+    return {
+        "message": "Commande et paiement enregistrés avec succès.",
+        "id_commande": nouvelle_commande.id_commande,
+        "id_client": client.id_client,
+        "date_commande": str(nouvelle_commande.date_commande),
+        "statut": nouvelle_commande.statut,
+        "nombre_produits": len(produits_commandes),
+        "nombre_services": len(services_commandes),
+        "total": total_commande,
+        "id_paiement": nouveau_paiement.id_paiement,
+        "methode_paiement": nouveau_paiement.methode,
+        "statut_paiement": nouveau_paiement.statut,
+        "reference_paiement": nouveau_paiement.reference,
+    }
 
 
-        # =====================================================
-        # 13. ACTUALISER LES OBJETS
-        # =====================================================
-
-        db.refresh(
-            nouvelle_commande
-        )
-
-        db.refresh(
-            nouveau_paiement
-        )
-        # =====================================================
-        # 12. ACTUALISER LA COMMANDE
-        # =====================================================
-
-        db.refresh(
-            nouvelle_commande
-        )
-
-
-        # =====================================================
-        # 14. RÉPONSE FINALE
-        # =====================================================
-
-        return {
-
-            "message":
-                "Commande et paiement enregistrés avec succès.",
-
-            # -------------------------------------------------
-            # Commande
-            # -------------------------------------------------
-
-            "id_commande":
-                nouvelle_commande.id_commande,
-
-            "id_client":
-                client.id_client,
-
-            "date_commande":
-                str(
-                    nouvelle_commande.date_commande
-                ),
-
-            "statut":
-                nouvelle_commande.statut,
-
-            # -------------------------------------------------
-            # Contenu
-            # -------------------------------------------------
-
-            "nombre_produits":
-                len(produits_commandes),
-
-            "nombre_services":
-                len(services_commandes),
-
-            # -------------------------------------------------
-            # Total
-            # -------------------------------------------------
-
-            "total":
-                total_commande,
-
-            # -------------------------------------------------
-            # Paiement
-            # -------------------------------------------------
-
-            "id_paiement":
-                nouveau_paiement.id_paiement,
-
-            "methode_paiement":
-                nouveau_paiement.methode,
-
-            "statut_paiement":
-                nouveau_paiement.statut,
-
-            "reference_paiement":
-                nouveau_paiement.reference
-        }
-            
-
-
-
-   # =========================================================
 # 📦 ALERTE AUTOMATIQUE — STOCK FAIBLE
 # =========================================================
 
@@ -3028,7 +2940,7 @@ def verifier_stock_faible(
             ),
             titre="⚠️ Stock faible",
             message=(
-                f"Le produit « {produit.nom_produit} » "
+                f"Le produit « {produit.designation} » "
                 f"vient de passer à {nouveau_stock} "
                 "unité(s) en stock."
             ),
@@ -3604,10 +3516,10 @@ def annuler_ma_commande(
     # 5. Vérifier le délai
     # -----------------------------------------------------
 
-    jours_ecoules = (
-        date.today()
-        - commande.date_commande
-    ).days
+    date_commande = commande.date_commande
+    if isinstance(date_commande, datetime):
+        date_commande = date_commande.date()
+    jours_ecoules = (date.today() - date_commande).days
 
     if jours_ecoules > 2:
 
@@ -3699,264 +3611,166 @@ def annuler_ma_commande(
 def modifier_statut_commande(
     id_commande: int,
     nouveau_statut: str,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur")
-    ),
-    db: Session = Depends(get_db)
+    utilisateur=Depends(role_autorise("admin", "vendeur")),
+    db: Session = Depends(get_db),
 ):
-
-    statuts_autorises = [
-
-        "en_attente",
-
-        "confirmee",
-
-        "en_preparation",
-
-        "prete",
-
-        "livree",
-
-        "annulee"
-    ]
-
-    # -----------------------------------------------------
-    # 1. Vérifier le statut
-    # -----------------------------------------------------
-
+    statuts_autorises = {
+        "en_attente", "confirmee", "en_preparation", "prete", "livree", "annulee"
+    }
     if nouveau_statut not in statuts_autorises:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Statut invalide."
-        )
-
-    # -----------------------------------------------------
-    # 2. Rechercher la commande
-    # -----------------------------------------------------
+        raise HTTPException(status_code=400, detail="Statut invalide.")
 
     commande = db.query(Commande).filter(
         Commande.id_commande == id_commande
     ).first()
-
     if commande is None:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Commande introuvable."
-        )
-
-    # -----------------------------------------------------
-    # 3. Vérifier si elle est déjà annulée
-    # -----------------------------------------------------
-
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     if commande.statut == "annulee":
+        raise HTTPException(status_code=400, detail="Cette commande est déjà annulée.")
 
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Cette commande est déjà annulée."
-            )
-        )
-
-    # -----------------------------------------------------
-    # 4. Si annulation : restaurer le stock
-    # -----------------------------------------------------
-
-    if nouveau_statut == "annulee":
-
-        lignes = db.query(
-            CommandeHasProduit
-        ).filter(
-            CommandeHasProduit.COMMANDE_id_commande
-            == id_commande
-        ).all()
-
-        for ligne in lignes:
-
-            produit = db.query(Produit).filter(
-                Produit.id_produit
-                == ligne.PRODUIT_id_produit
-            ).first()
-
-            if produit is not None:
-
-                produit.stock += ligne.quantite
-
-    # -----------------------------------------------------
-    # 5. Modifier le statut
-    # -----------------------------------------------------
-
-    commande.statut = nouveau_statut
-
-    # -----------------------------------------------------
-    # 6. Enregistrer
-    # -----------------------------------------------------
-
+    ancien_statut = commande.statut
     try:
+        if nouveau_statut == "annulee":
+            lignes = db.query(CommandeHasProduit).filter(
+                CommandeHasProduit.COMMANDE_id_commande == id_commande
+            ).all()
+            for ligne in lignes:
+                produit = db.query(Produit).filter(
+                    Produit.id_produit == ligne.PRODUIT_id_produit
+                ).with_for_update().first()
+                if produit is not None:
+                    produit.stock = int(produit.stock or 0) + int(ligne.quantite or 0)
 
-        db.commit()
-
-        db.refresh(commande)
-
-    except Exception:
-
-        db.rollback()
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Erreur lors de la modification "
-                "du statut."
+        commande.statut = nouveau_statut
+        client = db.query(Client).filter(
+            Client.id_client == commande.CLIENT_id_client
+        ).first()
+        if client and client.id_utilisateur:
+            messages_statut = {
+                "en_attente": ("Commande en attente", "Votre commande est en attente de traitement.", "info"),
+                "confirmee": ("Commande confirmée", "Votre commande a été confirmée.", "success"),
+                "en_preparation": ("Commande en préparation", "Votre commande est en préparation.", "info"),
+                "prete": ("Commande prête", "Votre commande est prête.", "success"),
+                "livree": ("Commande livrée", "Votre commande a été livrée. Merci pour votre confiance !", "success"),
+                "annulee": ("Commande annulée", "Votre commande a été annulée.", "danger"),
+            }
+            titre, message, type_notification = messages_statut[nouveau_statut]
+            creer_notification(
+                db=db,
+                id_utilisateur=client.id_utilisateur,
+                titre=titre,
+                message=f"Commande #{id_commande} : {message}",
+                type_notification=type_notification,
+                lien="/mes-commandes",
             )
-        )
-
-    # -----------------------------------------------------
-    # 7. Réponse
-    # -----------------------------------------------------
+        db.commit()
+        db.refresh(commande)
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur changement statut commande :", str(erreur))
+        raise HTTPException(status_code=500, detail="Erreur lors de la modification du statut.")
 
     return {
-
-        "message":
-            "Statut de la commande "
-            "modifié avec succès.",
-
-        "id_commande":
-            commande.id_commande,
-
-        "statut":
-            commande.statut
+        "message": "Statut de la commande modifié avec succès.",
+        "id_commande": commande.id_commande,
+        "ancien_statut": ancien_statut,
+        "statut": commande.statut,
     }
 
 
+# =========================================================
+# OUTILS CLOUDINARY
+# =========================================================
 
-    #=========================================================
-    # 🔔 NOTIFICATION — CHANGEMENT DE STATUT
-    # =========================================================
+def televerser_vers_cloudinary(fichier, dossier, type_ressource):
+    """Envoie un fichier reçu par FastAPI vers Cloudinary avec limite de taille."""
 
-    # ---------------------------------------------------------
-    # Récupérer le client propriétaire de la commande
-    # ---------------------------------------------------------
+    limites = {"image": 10 * 1024 * 1024, "video": 100 * 1024 * 1024, "raw": 20 * 1024 * 1024}
+    limite = limites.get(type_ressource, 20 * 1024 * 1024)
+    contenu = fichier.file.read(limite + 1)
 
-    client = (
-        db.query(Client)
-        .filter(
-            Client.id_client == commande.CLIENT_id_client
-        )
-        .first()
-    )
-
-    if client and client.id_utilisateur:
-
-        # -----------------------------------------------------
-        # Traduction du statut pour une notification agréable
-        # -----------------------------------------------------
-
-        statuts_notifications = {
-
-            "en_attente": {
-                "titre": "Commande en attente",
-                "message": (
-                    f"Votre commande #{commande.id_commande} "
-                    "est en attente de traitement."
-                ),
-                "type": "info"
-            },
-
-            "en_preparation": {
-                "titre": "Commande en préparation",
-                "message": (
-                    f"Votre commande #{commande.id_commande} "
-                    "est maintenant en préparation."
-                ),
-                "type": "info"
-            },
-
-            "en_livraison": {
-                "titre": "Commande en livraison",
-                "message": (
-                    f"Votre commande #{commande.id_commande} "
-                    "est maintenant en cours de livraison."
-                ),
-                "type": "commande"
-            },
-
-            "livree": {
-                "titre": "Commande livrée",
-                "message": (
-                    f"Votre commande #{commande.id_commande} "
-                    "a été livrée avec succès. "
-                    "Merci pour votre confiance !"
-                ),
-                "type": "success"
-            },
-
-            "annulee": {
-                "titre": "Commande annulée",
-                "message": (
-                    f"Votre commande #{commande.id_commande} "
-                    "a été annulée."
-                ),
-                "type": "danger"
-            }
-        }
-
-        # -----------------------------------------------------
-        # Récupérer le contenu correspondant au statut
-        # -----------------------------------------------------
-
-        notification = statuts_notifications.get(
-            str(nouveau_statut).lower(),
-            {
-                "titre": "Commande mise à jour",
-                "message": (
-                    f"Le statut de votre commande "
-                    f"#{commande.id_commande} a été mis à jour."
-                ),
-                "type": "info"
-            }
+    if len(contenu) > limite:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Fichier trop volumineux. Limite : {limite // (1024 * 1024)} Mo.",
         )
 
-        # -----------------------------------------------------
-        # Créer la notification
-        # -----------------------------------------------------
+    if not contenu:
+        raise HTTPException(
+            status_code=400,
+            detail="Le fichier envoyé est vide."
+        )
 
-        creer_notification(
-            db=db,
-            id_utilisateur=client.id_utilisateur,
-            titre=notification["titre"],
-            message=notification["message"],
-            type_notification=notification["type"],
-            lien="/mes-commandes"
+    try:
+        resultat = cloudinary.uploader.upload(
+            contenu,
+            resource_type=type_ressource,
+            folder=dossier,
+            public_id=uuid.uuid4().hex,
+            overwrite=False
+        )
+        return resultat
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Impossible de téléverser le fichier vers Cloudinary."
         )
 
 
+def supprimer_media_cloudinary(url, type_ressource):
+    """Supprime un média Cloudinary si son URL est reconnue."""
+
+    if not url:
+        return
+
+    try:
+        adresse = urlparse(url)
+
+        if adresse.netloc.lower() != "res.cloudinary.com":
+            return
+
+        chemin = adresse.path
+
+        if "/upload/" not in chemin:
+            return
+
+        chemin_media = chemin.split("/upload/", 1)[1]
+        morceaux = chemin_media.split("/")
+
+        # Retirer le numéro de version Cloudinary, s'il existe.
+        if morceaux and morceaux[0].startswith("v"):
+            version = morceaux[0][1:]
+            if version.isdigit():
+                morceaux.pop(0)
+
+        public_id = "/".join(morceaux)
+
+        # Retirer l'extension du dernier élément.
+        if "." in public_id:
+            public_id = public_id.rsplit(".", 1)[0]
+
+        if public_id:
+            cloudinary.uploader.destroy(
+                public_id,
+                resource_type=type_ressource,
+                invalidate=True
+            )
+
+    except Exception:
+        # Une erreur de suppression du média ne doit pas
+        # empêcher la suppression du message en base.
+        pass
 
 
 # =========================================================
 # TROUVER LE DESTINATAIRE D'UN MESSAGE
 # =========================================================
-#
-# Cette fonction détermine automatiquement à qui envoyer
-# le message selon l'utilisateur connecté et la commande.
-#
-# Cas 1 :
-#     CLIENT → VENDEUR / ADMIN
-#
-# Cas 2 :
-#     VENDEUR / ADMIN → CLIENT
-#
-# =========================================================
 
-def trouver_destinataire_message(
-    db,
-    commande,
-    utilisateur_connecte
-):
-
-    # -----------------------------------------------------
-    # 1. Vérifier que la commande possède un client
-    # -----------------------------------------------------
+def trouver_destinataire_message(db, commande, utilisateur_connecte):
 
     client = db.query(Client).filter(
         Client.id_client == commande.CLIENT_id_client
@@ -3968,10 +3782,6 @@ def trouver_destinataire_message(
             detail="Client de la commande introuvable."
         )
 
-    # -----------------------------------------------------
-    # 2. Récupérer l'utilisateur associé au client
-    # -----------------------------------------------------
-
     utilisateur_client = db.query(Utilisateur).filter(
         Utilisateur.id_utilisateur == client.id_utilisateur
     ).first()
@@ -3982,59 +3792,30 @@ def trouver_destinataire_message(
             detail="Utilisateur du client introuvable."
         )
 
-    # -----------------------------------------------------
-    # 3. Si l'utilisateur connecté est le CLIENT
-    # -----------------------------------------------------
-    #
-    # Le message doit aller à un vendeur.
-    #
-    # On choisit ici un utilisateur ayant le rôle
-    # "vendeur".
-    #
-    # -----------------------------------------------------
-
     if utilisateur_connecte.role == "client":
-
-        vendeur = db.query(Utilisateur).filter(
+        destinataire = db.query(Utilisateur).filter(
             Utilisateur.role == "vendeur"
+        ).order_by(
+            Utilisateur.id_utilisateur.asc()
         ).first()
 
-        if not vendeur:
-
-            # Si aucun vendeur n'existe, on cherche
-            # éventuellement un administrateur.
-
-            admin = db.query(Utilisateur).filter(
+        if destinataire is None:
+            destinataire = db.query(Utilisateur).filter(
                 Utilisateur.role == "admin"
+            ).order_by(
+                Utilisateur.id_utilisateur.asc()
             ).first()
 
-            if not admin:
-                raise HTTPException(
-                    status_code=404,
-                    detail=(
-                        "Aucun vendeur ou administrateur "
-                        "disponible pour recevoir le message."
-                    )
-                )
+        if destinataire is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Aucun vendeur ou administrateur disponible."
+            )
 
-            return admin
+        return destinataire
 
-        return vendeur
-
-    # -----------------------------------------------------
-    # 4. Si l'utilisateur connecté est VENDEUR ou ADMIN
-    # -----------------------------------------------------
-    #
-    # Le message doit revenir au client de la commande.
-    # -----------------------------------------------------
-
-    if utilisateur_connecte.role in ["vendeur", "admin"]:
-
+    if utilisateur_connecte.role in ("vendeur", "admin"):
         return utilisateur_client
-
-    # -----------------------------------------------------
-    # 5. Cas d'un rôle non autorisé
-    # -----------------------------------------------------
 
     raise HTTPException(
         status_code=403,
@@ -4043,12 +3824,81 @@ def trouver_destinataire_message(
 
 
 # =========================================================
-# MESSAGERIE DES COMMANDES
+# CRÉER UNE NOTIFICATION
 # =========================================================
+
+def creer_notification(
+    db,
+    id_utilisateur,
+    titre,
+    message,
+    type_notification="info",
+    lien=None
+):
+    notification = Notification(
+        UTILISATEUR_id_utilisateur=id_utilisateur,
+        titre=titre,
+        message=message,
+        type_notification=type_notification,
+        lien=lien,
+        lu=False,
+        date_notification=datetime.now()
+    )
+
+    db.add(notification)
+    return notification
 
 
 # =========================================================
-# ENVOYER UN MESSAGE TEXTE POUR UNE COMMANDE
+# NOTIFIER LES PERSONNES CONCERNÉES PAR UN MESSAGE
+# =========================================================
+
+def notifier_nouveau_message(
+    db,
+    commande,
+    expediteur,
+    id_commande
+):
+    if expediteur.role == "client":
+        # Chaque administrateur et vendeur reçoit une notification.
+        destinataires = db.query(Utilisateur).filter(
+            Utilisateur.role.in_(["admin", "vendeur"])
+        ).all()
+
+        for destinataire in destinataires:
+            creer_notification(
+                db=db,
+                id_utilisateur=destinataire.id_utilisateur,
+                titre="Nouveau message",
+                message=(
+                    f"Un client a envoyé un message "
+                    f"concernant la commande #{id_commande}."
+                ),
+                type_notification="message",
+                lien="/commandes"
+            )
+
+    else:
+        client = db.query(Client).filter(
+            Client.id_client == commande.CLIENT_id_client
+        ).first()
+
+        if client and client.id_utilisateur:
+            creer_notification(
+                db=db,
+                id_utilisateur=client.id_utilisateur,
+                titre="Nouveau message",
+                message=(
+                    f"Vous avez reçu un nouveau message "
+                    f"concernant votre commande #{id_commande}."
+                ),
+                type_notification="message",
+                lien="/mes-commandes"
+            )
+
+
+# =========================================================
+# ENVOYER UN MESSAGE TEXTE
 # =========================================================
 
 @app.post(
@@ -4058,809 +3908,167 @@ def trouver_destinataire_message(
 def envoyer_message_commande(
     id_commande: int,
     message_data: MessageCommandeCreate,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # 1. VÉRIFIER QUE LA COMMANDE EXISTE
-    # -----------------------------------------------------
-
     commande = db.query(Commande).filter(
         Commande.id_commande == id_commande
     ).first()
 
     if commande is None:
-
         raise HTTPException(
             status_code=404,
             detail="Commande introuvable."
         )
 
-    # -----------------------------------------------------
-    # 2. VÉRIFICATION DU CLIENT
-    # -----------------------------------------------------
-    #
-    # Si l'utilisateur connecté est un client, il doit
-    # obligatoirement être propriétaire de la commande.
-    #
-    # Cette sécurité existait déjà dans ton code et nous
-    # la conservons.
-    # -----------------------------------------------------
-
     if utilisateur.role == "client":
-
         client = db.query(Client).filter(
-            Client.id_utilisateur
-            == utilisateur.id_utilisateur
+            Client.id_utilisateur == utilisateur.id_utilisateur
         ).first()
 
         if client is None:
-
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    "Aucun client associé "
-                    "à cet utilisateur."
-                )
+                detail="Aucun client associé à cet utilisateur."
             )
 
-        if (
-            commande.CLIENT_id_client
-            != client.id_client
-        ):
-
+        if commande.CLIENT_id_client != client.id_client:
             raise HTTPException(
                 status_code=403,
-                detail=(
-                    "Vous ne pouvez pas envoyer "
-                    "un message pour cette commande."
-                )
+                detail="Vous ne pouvez pas envoyer un message pour cette commande."
             )
 
-    # -----------------------------------------------------
-    # 3. VÉRIFIER QUE LE MESSAGE N'EST PAS VIDE
-    # -----------------------------------------------------
-
-    texte = message_data.message.strip()
+    texte = (message_data.message or "").strip()
 
     if not texte:
-
         raise HTTPException(
             status_code=400,
             detail="Le message ne peut pas être vide."
         )
 
-    # -----------------------------------------------------
-    # 4. TROUVER LE DESTINATAIRE
-    # -----------------------------------------------------
-    #
-    # Cette fonction a été créée précédemment :
-    #
-    #     trouver_destinataire_message(...)
-    #
-    # Elle détermine automatiquement :
-    #
-    # CLIENT
-    #    ↓
-    # VENDEUR / ADMIN
-    #
-    # ou :
-    #
-    # VENDEUR / ADMIN
-    #    ↓
-    # CLIENT
-    # -----------------------------------------------------
-
     destinataire = trouver_destinataire_message(
-        db=db,
-        commande=commande,
-        utilisateur_connecte=utilisateur
+        db, commande, utilisateur
     )
 
-    # -----------------------------------------------------
-    # 5. VÉRIFICATION SUPPLÉMENTAIRE
-    # -----------------------------------------------------
-    #
-    # On évite qu'un utilisateur puisse être son propre
-    # destinataire.
-    # -----------------------------------------------------
-
-    if (
-        destinataire.id_utilisateur
-        == utilisateur.id_utilisateur
-    ):
-
+    if destinataire.id_utilisateur == utilisateur.id_utilisateur:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Le destinataire du message "
-                "ne peut pas être l'expéditeur."
-            )
+            detail="Le destinataire ne peut pas être l'expéditeur."
         )
 
-    # -----------------------------------------------------
-    # 6. CRÉER LE MESSAGE
-    # -----------------------------------------------------
-
     nouveau_message = MessageCommande(
-
-        # Commande concernée
         COMMANDE_id_commande=id_commande,
-
-        # Expéditeur
-        UTILISATEUR_id_utilisateur=
-            utilisateur.id_utilisateur,
-
-        # Destinataire
-        UTILISATEUR_destinataire_id=
-            destinataire.id_utilisateur,
-
-        # Texte
+        UTILISATEUR_id_utilisateur=utilisateur.id_utilisateur,
+        UTILISATEUR_destinataire_id=destinataire.id_utilisateur,
         message=texte,
-
-        # Nouveau message = non lu
         lu=False
     )
 
-    # -----------------------------------------------------
-    # 7. ENREGISTRER DANS LA BASE
-    # -----------------------------------------------------
+    try:
+        db.add(nouveau_message)
+        db.flush()
 
-    db.add(nouveau_message)
+        notifier_nouveau_message(
+            db, commande, utilisateur, id_commande
+        )
 
-    db.commit()
+        db.commit()
+        db.refresh(nouveau_message)
 
-    db.refresh(nouveau_message)
-
-    # -----------------------------------------------------
-    # 8. RETOURNER LE MESSAGE
-    # -----------------------------------------------------
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer le message."
+        )
 
     return nouveau_message
 
 
-    # =========================================================
-    # 🔔 NOTIFICATION — NOUVEAU MESSAGE
-    # =========================================================
-
-    # ---------------------------------------------------------
-    # Identifier l'expéditeur
-    # ---------------------------------------------------------
-
-    expediteur = utilisateur
-
-
-    # ---------------------------------------------------------
-    # Identifier le destinataire
-    # ---------------------------------------------------------
-
-    commande = (
-        db.query(Commande)
-        .filter(
-            Commande.id_commande == id_commande
-        )
-        .first()
-    )
-
-    if commande:
-
-        # =====================================================
-        # CAS 1 : LE CLIENT ENVOIE UN MESSAGE
-        # =====================================================
-
-        if expediteur.role == "client":
-
-            # Tous les administrateurs et vendeurs
-            # doivent être informés.
-
-            destinataires = (
-                db.query(Utilisateur)
-                .filter(
-                    Utilisateur.role.in_(
-                        ["admin", "vendeur"]
-                    )
-                )
-                .all()
-            )
-
-            for destinataire in destinataires:
-
-                creer_notification(
-                    db=db,
-                    id_utilisateur=(
-                        destinataire.id_utilisateur
-                    ),
-                    titre="Nouveau message",
-                    message=(
-                        f"Un client vous a envoyé "
-                        f"un message concernant la "
-                        f"commande #{id_commande}."
-                    ),
-                    type_notification="message",
-                    lien="/commandes"
-                )
-
-        # =====================================================
-        # CAS 2 : ADMIN OU VENDEUR RÉPOND AU CLIENT
-        # =====================================================
-
-        else:
-
-            client = (
-                db.query(Client)
-                .filter(
-                    Client.id_client
-                    == commande.CLIENT_id_client
-                )
-                .first()
-            )
-
-            if client and client.id_utilisateur:
-
-                creer_notification(
-                    db=db,
-                    id_utilisateur=(
-                        client.id_utilisateur
-                    ),
-                    titre="Nouveau message",
-                    message=(
-                        f"Vous avez reçu un nouveau "
-                        f"message concernant votre "
-                        f"commande #{id_commande}."
-                    ),
-                    type_notification="message",
-                    lien="/mes-commandes"
-                )
-
-
 # =========================================================
-# AFFICHER LES MESSAGES D'UNE COMMANDE
-# =========================================================
-#
-# Cette route :
-#
-# - vérifie que la commande existe ;
-# - vérifie que le client possède bien la commande ;
-# - marque automatiquement comme LUS les messages reçus
-#   lorsque la conversation est ouverte ;
-# - retourne ensuite tous les messages.
-#
-# LOGIQUE :
-#
-# CLIENT
-#   -> ouvre la conversation
-#   -> ses messages reçus deviennent lus
-#
-# VENDEUR / ADMIN
-#   -> ouvre la conversation
-#   -> les messages envoyés par le client deviennent lus
-#
-# =========================================================
-
-@app.get(
-    "/commandes/{id_commande}/messages",
-    response_model=list[MessageCommandeResponse]
-)
-def lire_messages_commande(
-    id_commande: int,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
-    db: Session = Depends(get_db)
-):
-
-    # -----------------------------------------------------
-    # 1. Vérifier que la commande existe
-    # -----------------------------------------------------
-
-    commande = db.query(Commande).filter(
-        Commande.id_commande == id_commande
-    ).first()
-
-    if commande is None:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Commande introuvable."
-        )
-
-    # -----------------------------------------------------
-    # 2. Vérifier les droits du client
-    # -----------------------------------------------------
-
-    if utilisateur.role == "client":
-
-        client = db.query(Client).filter(
-            Client.id_utilisateur
-            == utilisateur.id_utilisateur
-        ).first()
-
-        if client is None:
-
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Aucun client associé "
-                    "à cet utilisateur."
-                )
-            )
-
-        # Le client ne peut consulter que ses commandes.
-
-        if (
-            commande.CLIENT_id_client
-            != client.id_client
-        ):
-
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    "Vous ne pouvez pas consulter "
-                    "les messages de cette commande."
-                )
-            )
-
-    # -----------------------------------------------------
-    # 3. MARQUER LES MESSAGES COMME LUS
-    # -----------------------------------------------------
-    #
-    # CAS 1 :
-    # CLIENT ouvre la conversation
-    #
-    # On marque comme lus uniquement les messages
-    # qui lui sont destinés.
-    #
-    # CAS 2 :
-    # VENDEUR ou ADMIN ouvre la conversation
-    #
-    # On considère que la conversation est prise en charge
-    # par le personnel de la boutique.
-    #
-    # On marque donc comme lus les messages envoyés
-    # par le client.
-    #
-    # -----------------------------------------------------
-
-    if utilisateur.role == "client":
-
-        # -------------------------------------------------
-        # Le client lit les réponses du vendeur/admin.
-        # -------------------------------------------------
-
-        db.query(MessageCommande).filter(
-
-            MessageCommande.COMMANDE_id_commande
-            == id_commande,
-
-            MessageCommande.UTILISATEUR_destinataire_id
-            == utilisateur.id_utilisateur,
-
-            MessageCommande.lu == False
-
-        ).update(
-
-            {
-                MessageCommande.lu: True
-            },
-
-            synchronize_session=False
-        )
-
-    else:
-
-        # -------------------------------------------------
-        # Admin ou vendeur lit les messages du client.
-        #
-        # On identifie le client propriétaire de la commande.
-        # -------------------------------------------------
-
-        client = db.query(Client).filter(
-            Client.id_client
-            == commande.CLIENT_id_client
-        ).first()
-
-        if client is not None:
-
-            db.query(MessageCommande).filter(
-
-                MessageCommande.COMMANDE_id_commande
-                == id_commande,
-
-                MessageCommande.UTILISATEUR_id_utilisateur
-                == client.id_utilisateur,
-
-                MessageCommande.lu == False
-
-            ).update(
-
-                {
-                    MessageCommande.lu: True
-                },
-
-                synchronize_session=False
-            )
-
-    # -----------------------------------------------------
-    # 4. Enregistrer les changements de statut LU
-    # -----------------------------------------------------
-
-    db.commit()
-
-    # -----------------------------------------------------
-    # 5. Récupérer tous les messages de la conversation
-    # -----------------------------------------------------
-
-    messages = db.query(
-        MessageCommande
-    ).filter(
-
-        MessageCommande.COMMANDE_id_commande
-        == id_commande
-
-    ).order_by(
-
-        MessageCommande.date_message.asc()
-
-    ).all()
-
-    # -----------------------------------------------------
-    # 6. Préparer la réponse
-    # -----------------------------------------------------
-
-    resultats = []
-
-    for message in messages:
-
-        # -------------------------------------------------
-        # Rechercher l'expéditeur
-        # -------------------------------------------------
-
-        expediteur = db.query(
-            Utilisateur
-        ).filter(
-
-            Utilisateur.id_utilisateur
-            == message.UTILISATEUR_id_utilisateur
-
-        ).first()
-
-        # -------------------------------------------------
-        # Construire le résultat
-        # -------------------------------------------------
-
-        resultats.append({
-
-            "id_message":
-                message.id_message,
-
-            "COMMANDE_id_commande":
-                message.COMMANDE_id_commande,
-
-            "UTILISATEUR_id_utilisateur":
-                message.UTILISATEUR_id_utilisateur,
-
-            "message":
-                message.message,
-
-            "audio_url":
-                message.audio_url,
-
-            "date_message":
-                message.date_message,
-
-            "lu":
-                message.lu,
-
-            "nom_utilisateur":
-                expediteur.nom
-                if expediteur
-                else None,
-
-            "prenom_utilisateur":
-                expediteur.prenom
-                if expediteur
-                else None,
-
-            "role_utilisateur":
-                expediteur.role
-                if expediteur
-                else None
-        })
-
-    return resultats
-
-
-# =========================================================
-# NOMBRE DE MESSAGES NON LUS POUR UNE COMMANDE
-# =========================================================
-
-@app.get(
-    "/commandes/{id_commande}/messages/non-lus"
-)
-def compter_messages_non_lus(
-    id_commande: int,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
-    db: Session = Depends(get_db)
-):
-
-    # -----------------------------------------------------
-    # 1. Vérifier que la commande existe
-    # -----------------------------------------------------
-
-    commande = db.query(Commande).filter(
-        Commande.id_commande == id_commande
-    ).first()
-
-    if commande is None:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Commande introuvable."
-        )
-
-    # -----------------------------------------------------
-    # 2. CLIENT
-    # -----------------------------------------------------
-
-    if utilisateur.role == "client":
-
-        client = db.query(Client).filter(
-            Client.id_utilisateur
-            == utilisateur.id_utilisateur
-        ).first()
-
-        if client is None:
-
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Aucun client associé "
-                    "à cet utilisateur."
-                )
-            )
-
-        # Le client ne peut consulter que ses commandes.
-
-        if (
-            commande.CLIENT_id_client
-            != client.id_client
-        ):
-
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    "Vous ne pouvez pas consulter "
-                    "cette commande."
-                )
-            )
-
-        # -------------------------------------------------
-        # Pour le client :
-        #
-        # on compte uniquement les messages qui lui sont
-        # destinés et qui ne sont pas lus.
-        # -------------------------------------------------
-
-        nombre_non_lus = db.query(
-            MessageCommande
-        ).filter(
-
-            MessageCommande.COMMANDE_id_commande
-            == id_commande,
-
-            MessageCommande.UTILISATEUR_destinataire_id
-            == utilisateur.id_utilisateur,
-
-            MessageCommande.lu == False
-
-        ).count()
-
-    # -----------------------------------------------------
-    # 3. ADMIN / VENDEUR
-    # -----------------------------------------------------
-
-    else:
-
-        # -------------------------------------------------
-        # Pour le personnel :
-        #
-        # on compte les messages envoyés par le client
-        # qui ne sont pas encore lus.
-        #
-        # Cela permet à l'admin ET au vendeur de voir
-        # le badge rouge.
-        # -------------------------------------------------
-
-        client = db.query(Client).filter(
-            Client.id_client
-            == commande.CLIENT_id_client
-        ).first()
-
-        if client is None:
-
-            nombre_non_lus = 0
-
-        else:
-
-            nombre_non_lus = db.query(
-                MessageCommande
-            ).filter(
-
-                MessageCommande.COMMANDE_id_commande
-                == id_commande,
-
-                MessageCommande.UTILISATEUR_id_utilisateur
-                == client.id_utilisateur,
-
-                MessageCommande.lu == False
-
-            ).count()
-
-    # -----------------------------------------------------
-    # 4. Retourner le résultat
-    # -----------------------------------------------------
-
-    return {
-
-        "id_commande":
-            id_commande,
-
-        "messages_non_lus":
-            nombre_non_lus
-    }
-
-# =========================================================
-# ENVOYER UN MESSAGE CONCERNANT UNE COMMANDE
-# CLIENT
+# ENVOYER UN MESSAGE DEPUIS L'ESPACE CLIENT
 # =========================================================
 
 @app.post("/mes-commandes/{id_commande}/messages")
 def envoyer_message_client(
     id_commande: int,
     message_data: dict,
-    utilisateur=Depends(
-        role_autorise("client")
-    ),
+    utilisateur=Depends(role_autorise("client")),
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # 1. Vérifier que le message n'est pas vide
-    # -----------------------------------------------------
-
-    contenu = message_data.get("message", "").strip()
+    contenu = str(message_data.get("message") or "").strip()
 
     if not contenu:
-
         raise HTTPException(
             status_code=400,
             detail="Le message ne peut pas être vide."
         )
 
-    # -----------------------------------------------------
-    # 2. Rechercher le client connecté
-    # -----------------------------------------------------
-
     client = db.query(Client).filter(
-        Client.id_utilisateur
-        == utilisateur.id_utilisateur
+        Client.id_utilisateur == utilisateur.id_utilisateur
     ).first()
 
     if client is None:
-
         raise HTTPException(
             status_code=404,
             detail="Aucun client associé à cet utilisateur."
         )
 
-    # -----------------------------------------------------
-    # 3. Vérifier que la commande existe
-    # -----------------------------------------------------
-
     commande = db.query(Commande).filter(
-        Commande.id_commande
-        == id_commande
+        Commande.id_commande == id_commande
     ).first()
 
     if commande is None:
-
         raise HTTPException(
             status_code=404,
             detail="Commande introuvable."
         )
 
-    # -----------------------------------------------------
-    # 4. Vérifier que la commande appartient au client
-    # -----------------------------------------------------
-
     if commande.CLIENT_id_client != client.id_client:
-
         raise HTTPException(
             status_code=403,
-            detail=(
-                "Vous n'êtes pas autorisé "
-                "à envoyer un message concernant "
-                "cette commande."
-            )
+            detail="Vous n'êtes pas autorisé à contacter cette commande."
         )
-
-    # -----------------------------------------------------
-    # 5. Trouver le destinataire
-    # -----------------------------------------------------
 
     destinataire = trouver_destinataire_message(
-        db=db,
-        commande=commande,
-        utilisateur_connecte=utilisateur
+        db, commande, utilisateur
     )
 
-    # -----------------------------------------------------
-    # 6. Empêcher l'envoi à soi-même
-    # -----------------------------------------------------
-
-    if (
-        destinataire.id_utilisateur
-        == utilisateur.id_utilisateur
-    ):
-
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Le destinataire du message "
-                "ne peut pas être l'expéditeur."
-            )
-        )
-
-    # -----------------------------------------------------
-    # 7. Créer le message
-    # -----------------------------------------------------
-
     nouveau_message = MessageCommande(
-
         COMMANDE_id_commande=id_commande,
-
-        UTILISATEUR_id_utilisateur=
-            utilisateur.id_utilisateur,
-
-        UTILISATEUR_destinataire_id=
-            destinataire.id_utilisateur,
-
+        UTILISATEUR_id_utilisateur=utilisateur.id_utilisateur,
+        UTILISATEUR_destinataire_id=destinataire.id_utilisateur,
         message=contenu,
-
-        # Le destinataire n'a pas encore lu le message
         lu=False
     )
 
-    # -----------------------------------------------------
-    # 8. Enregistrer le message
-    # -----------------------------------------------------
+    try:
+        db.add(nouveau_message)
+        db.flush()
 
-    db.add(nouveau_message)
+        notifier_nouveau_message(
+            db, commande, utilisateur, id_commande
+        )
 
-    db.commit()
+        db.commit()
+        db.refresh(nouveau_message)
 
-    db.refresh(nouveau_message)
-
-    # -----------------------------------------------------
-    # 9. Retourner une confirmation
-    # -----------------------------------------------------
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer le message."
+        )
 
     return {
-
-        "message":
-            "Votre message a été envoyé.",
-
-        "id_message":
-            nouveau_message.id_message
+        "message": "Votre message a été envoyé.",
+        "id_message": nouveau_message.id_message
     }
 
+
+
 # =========================================================
-# ENVOYER UN MESSAGE VOCAL POUR UNE COMMANDE
+# ENVOYER UN MESSAGE VOCAL VERS CLOUDINARY
 # =========================================================
 
 @app.post(
@@ -4875,9 +4083,8 @@ async def envoyer_message_vocal(
     ),
     db: Session = Depends(get_db)
 ):
-
     # -----------------------------------------------------
-    # 1. VÉRIFIER QUE LA COMMANDE EXISTE
+    # 1. VÉRIFIER LA COMMANDE
     # -----------------------------------------------------
 
     commande = db.query(Commande).filter(
@@ -4885,226 +4092,394 @@ async def envoyer_message_vocal(
     ).first()
 
     if commande is None:
-
         raise HTTPException(
             status_code=404,
             detail="Commande introuvable."
         )
 
     # -----------------------------------------------------
-    # 2. VÉRIFICATION DU CLIENT
-    # -----------------------------------------------------
-    #
-    # Un client ne peut envoyer un vocal que pour
-    # sa propre commande.
+    # 2. VÉRIFIER LES DROITS D'ACCÈS
     # -----------------------------------------------------
 
     if utilisateur.role == "client":
-
         client = db.query(Client).filter(
-            Client.id_utilisateur
-            == utilisateur.id_utilisateur
+            Client.id_utilisateur == utilisateur.id_utilisateur
         ).first()
 
         if client is None:
-
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    "Aucun client associé "
-                    "à cet utilisateur."
-                )
+                detail="Aucun client associé à cet utilisateur."
             )
 
-        if (
-            commande.CLIENT_id_client
-            != client.id_client
-        ):
-
+        if commande.CLIENT_id_client != client.id_client:
             raise HTTPException(
                 status_code=403,
                 detail=(
-                    "Vous ne pouvez pas envoyer "
-                    "un message vocal pour cette commande."
+                    "Vous ne pouvez pas envoyer un vocal "
+                    "pour cette commande."
                 )
             )
 
     # -----------------------------------------------------
-    # 3. VÉRIFIER LE FICHIER
+    # 3. VÉRIFIER LE FICHIER AUDIO
     # -----------------------------------------------------
 
-    if fichier is None:
-
+    if not fichier.filename:
         raise HTTPException(
             status_code=400,
             detail="Aucun fichier vocal reçu."
         )
 
-    # -----------------------------------------------------
-    # 4. VÉRIFIER LE NOM DU FICHIER
-    # -----------------------------------------------------
+    type_fichier = (fichier.content_type or "").lower()
 
-    if not fichier.filename:
+    types_audio_autorises = {
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/ogg",
+        "audio/webm",
+        "audio/aac",
+        "audio/3gpp",
+        "application/octet-stream",
+    }
 
+    if type_fichier not in types_audio_autorises:
         raise HTTPException(
             status_code=400,
-            detail="Le fichier vocal n'a pas de nom."
+            detail="Le format du fichier vocal n'est pas accepté."
         )
 
-    # -----------------------------------------------------
-    # 5. TROUVER LE DESTINATAIRE
-    # -----------------------------------------------------
-    #
-    # Même logique que pour les messages texte.
-    #
-    # CLIENT
-    #    ↓
-    # VENDEUR / ADMIN
-    #
-    # VENDEUR / ADMIN
-    #    ↓
-    # CLIENT
-    # -----------------------------------------------------
-
-    destinataire = trouver_destinataire_message(
-        db=db,
-        commande=commande,
-        utilisateur_connecte=utilisateur
-    )
-
-    # -----------------------------------------------------
-    # 6. EMPÊCHER L'ENVOI À SOI-MÊME
-    # -----------------------------------------------------
-
-    if (
-        destinataire.id_utilisateur
-        == utilisateur.id_utilisateur
-    ):
-
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Le destinataire du message "
-                "ne peut pas être l'expéditeur."
-            )
-        )
-
-    # -----------------------------------------------------
-    # 7. VÉRIFIER LE DOSSIER AUDIO
-    # -----------------------------------------------------
-
-    if not os.path.exists(AUDIO_DIR):
-
-        os.makedirs(
-            AUDIO_DIR,
-            exist_ok=True
-        )
-
-    # -----------------------------------------------------
-    # 8. CRÉER UN NOM UNIQUE POUR LE FICHIER
-    # -----------------------------------------------------
-
-    extension = os.path.splitext(
-        fichier.filename
-    )[1]
-
-    # Si le navigateur n'envoie pas d'extension,
-    # on utilise .webm car MediaRecorder produit
-    # généralement ce format.
-
-    if not extension:
-
-        extension = ".webm"
-
-    nom_fichier = (
-        f"{uuid.uuid4().hex}"
-        f"{extension}"
-    )
-
-    chemin_fichier = os.path.join(
-        AUDIO_DIR,
-        nom_fichier
-    )
-
-    # -----------------------------------------------------
-    # 9. SAUVEGARDER LE FICHIER AUDIO
-    # -----------------------------------------------------
-
-    contenu = await fichier.read()
+    # Limite de sécurité : 20 Mo.
+    taille_maximale = 20 * 1024 * 1024
+    contenu = await fichier.read(taille_maximale + 1)
 
     if not contenu:
-
         raise HTTPException(
             status_code=400,
             detail="Le fichier vocal est vide."
         )
 
-    with open(
-        chemin_fichier,
-        "wb"
-    ) as fichier_audio:
+    if len(contenu) > taille_maximale:
+        raise HTTPException(
+            status_code=413,
+            detail="Le fichier vocal dépasse la limite de 20 Mo."
+        )
 
-        fichier_audio.write(contenu)
+    # Replacer le curseur au début avant l'envoi Cloudinary.
+    await fichier.seek(0)
 
     # -----------------------------------------------------
-    # 10. URL PUBLIQUE DU FICHIER
+    # 4. TROUVER LE DESTINATAIRE
     # -----------------------------------------------------
 
-    audio_url = (
-        f"/static/audio/{nom_fichier}"
+    destinataire = trouver_destinataire_message(
+        db,
+        commande,
+        utilisateur
     )
 
+    if destinataire is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Aucun destinataire disponible pour ce message."
+        )
+
+    if (
+        destinataire.id_utilisateur
+        == utilisateur.id_utilisateur
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Le destinataire ne peut pas être l'expéditeur."
+        )
+
     # -----------------------------------------------------
-    # 11. CRÉER LE MESSAGE VOCAL
+    # 5. TÉLÉVERSER LE FICHIER SUR CLOUDINARY
     # -----------------------------------------------------
-    #
-    # message = None
-    # car il n'y a pas de texte.
-    #
-    # audio_url contient le chemin du vocal.
-    #
-    # lu = False
-    # car le destinataire ne l'a pas encore écouté.
+
+    try:
+        resultat = televerser_vers_cloudinary(
+            fichier,
+            "boutique/audio",
+            "video"
+        )
+
+    except Exception as erreur:
+        print("Erreur Cloudinary lors de l'envoi audio :", str(erreur))
+
+        raise HTTPException(
+            status_code=502,
+            detail="Impossible de téléverser le fichier vocal."
+        )
+
+    audio_url = resultat.get("secure_url")
+
+    if not audio_url:
+        raise HTTPException(
+            status_code=502,
+            detail="Cloudinary n'a pas retourné l'URL du fichier audio."
+        )
+
+    # -----------------------------------------------------
+    # 6. ENREGISTRER LE MESSAGE
     # -----------------------------------------------------
 
     nouveau_message = MessageCommande(
-
-        # Commande concernée
         COMMANDE_id_commande=id_commande,
-
-        # Expéditeur
-        UTILISATEUR_id_utilisateur=
-            utilisateur.id_utilisateur,
-
-        # Destinataire
-        UTILISATEUR_destinataire_id=
-            destinataire.id_utilisateur,
-
-        # Aucun texte
+        UTILISATEUR_id_utilisateur=utilisateur.id_utilisateur,
+        UTILISATEUR_destinataire_id=destinataire.id_utilisateur,
         message=None,
-
-        # Fichier vocal
         audio_url=audio_url,
-
-        # Nouveau message = non lu
         lu=False
     )
 
-    # -----------------------------------------------------
-    # 12. ENREGISTRER LE MESSAGE
-    # -----------------------------------------------------
+    try:
+        db.add(nouveau_message)
+        db.flush()
 
-    db.add(nouveau_message)
+        notifier_nouveau_message(
+            db,
+            commande,
+            utilisateur,
+            id_commande
+        )
 
-    db.commit()
+        db.commit()
+        db.refresh(nouveau_message)
 
-    db.refresh(nouveau_message)
+    except Exception as erreur:
+        db.rollback()
 
-    # -----------------------------------------------------
-    # 13. RETOURNER LE MESSAGE
-    # -----------------------------------------------------
+        print("Erreur d'enregistrement du message vocal :", str(erreur))
+
+        # Essayer de supprimer le média distant si la transaction
+        # échoue, sans masquer l'erreur initiale.
+        try:
+            supprimer_media_cloudinary(audio_url, "video")
+        except Exception as erreur_suppression:
+            print(
+                "Nettoyage Cloudinary impossible :",
+                str(erreur_suppression)
+            )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Le fichier vocal a été téléversé, mais "
+                "le message n'a pas pu être enregistré."
+            )
+        )
 
     return nouveau_message
+
+
+# =========================================================
+# AFFICHER LES MESSAGES D'UNE COMMANDE
+# =========================================================
+
+@app.get(
+    "/commandes/{id_commande}/messages",
+    response_model=list[MessageCommandeResponse]
+)
+def lire_messages_commande(
+    id_commande: int,
+    utilisateur=Depends(
+        role_autorise("admin", "vendeur", "client")
+    ),
+    db: Session = Depends(get_db)
+):
+    # -----------------------------------------------------
+    # 1. VÉRIFIER LA COMMANDE
+    # -----------------------------------------------------
+
+    commande = db.query(Commande).filter(
+        Commande.id_commande == id_commande
+    ).first()
+
+    if commande is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Commande introuvable."
+        )
+
+    # -----------------------------------------------------
+    # 2. VÉRIFIER LES DROITS ET MARQUER LES MESSAGES LUS
+    # -----------------------------------------------------
+
+    if utilisateur.role == "client":
+        client = db.query(Client).filter(
+            Client.id_utilisateur == utilisateur.id_utilisateur
+        ).first()
+
+        if client is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Aucun client associé à cet utilisateur."
+            )
+
+        if commande.CLIENT_id_client != client.id_client:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Vous ne pouvez pas consulter les messages "
+                    "de cette commande."
+                )
+            )
+
+        # Le client ne marque comme lus que les messages
+        # qui lui sont effectivement destinés.
+        db.query(MessageCommande).filter(
+            MessageCommande.COMMANDE_id_commande == id_commande,
+            MessageCommande.UTILISATEUR_destinataire_id
+            == utilisateur.id_utilisateur,
+            MessageCommande.lu.is_(False)
+        ).update(
+            {MessageCommande.lu: True},
+            synchronize_session=False
+        )
+
+    else:
+        # Le personnel ne marque comme lus que les messages
+        # envoyés par le client propriétaire de la commande.
+        client = db.query(Client).filter(
+            Client.id_client == commande.CLIENT_id_client
+        ).first()
+
+        if client:
+            db.query(MessageCommande).filter(
+                MessageCommande.COMMANDE_id_commande == id_commande,
+                MessageCommande.UTILISATEUR_id_utilisateur
+                == client.id_utilisateur,
+                MessageCommande.UTILISATEUR_destinataire_id
+                == utilisateur.id_utilisateur,
+                MessageCommande.lu.is_(False)
+            ).update(
+                {MessageCommande.lu: True},
+                synchronize_session=False
+            )
+
+    try:
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+
+        print("Erreur de mise à jour du statut lu :", str(erreur))
+
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible de mettre à jour le statut des messages."
+        )
+
+    # -----------------------------------------------------
+    # 3. RÉCUPÉRER LES MESSAGES
+    # -----------------------------------------------------
+
+    messages = db.query(MessageCommande).filter(
+        MessageCommande.COMMANDE_id_commande == id_commande
+    ).order_by(
+        MessageCommande.date_message.asc()
+    ).all()
+
+    # -----------------------------------------------------
+    # 4. PRÉPARER LA RÉPONSE
+    # -----------------------------------------------------
+
+    resultats = []
+
+    for message in messages:
+        expediteur = db.query(Utilisateur).filter(
+            Utilisateur.id_utilisateur
+            == message.UTILISATEUR_id_utilisateur
+        ).first()
+
+        resultats.append({
+            "id_message": message.id_message,
+            "COMMANDE_id_commande": message.COMMANDE_id_commande,
+            "UTILISATEUR_id_utilisateur":
+                message.UTILISATEUR_id_utilisateur,
+            "message": message.message,
+            "audio_url": message.audio_url,
+            "date_message": message.date_message,
+            "lu": message.lu,
+            "nom_utilisateur": (
+                expediteur.nom if expediteur else None
+            ),
+            "prenom_utilisateur": (
+                expediteur.prenom if expediteur else None
+            ),
+            "role_utilisateur": (
+                expediteur.role if expediteur else None
+            )
+        })
+
+    return resultats
+
+
+
+
+# =========================================================
+# COMPTER LES MESSAGES NON LUS POUR UNE COMMANDE
+# =========================================================
+
+@app.get("/commandes/{id_commande}/messages/non-lus")
+def compter_messages_non_lus_commande(
+    id_commande: int,
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
+    db: Session = Depends(get_db)
+):
+    commande = db.query(Commande).filter(
+        Commande.id_commande == id_commande
+    ).first()
+
+    if commande is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Commande introuvable."
+        )
+
+    if utilisateur.role == "client":
+        client = db.query(Client).filter(
+            Client.id_utilisateur == utilisateur.id_utilisateur
+        ).first()
+
+        if client is None or commande.CLIENT_id_client != client.id_client:
+            raise HTTPException(
+                status_code=403,
+                detail="Vous ne pouvez pas consulter cette commande."
+            )
+
+        filtre = (
+            MessageCommande.UTILISATEUR_destinataire_id
+            == utilisateur.id_utilisateur
+        )
+
+    else:
+        client = db.query(Client).filter(
+            Client.id_client == commande.CLIENT_id_client
+        ).first()
+
+        if client is None:
+            return {"id_commande": id_commande, "messages_non_lus": 0}
+
+        filtre = (
+            MessageCommande.UTILISATEUR_id_utilisateur == client.id_utilisateur,
+            MessageCommande.UTILISATEUR_destinataire_id == utilisateur.id_utilisateur,
+        )
+
+    nombre = db.query(MessageCommande).filter(
+        MessageCommande.COMMANDE_id_commande == id_commande,
+        *([filtre] if not isinstance(filtre, tuple) else list(filtre)),
+        MessageCommande.lu.is_(False)
+    ).count()
+
+    return {
+        "id_commande": id_commande,
+        "messages_non_lus": nombre
+    }
 
 
 # =========================================================
@@ -5115,67 +4490,34 @@ async def envoyer_message_vocal(
 def supprimer_message(
     id_commande: int,
     id_message: int,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # 1. Rechercher le message
-    # -----------------------------------------------------
-
     message = db.query(MessageCommande).filter(
         MessageCommande.id_message == id_message,
         MessageCommande.COMMANDE_id_commande == id_commande
     ).first()
 
     if message is None:
-
         raise HTTPException(
             status_code=404,
             detail="Message introuvable."
         )
 
-    # -----------------------------------------------------
-    # 2. Vérifier que l'utilisateur est l'auteur
-    # -----------------------------------------------------
-
-    if (
-        message.UTILISATEUR_id_utilisateur
-        != utilisateur.id_utilisateur
-    ):
-
+    if message.UTILISATEUR_id_utilisateur != utilisateur.id_utilisateur:
         raise HTTPException(
             status_code=403,
-            detail=(
-                "Vous ne pouvez supprimer "
-                "que vos propres messages."
-            )
+            detail="Vous ne pouvez supprimer que vos propres messages."
         )
 
-    # -----------------------------------------------------
-    # 3. Supprimer éventuellement le fichier vocal
-    # -----------------------------------------------------
-
+    # Supprimer le média distant si l'URL appartient à Cloudinary.
     if message.audio_url:
-
-        chemin = message.audio_url.lstrip("/")
-
-        if os.path.exists(chemin):
-            os.remove(chemin)
-
-    # -----------------------------------------------------
-    # 4. Supprimer le message de la base
-    # -----------------------------------------------------
+        supprimer_media_cloudinary(message.audio_url, "video")
 
     db.delete(message)
-
     db.commit()
 
-    return {
-        "message": "Message supprimé."
-    }
+    return {"message": "Message supprimé."}
 
 
 # =========================================================
@@ -5183,38 +4525,16 @@ def supprimer_message(
 # =========================================================
 
 @app.put(
-    "/commandes/{id_commande}/messages/"
-    "{id_message}/lu",
+    "/commandes/{id_commande}/messages/{id_message}/lu",
     response_model=MessageCommandeResponse
 )
 def marquer_message_lu(
     id_commande: int,
     id_message: int,
     message_data: MessageCommandeLuUpdate,
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # 1. Vérifier que la commande existe
-    # -----------------------------------------------------
-
-    commande = db.query(Commande).filter(
-        Commande.id_commande == id_commande
-    ).first()
-
-    if commande is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Commande introuvable."
-        )
-
-    # -----------------------------------------------------
-    # 2. Chercher le message
-    # -----------------------------------------------------
-
     message = db.query(MessageCommande).filter(
         MessageCommande.id_message == id_message,
         MessageCommande.COMMANDE_id_commande == id_commande
@@ -5226,368 +4546,188 @@ def marquer_message_lu(
             detail="Message introuvable."
         )
 
-    # -----------------------------------------------------
-    # 3. Vérifier que le message est destiné
-    #    à l'utilisateur connecté
-    # -----------------------------------------------------
-
-    if (
-        message.UTILISATEUR_destinataire_id
-        != utilisateur.id_utilisateur
-    ):
+    if message.UTILISATEUR_destinataire_id != utilisateur.id_utilisateur:
         raise HTTPException(
             status_code=403,
-            detail=(
-                "Vous ne pouvez modifier que "
-                "les messages qui vous sont destinés."
-            )
+            detail="Vous ne pouvez modifier que les messages qui vous sont destinés."
         )
 
-    # -----------------------------------------------------
-    # 4. Modifier le statut
-    # -----------------------------------------------------
-
     message.lu = message_data.lu
-
-    # -----------------------------------------------------
-    # 5. Sauvegarder
-    # -----------------------------------------------------
-
     db.commit()
-
     db.refresh(message)
-
-    # -----------------------------------------------------
-    # 6. Retourner le message
-    # -----------------------------------------------------
 
     return message
 
 
-
 # =========================================================
-# COMPTER LES MESSAGES NON LUS
+# COMPTER TOUS LES MESSAGES NON LUS DE L'UTILISATEUR
 # =========================================================
 
-@app.get(
-    "/messages/non-lus"
-)
-def compter_messages_non_lus(
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
+@app.get("/messages/non-lus")
+def compter_tous_messages_non_lus(
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
     db: Session = Depends(get_db)
 ):
-
-    # -----------------------------------------------------
-    # On compte uniquement les messages :
-    #
-    # - destinés à l'utilisateur connecté
-    # - qui ne sont pas encore lus
-    #
-    # -----------------------------------------------------
-
-    nombre_non_lus = db.query(
-        MessageCommande
-    ).filter(
-        MessageCommande.UTILISATEUR_destinataire_id
-        == utilisateur.id_utilisateur,
-
-        MessageCommande.lu == False
+    nombre = db.query(MessageCommande).filter(
+        MessageCommande.UTILISATEUR_destinataire_id == utilisateur.id_utilisateur,
+        MessageCommande.lu.is_(False)
     ).count()
 
-    # -----------------------------------------------------
-    # Retourner le nombre
-    # -----------------------------------------------------
-
-    return {
-        "nombre_non_lus": nombre_non_lus
-    }
+    return {"nombre_non_lus": nombre}
 
 
 # =========================================================
-# RÉCUPÉRER TOUTES LES CONVERSATIONS DE L'UTILISATEUR
-# =========================================================
-#
-# Une conversation correspond à une commande.
-#
-# Pour chaque commande contenant au moins un message,
-# on retourne :
-#
-# - le numéro de la commande
-# - le nombre de messages non lus
-# - le dernier message
-# - la date du dernier message
-# - l'expéditeur du dernier message
-#
+# RÉCUPÉRER LES CONVERSATIONS
 # =========================================================
 
-@app.get(
-    "/messages/conversations"
-)
+@app.get("/messages/conversations")
 def obtenir_conversations(
-    utilisateur=Depends(
-        role_autorise("admin", "vendeur", "client")
-    ),
+    utilisateur=Depends(role_autorise("admin", "vendeur", "client")),
     db: Session = Depends(get_db)
 ):
-
-    # ---------------------------------------------------------
-    # Récupérer tous les messages accessibles à l'utilisateur
-    # ---------------------------------------------------------
-
     if utilisateur.role == "client":
-
-        # Le client ne doit voir que ses propres commandes.
-
         client = db.query(Client).filter(
-            Client.id_utilisateur
-            == utilisateur.id_utilisateur
+            Client.id_utilisateur == utilisateur.id_utilisateur
         ).first()
 
         if client is None:
-
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    "Aucun client associé "
-                    "à cet utilisateur."
-                )
+                detail="Aucun client associé à cet utilisateur."
             )
 
         commandes = db.query(Commande).filter(
-            Commande.CLIENT_id_client
-            == client.id_client
+            Commande.CLIENT_id_client == client.id_client
         ).all()
-
     else:
-
-        # -----------------------------------------------------
-        # Admin et vendeur :
-        # pour le moment, ils peuvent voir les conversations
-        # de toutes les commandes.
-        # -----------------------------------------------------
-
         commandes = db.query(Commande).all()
-
 
     conversations = []
 
-
-    # =========================================================
-    # PARCOURIR LES COMMANDES
-    # =========================================================
-
     for commande in commandes:
-
-        messages = db.query(
-            MessageCommande
-        ).filter(
-            MessageCommande.COMMANDE_id_commande
-            == commande.id_commande
+        messages = db.query(MessageCommande).filter(
+            MessageCommande.COMMANDE_id_commande == commande.id_commande
         ).order_by(
             MessageCommande.date_message.desc()
         ).all()
 
-
-        # -----------------------------------------------------
-        # Si aucune conversation n'existe pour cette commande,
-        # on ne l'affiche pas.
-        # -----------------------------------------------------
-
         if not messages:
-
             continue
 
+        dernier = messages[0]
 
-        # -----------------------------------------------------
-        # Dernier message
-        # -----------------------------------------------------
-
-        dernier_message = messages[0]
-
-
-        # -----------------------------------------------------
-        # Nombre de messages non lus destinés
-        # à l'utilisateur connecté
-        # -----------------------------------------------------
-
-        nombre_non_lus = db.query(
-            MessageCommande
-        ).filter(
-
-            MessageCommande.COMMANDE_id_commande
-            == commande.id_commande,
-
-            MessageCommande.UTILISATEUR_destinataire_id
-            == utilisateur.id_utilisateur,
-
-            MessageCommande.lu == False
-
+        nombre_non_lus = db.query(MessageCommande).filter(
+            MessageCommande.COMMANDE_id_commande == commande.id_commande,
+            MessageCommande.UTILISATEUR_destinataire_id == utilisateur.id_utilisateur,
+            MessageCommande.lu.is_(False)
         ).count()
 
-
-        # -----------------------------------------------------
-        # Récupérer l'expéditeur du dernier message
-        # -----------------------------------------------------
-
-        expediteur = db.query(
-            Utilisateur
-        ).filter(
-            Utilisateur.id_utilisateur
-            == dernier_message.UTILISATEUR_id_utilisateur
+        expediteur = db.query(Utilisateur).filter(
+            Utilisateur.id_utilisateur == dernier.UTILISATEUR_id_utilisateur
         ).first()
 
-
-        # -----------------------------------------------------
-        # Déterminer le contenu à afficher dans l'aperçu
-        # -----------------------------------------------------
-
-        if dernier_message.audio_url:
-
-            apercu = "🎤 Message vocal"
-
-        elif dernier_message.message:
-
-            apercu = dernier_message.message
-
-        else:
-
-            apercu = "Message"
-
-
-        # -----------------------------------------------------
-        # Informations de l'expéditeur
-        # -----------------------------------------------------
-
-        nom_expediteur = None
-        prenom_expediteur = None
-        role_expediteur = None
-
-        if expediteur:
-
-            nom_expediteur = expediteur.nom
-            prenom_expediteur = expediteur.prenom
-            role_expediteur = expediteur.role
-
-
-        # -----------------------------------------------------
-        # Ajouter la conversation à la liste
-        # -----------------------------------------------------
+        apercu = (
+            "🎤 Message vocal" if dernier.audio_url
+            else dernier.message or "Message"
+        )
 
         conversations.append({
-
-            "id_commande":
-                commande.id_commande,
-
-            "statut_commande":
-                commande.statut,
-
-            "nombre_messages":
-                len(messages),
-
-            "nombre_non_lus":
-                nombre_non_lus,
-
-            "dernier_message":
-                apercu,
-
-            "date_dernier_message":
-                dernier_message.date_message,
-
-            "id_expediteur":
-                dernier_message.UTILISATEUR_id_utilisateur,
-
-            "nom_expediteur":
-                nom_expediteur,
-
-            "prenom_expediteur":
-                prenom_expediteur,
-
-            "role_expediteur":
-                role_expediteur
+            "id_commande": commande.id_commande,
+            "statut_commande": commande.statut,
+            "nombre_messages": len(messages),
+            "nombre_non_lus": nombre_non_lus,
+            "dernier_message": apercu,
+            "date_dernier_message": dernier.date_message,
+            "id_expediteur": dernier.UTILISATEUR_id_utilisateur,
+            "nom_expediteur": expediteur.nom if expediteur else None,
+            "prenom_expediteur": expediteur.prenom if expediteur else None,
+            "role_expediteur": expediteur.role if expediteur else None
         })
 
-
-    # =========================================================
-    # TRI
-    # =========================================================
-    #
-    # Les conversations les plus récentes apparaissent
-    # en premier.
-    #
-    # =========================================================
-
     conversations.sort(
-        key=lambda conversation:
-            conversation["date_dernier_message"],
+        key=lambda c: c["date_dernier_message"],
         reverse=True
     )
 
-
     return {
-        "nombre_conversations":
-            len(conversations),
-
-        "nombre_non_lus":
-            sum(
-                conversation["nombre_non_lus"]
-                for conversation
-                in conversations
-            ),
-
-        "conversations":
-            conversations
+        "nombre_conversations": len(conversations),
+        "nombre_non_lus": sum(c["nombre_non_lus"] for c in conversations),
+        "conversations": conversations
     }
+
 
 
 # =========================================================
 # PHOTOS DE LA PAGE D'ACCUEIL
 # =========================================================
 
-
-# ---------------------------------------------------------
-# LISTER LES PHOTOS
-# ---------------------------------------------------------
-
 @app.get("/accueil/photos")
 def liste_photos_accueil(
     utilisateur=Depends(role_autorise("admin")),
     db: Session = Depends(get_db)
 ):
+    return db.query(PhotoAccueil).order_by(
+        PhotoAccueil.ordre.asc(),
+        PhotoAccueil.id_photo.desc()
+    ).all()
 
-    photos = (
-        db.query(PhotoAccueil)
-        .order_by(
-            PhotoAccueil.ordre.asc(),
-            PhotoAccueil.id_photo.desc()
-        )
-        .all()
-    )
-
-    return photos
-
-
-# ---------------------------------------------------------
-# AJOUTER UNE PHOTO
-# ---------------------------------------------------------
 
 @app.post("/accueil/photos")
 def ajouter_photo_accueil(
-    nom_fichier: str,
-    db: Session = Depends(get_db),
-    utilisateur=Depends(role_autorise("admin"))
+    fichier: UploadFile = File(...),
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db)
 ):
+    type_fichier = (fichier.content_type or "").lower()
+
+    if not type_fichier.startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Veuillez sélectionner un fichier image."
+        )
+
+    resultat = televerser_vers_cloudinary(
+        fichier,
+        "boutique/photos-accueil",
+        "image"
+    )
+
+    url_media = resultat.get("secure_url")
+
+    if not url_media:
+        raise HTTPException(
+            status_code=502,
+            detail="Cloudinary n'a pas retourné l'URL de la photo."
+        )
 
     nouvelle_photo = PhotoAccueil(
-        nom_fichier=nom_fichier,
+        nom_fichier=url_media,
         ordre=0,
         actif=True
     )
 
-    db.add(nouvelle_photo)
-    db.commit()
-    db.refresh(nouvelle_photo)
+    try:
+        db.add(nouvelle_photo)
+        db.commit()
+        db.refresh(nouvelle_photo)
+
+    except Exception as erreur:
+        db.rollback()
+
+        try:
+            supprimer_media_cloudinary(url_media, "image")
+        except Exception as erreur_cloudinary:
+            print(
+                "Erreur de nettoyage Cloudinary :",
+                str(erreur_cloudinary)
+            )
+
+        print("Erreur ajout photo :", str(erreur))
+
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer la photo d'accueil."
+        )
 
     return {
         "message": "Photo d'accueil ajoutée avec succès.",
@@ -5595,105 +4735,142 @@ def ajouter_photo_accueil(
     }
 
 
-# ---------------------------------------------------------
-# SUPPRIMER UNE PHOTO
-# ---------------------------------------------------------
-
 @app.delete("/accueil/photos/{id_photo}")
 def supprimer_photo_accueil(
     id_photo: int,
-    db: Session = Depends(get_db),
-    utilisateur=Depends(role_autorise("admin"))
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db)
 ):
-
-    photo = (
-        db.query(PhotoAccueil)
-        .filter(
-            PhotoAccueil.id_photo == id_photo
-        )
-        .first()
-    )
+    photo = db.query(PhotoAccueil).filter(
+        PhotoAccueil.id_photo == id_photo
+    ).first()
 
     if photo is None:
-
         raise HTTPException(
             status_code=404,
             detail="Photo introuvable."
         )
 
-    db.delete(photo)
-    db.commit()
+    # Supprimer d'abord le média distant.
+    # Si cela échoue, conserver la ligne en base.
+    try:
+        supprimer_media_cloudinary(photo.nom_fichier, "image")
+    except Exception as erreur:
+        print("Erreur suppression photo Cloudinary :", str(erreur))
 
-    return {
-        "message": "Photo supprimée avec succès."
-    }
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Impossible de supprimer la photo sur Cloudinary. "
+                "L'enregistrement en base a été conservé."
+            )
+        )
 
+    try:
+        db.delete(photo)
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur suppression photo en base :", str(erreur))
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Le média a été supprimé, mais l'enregistrement "
+                "en base n'a pas pu être supprimé."
+            )
+        )
+
+    return {"message": "Photo supprimée avec succès."}
 
 
 # =========================================================
 # PUBLICITÉS VIDÉO
 # =========================================================
 
-
-# ---------------------------------------------------------
-# LISTER LES PUBLICITÉS
-# ---------------------------------------------------------
-
 @app.get("/accueil/publicites")
 def liste_publicites(
     utilisateur=Depends(role_autorise("admin")),
     db: Session = Depends(get_db)
 ):
+    return db.query(Publicite).order_by(
+        Publicite.ordre.asc(),
+        Publicite.id_publicite.desc()
+    ).all()
 
-    publicites = (
-        db.query(Publicite)
-        .order_by(
-            Publicite.ordre.asc(),
-            Publicite.id_publicite.desc()
-        )
-        .all()
-    )
-
-    return publicites
-
-
-# ---------------------------------------------------------
-# AJOUTER UNE PUBLICITÉ
-# ---------------------------------------------------------
 
 @app.post("/accueil/publicites")
 def ajouter_publicite(
-    nom_fichier: str,
+    fichier: UploadFile = File(...),
     titre: str | None = None,
-    db: Session = Depends(get_db),
-    utilisateur=Depends(role_autorise("admin"))
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db)
 ):
-
-    nombre_publicites = (
-        db.query(Publicite)
-        .filter(
-            Publicite.actif == True
-        )
-        .count()
-    )
+    # Vérifier la limite avant le téléversement.
+    nombre_publicites = db.query(Publicite).filter(
+        Publicite.actif.is_(True)
+    ).count()
 
     if nombre_publicites >= 3:
-
         raise HTTPException(
             status_code=400,
-            detail="Vous ne pouvez avoir que 3 publicités vidéo actives maximum."
+            detail=(
+                "Vous ne pouvez avoir que 3 publicités "
+                "vidéo actives maximum."
+            )
+        )
+
+    type_fichier = (fichier.content_type or "").lower()
+
+    if not type_fichier.startswith("video/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Veuillez sélectionner un fichier vidéo."
+        )
+
+    resultat = televerser_vers_cloudinary(
+        fichier,
+        "boutique/publicites",
+        "video"
+    )
+
+    url_media = resultat.get("secure_url")
+
+    if not url_media:
+        raise HTTPException(
+            status_code=502,
+            detail="Cloudinary n'a pas retourné l'URL de la vidéo."
         )
 
     nouvelle_publicite = Publicite(
-        nom_fichier=nom_fichier,
-        titre=titre,
+        nom_fichier=url_media,
+        titre=titre.strip() if titre else None,
         ordre=nombre_publicites,
         actif=True
     )
 
-    db.add(nouvelle_publicite)
-    db.commit()
-    db.refresh(nouvelle_publicite)
+    try:
+        db.add(nouvelle_publicite)
+        db.commit()
+        db.refresh(nouvelle_publicite)
+
+    except Exception as erreur:
+        db.rollback()
+
+        try:
+            supprimer_media_cloudinary(url_media, "video")
+        except Exception as erreur_cloudinary:
+            print(
+                "Erreur de nettoyage Cloudinary :",
+                str(erreur_cloudinary)
+            )
+
+        print("Erreur ajout publicité :", str(erreur))
+
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer la publicité."
+        )
 
     return {
         "message": "Publicité ajoutée avec succès.",
@@ -5701,130 +4878,109 @@ def ajouter_publicite(
     }
 
 
-# ---------------------------------------------------------
-# SUPPRIMER UNE PUBLICITÉ
-# ---------------------------------------------------------
-
 @app.delete("/accueil/publicites/{id_publicite}")
 def supprimer_publicite(
     id_publicite: int,
-    db: Session = Depends(get_db),
-    utilisateur=Depends(role_autorise("admin"))
+    utilisateur=Depends(role_autorise("admin")),
+    db: Session = Depends(get_db)
 ):
-
-    publicite = (
-        db.query(Publicite)
-        .filter(
-            Publicite.id_publicite == id_publicite
-        )
-        .first()
-    )
+    publicite = db.query(Publicite).filter(
+        Publicite.id_publicite == id_publicite
+    ).first()
 
     if publicite is None:
-
         raise HTTPException(
             status_code=404,
             detail="Publicité introuvable."
         )
 
-    db.delete(publicite)
-    db.commit()
+    try:
+        supprimer_media_cloudinary(publicite.nom_fichier, "video")
+    except Exception as erreur:
+        print(
+            "Erreur suppression vidéo Cloudinary :",
+            str(erreur)
+        )
 
-    return {
-        "message": "Publicité supprimée avec succès."
-    }
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Impossible de supprimer la vidéo sur Cloudinary. "
+                "L'enregistrement en base a été conservé."
+            )
+        )
+
+    try:
+        db.delete(publicite)
+        db.commit()
+    except Exception as erreur:
+        db.rollback()
+        print("Erreur suppression publicité en base :", str(erreur))
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "La vidéo a été supprimée, mais l'enregistrement "
+                "en base n'a pas pu être supprimé."
+            )
+        )
+
+    return {"message": "Publicité supprimée avec succès."}
+
 
 # =========================================================
 # CONTENU PUBLIC DE LA PAGE D'ACCUEIL
 # =========================================================
 
 @app.get("/accueil/contenu")
-def contenu_accueil(
-    db: Session = Depends(get_db)
-):
+def contenu_accueil(db: Session = Depends(get_db)):
+    photos = db.query(PhotoAccueil).filter(
+        PhotoAccueil.actif.is_(True)
+    ).order_by(
+        PhotoAccueil.ordre.asc(),
+        PhotoAccueil.id_photo.desc()
+    ).all()
 
-    # -----------------------------------------------------
-    # PHOTOS
-    # -----------------------------------------------------
+    publicites = db.query(Publicite).filter(
+        Publicite.actif.is_(True)
+    ).order_by(
+        Publicite.ordre.asc(),
+        Publicite.id_publicite.desc()
+    ).limit(3).all()
 
-    photos = (
-        db.query(PhotoAccueil)
-        .filter(
-            PhotoAccueil.actif == True
-        )
-        .order_by(
-            PhotoAccueil.ordre.asc(),
-            PhotoAccueil.id_photo.desc()
-        )
-        .all()
-    )
-
-
-    # -----------------------------------------------------
-    # PUBLICITÉS
-    # -----------------------------------------------------
-
-    publicites = (
-        db.query(Publicite)
-        .filter(
-            Publicite.actif == True
-        )
-        .order_by(
-            Publicite.ordre.asc(),
-            Publicite.id_publicite.desc()
-        )
-        .limit(3)
-        .all()
-    )
-
-
-    # -----------------------------------------------------
-    # PRODUITS
-    # -----------------------------------------------------
-
-    produits = (
-        db.query(Produit)
-        .filter(
-            Produit.actif == True
-        )
-        .order_by(
-            Produit.id_produit.desc()
-        )
-        .limit(10)
-        .all()
-    )
-
+    produits = db.query(Produit).filter(
+        Produit.actif.is_(True)
+    ).order_by(
+        Produit.id_produit.desc()
+    ).limit(10).all()
 
     return {
-
         "photos": [
             {
-                "id_photo": photo.id_photo,
-                "nom_fichier": photo.nom_fichier
+                "id_photo": p.id_photo,
+                "nom_fichier": p.nom_fichier
             }
-            for photo in photos
+            for p in photos
         ],
-
         "publicites": [
             {
-                "id_publicite": pub.id_publicite,
-                "nom_fichier": pub.nom_fichier,
-                "titre": pub.titre
+                "id_publicite": p.id_publicite,
+                "nom_fichier": p.nom_fichier,
+                "titre": p.titre
             }
-            for pub in publicites
+            for p in publicites
         ],
-
         "produits": [
             {
-                "id_produit": produit.id_produit,
-                "designation": produit.designation,
-                "prix_unitaire": produit.prix_unitaire,
-                "description": produit.description,
-                "image": produit.image,
-                "stock": produit.stock,
-                "categorie": produit.categorie
+                "id_produit": p.id_produit,
+                "designation": p.designation,
+                "prix_unitaire": p.prix_unitaire,
+                "description": p.description,
+                "image": p.image,
+                "stock": p.stock,
+                "categorie": p.categorie
             }
-            for produit in produits
+            for p in produits
         ]
     }
 
@@ -6131,7 +5287,7 @@ def liste_notifications(
             Notification.UTILISATEUR_id_utilisateur
             == utilisateur.id_utilisateur,
 
-            Notification.lu == False
+            Notification.lu.is_(False)
         )
         .count()
     )
@@ -6251,7 +5407,7 @@ def marquer_toutes_notifications_lues(
             Notification.UTILISATEUR_id_utilisateur
             == utilisateur.id_utilisateur,
 
-            Notification.lu == False
+            Notification.lu.is_(False)
         )
         .update(
             {

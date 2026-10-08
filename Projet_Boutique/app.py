@@ -1,5 +1,7 @@
 import os
+import re
 import uuid
+from datetime import date
 
 import requests
 
@@ -14,64 +16,183 @@ from flask import (
     jsonify
 )
 
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
+
+# Cloudinary est facultatif en local (repli sur le dossier static/).
+try:
+    import cloudinary
+    import cloudinary.uploader
+except ImportError:  # pragma: no cover
+    cloudinary = None
 
 
 app = Flask(__name__)
 
+
 # =========================================================
-# DOSSIERS DES SERVICES
+# ENVIRONNEMENT : LOCAL OU PRODUCTION (RENDER)
+# =========================================================
+#
+# Render définit automatiquement la variable RENDER.
 # =========================================================
 
-SERVICES_DIR = os.path.join(
-    app.root_path,
-    "static",
-    "services"
+EN_PRODUCTION = bool(
+    os.getenv("RENDER")
+    or os.getenv("ENVIRONMENT", "").lower() == "production"
 )
 
-SERVICES_IMAGES_DIR = os.path.join(
-    SERVICES_DIR,
-    "images"
+# Render place l'application derrière un proxy HTTPS.
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=1,
+    x_proto=1,
+    x_host=1
 )
 
-SERVICES_VIDEOS_DIR = os.path.join(
-    SERVICES_DIR,
-    "videos"
+
+# =========================================================
+# CONFIGURATION DE LA SESSION
+# =========================================================
+
+app.secret_key = (
+    os.getenv("FLASK_SECRET_KEY")
+    or os.getenv("SECRET_KEY")
 )
 
-# Création automatique des dossiers
-os.makedirs(
-    SERVICES_IMAGES_DIR,
-    exist_ok=True
+if not app.secret_key:
+
+    if EN_PRODUCTION:
+        raise RuntimeError(
+            "La variable FLASK_SECRET_KEY doit être configurée "
+            "dans les variables d'environnement de Render."
+        )
+
+    # Clé de développement local uniquement.
+    app.secret_key = "cle-flask-developpement-local-non-securisee"
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=EN_PRODUCTION,
+    MAX_CONTENT_LENGTH=(
+        int(os.getenv("MAX_UPLOAD_MB", "100")) * 1024 * 1024
+    ),
 )
 
-os.makedirs(
-    SERVICES_VIDEOS_DIR,
-    exist_ok=True
+
+# =========================================================
+# CONFIGURATION DE L'API FASTAPI
+# =========================================================
+#
+# LOCAL  : http://127.0.0.1:8000 (valeur par défaut)
+# RENDER : définir API_URL = https://votre-api.onrender.com
+#
+# API_PUBLIC_URL : URL appelée directement par le navigateur
+# (par défaut identique à API_URL).
+#
+# API_TIMEOUT : délai maximal d'une requête vers l'API.
+# Il doit être assez long pour absorber le démarrage à froid
+# d'un service Render gratuit.
+# =========================================================
+
+API_URL = os.getenv(
+    "API_URL",
+    "http://127.0.0.1:8000"
+).rstrip("/")
+
+API_PUBLIC_URL = os.getenv(
+    "API_PUBLIC_URL",
+    API_URL
+).rstrip("/")
+
+API_TIMEOUT = int(
+    os.getenv("API_TIMEOUT", "60")
 )
+
+
+# =========================================================
+# CONFIGURATION DE CLOUDINARY
+# =========================================================
+#
+# Option 1 : CLOUDINARY_URL=cloudinary://clé:secret@nom_du_cloud
+# Option 2 : CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY,
+#            CLOUDINARY_API_SECRET
+# =========================================================
+
+def configurer_cloudinary():
+
+    if cloudinary is None:
+        return False
+
+    nom = os.getenv("CLOUDINARY_CLOUD_NAME")
+    cle = os.getenv("CLOUDINARY_API_KEY")
+    secret = os.getenv("CLOUDINARY_API_SECRET")
+
+    if nom and cle and secret:
+
+        cloudinary.config(
+            cloud_name=nom,
+            api_key=cle,
+            api_secret=secret,
+            secure=True
+        )
+
+        return True
+
+    # CLOUDINARY_URL est lue automatiquement par la bibliothèque.
+    return bool(cloudinary.config().cloud_name)
+
+
+CLOUDINARY_ACTIF = configurer_cloudinary()
+
+
+# =========================================================
+# DOSSIERS DES MÉDIAS
+# =========================================================
+#
+# Clé       -> sous-dossier de static/ (repli local)
+#              et dossier Cloudinary : boutique/<clé>
+# =========================================================
+
+DOSSIERS_STATIC = {
+    "produits": "images",
+    "services_images": "services/images",
+    "services_videos": "services/videos",
+    "accueil_photos": "accueil/photos",
+    "accueil_videos": "accueil/videos",
+}
+
+SERVICES_DIR = os.path.join(app.root_path, "static", "services")
+SERVICES_IMAGES_DIR = os.path.join(SERVICES_DIR, "images")
+SERVICES_VIDEOS_DIR = os.path.join(SERVICES_DIR, "videos")
+
+# Dossiers locaux créés uniquement hors production.
+if not EN_PRODUCTION:
+
+    try:
+        for dossier in DOSSIERS_STATIC.values():
+            os.makedirs(
+                os.path.join(
+                    app.root_path,
+                    "static",
+                    *dossier.split("/")
+                ),
+                exist_ok=True
+            )
+    except OSError:
+        pass
 
 
 # =========================================================
 # EXTENSIONS AUTORISÉES
 # =========================================================
 
-EXTENSIONS_IMAGE_SERVICE = {
-    "jpg",
-    "jpeg",
-    "png",
-    "webp"
-}
+EXTENSIONS_IMAGE_SERVICE = {"jpg", "jpeg", "png", "webp"}
+EXTENSIONS_VIDEO_SERVICE = {"mp4", "webm", "mov"}
+EXTENSIONS_PHOTO_ACCUEIL = {"jpg", "jpeg", "png", "webp", "gif"}
+EXTENSIONS_VIDEO_ACCUEIL = {"mp4", "webm", "ogg"}
 
-EXTENSIONS_VIDEO_SERVICE = {
-    "mp4",
-    "webm",
-    "mov"
-}
-
-
-# =========================================================
-# VÉRIFIER UNE EXTENSION
-# =========================================================
 
 def extension_autorisee(
     nom_fichier,
@@ -94,17 +215,235 @@ def extension_autorisee(
 
 
 # =========================================================
-# CONFIGURATION DE LA SESSION
+# TÉLÉVERSEMENT / SUPPRESSION DES MÉDIAS
+# =========================================================
+#
+# Valeur enregistrée en base :
+#   - Cloudinary configuré : l'URL complète (https://...)
+#   - Sinon (local)        : le nom du fichier dans static/
 # =========================================================
 
-app.secret_key = "ma-cle-secrete-temporaire"
+class ErreurMedia(Exception):
+    pass
 
 
-# =========================================================
-# CONFIGURATION DE L'API FASTAPI
-# =========================================================
+def televerser_media(fichier, dossier, type_ressource="image"):
 
-API_URL = "http://127.0.0.1:8000"
+    extension = fichier.filename.rsplit(".", 1)[-1].lower()
+
+    # -----------------------------------------------------
+    # CLOUDINARY
+    # -----------------------------------------------------
+
+    if CLOUDINARY_ACTIF:
+
+        options = {
+            "folder": f"boutique/{dossier}",
+            "public_id": uuid.uuid4().hex,
+            "resource_type": type_ressource,
+            "overwrite": False,
+        }
+
+        try:
+
+            fichier.stream.seek(0)
+
+            if type_ressource == "video":
+                resultat = cloudinary.uploader.upload_large(
+                    fichier.stream,
+                    chunk_size=6_000_000,
+                    **options
+                )
+            else:
+                resultat = cloudinary.uploader.upload(
+                    fichier.stream,
+                    **options
+                )
+
+        except Exception as erreur:
+            app.logger.exception("Échec du téléversement Cloudinary")
+            raise ErreurMedia(
+                f"Échec du téléversement vers Cloudinary : {erreur}"
+            )
+
+        return resultat["secure_url"]
+
+    # -----------------------------------------------------
+    # PRODUCTION SANS CLOUDINARY : le disque de Render est
+    # éphémère, on refuse plutôt que de perdre le fichier.
+    # -----------------------------------------------------
+
+    if EN_PRODUCTION:
+        raise ErreurMedia(
+            "Cloudinary n'est pas configuré sur le serveur "
+            "(variable CLOUDINARY_URL manquante)."
+        )
+
+    # -----------------------------------------------------
+    # LOCAL : enregistrement dans static/
+    # -----------------------------------------------------
+
+    nom_fichier = f"{uuid.uuid4().hex}.{extension}"
+
+    dossier_local = os.path.join(
+        app.root_path,
+        "static",
+        *DOSSIERS_STATIC[dossier].split("/")
+    )
+
+    os.makedirs(dossier_local, exist_ok=True)
+
+    fichier.save(os.path.join(dossier_local, nom_fichier))
+
+    return nom_fichier
+
+
+def supprimer_media(valeur, dossier, local=False):
+    """
+    Suppression « au mieux » : n'interrompt jamais la requête.
+
+    - URL Cloudinary : supprime l'asset.
+    - Nom de fichier local : supprimé seulement si local=True.
+    """
+
+    if not valeur:
+        return
+
+    valeur = str(valeur)
+
+    # -----------------------------------------------------
+    # ASSET CLOUDINARY
+    # -----------------------------------------------------
+
+    if valeur.startswith(("http://", "https://")):
+
+        if not CLOUDINARY_ACTIF:
+            return
+
+        correspondance = re.search(
+            r"/(image|video|raw)/upload/(?:v\d+/)?(.+)$",
+            valeur
+        )
+
+        if not correspondance:
+            return
+
+        type_ressource = correspondance.group(1)
+        identifiant = correspondance.group(2)
+
+        if type_ressource != "raw":
+            identifiant = os.path.splitext(identifiant)[0]
+
+        try:
+            cloudinary.uploader.destroy(
+                identifiant,
+                resource_type=type_ressource,
+                invalidate=True
+            )
+        except Exception:
+            app.logger.exception("Suppression Cloudinary impossible")
+
+        return
+
+    # -----------------------------------------------------
+    # FICHIER LOCAL
+    # -----------------------------------------------------
+
+    if not local or EN_PRODUCTION:
+        return
+
+    chemin = os.path.join(
+        app.root_path,
+        "static",
+        *DOSSIERS_STATIC[dossier].split("/"),
+        secure_filename(os.path.basename(valeur))
+    )
+
+    try:
+        if os.path.exists(chemin):
+            os.remove(chemin)
+    except OSError:
+        pass
+
+
+def media_url(valeur, dossier):
+    """
+    Retourne l'URL affichable d'un média, qu'il s'agisse
+    d'une URL Cloudinary ou d'un ancien nom de fichier local.
+    """
+
+    if not valeur:
+        return None
+
+    valeur = str(valeur).strip()
+
+    if valeur.startswith(("http://", "https://", "//", "data:", "/")):
+        return valeur
+
+    return url_for(
+        "static",
+        filename=f"{DOSSIERS_STATIC[dossier]}/{valeur}"
+    )
+
+
+# Utilisable dans les templates : {{ media_url(x, "produits") }}
+app.jinja_env.globals["media_url"] = media_url
+
+
+def enrichir_produits(liste):
+
+    if isinstance(liste, list):
+        for produit in liste:
+            if isinstance(produit, dict):
+                produit["image_url"] = media_url(
+                    produit.get("image"),
+                    "produits"
+                )
+
+    return liste
+
+
+def enrichir_services(liste):
+
+    if isinstance(liste, list):
+        for service in liste:
+            if isinstance(service, dict):
+                service["image_url"] = media_url(
+                    service.get("image"),
+                    "services_images"
+                )
+                service["video_url"] = media_url(
+                    service.get("video"),
+                    "services_videos"
+                )
+
+    return liste
+
+
+def enrichir_photos_accueil(liste):
+
+    if isinstance(liste, list):
+        for photo in liste:
+            if isinstance(photo, dict):
+                photo["url_fichier"] = media_url(
+                    photo.get("nom_fichier"),
+                    "accueil_photos"
+                )
+
+    return liste
+
+
+def enrichir_publicites(liste):
+
+    if isinstance(liste, list):
+        for publicite in liste:
+            if isinstance(publicite, dict):
+                publicite["url_fichier"] = media_url(
+                    publicite.get("nom_fichier"),
+                    "accueil_videos"
+                )
+
+    return liste
 
 
 # =========================================================
@@ -121,81 +460,212 @@ def role_autorise(*roles):
     return role in roles
 
 
+def compter_articles_panier():
+    """
+    Nombre total d'articles : produits + services.
+    """
+
+    total = 0
+
+    for cle in ("panier", "panier_services"):
+
+        for quantite in session.get(cle, {}).values():
+
+            try:
+                total += int(quantite)
+            except (TypeError, ValueError):
+                continue
+
+    return total
+
+
 # =========================================================
-# EN-TÊTES D'AUTHENTIFICATION POUR FASTAPI
+# APPELS VERS FASTAPI
 # =========================================================
+
+class SessionExpiree(Exception):
+    pass
+
+
+def url_api(url):
+    """
+    Construit l'URL complète.
+    /services  ->  <API_URL>/services
+    """
+
+    if url.startswith(("http://", "https://")):
+        return url
+
+    return f"{API_URL}/{url.lstrip('/')}"
+
 
 def api_headers():
 
+    token = session.get("access_token")
+
+    if not token:
+        return {}
+
+    return {"Authorization": f"Bearer {token}"}
+
+
+def appel_api(methode, url, authentifie=True, **kwargs):
+
+    # Délai unique, assez long pour un démarrage à froid.
+    kwargs["timeout"] = API_TIMEOUT
+
+    en_tetes = dict(kwargs.pop("headers", None) or {})
+
+    if authentifie:
+        en_tetes = {**api_headers(), **en_tetes}
+
+    reponse = requests.request(
+        methode,
+        url_api(url),
+        headers=en_tetes,
+        **kwargs
+    )
+
+    # Jeton JWT expiré ou invalide (l'API envoie alors
+    # l'en-tête WWW-Authenticate).
+    if (
+        authentifie
+        and reponse.status_code == 401
+        and session.get("access_token")
+        and reponse.headers.get("WWW-Authenticate")
+    ):
+        session.clear()
+        raise SessionExpiree()
+
+    return reponse
+
+
+def api_get(url, **kwargs):
+    return appel_api("GET", url, **kwargs)
+
+
+def api_post(url, donnees=None, **kwargs):
+
+    if donnees is not None and "json" not in kwargs:
+        kwargs["json"] = donnees
+
+    return appel_api("POST", url, **kwargs)
+
+
+def api_put(url, donnees=None, **kwargs):
+
+    if donnees is not None and "json" not in kwargs:
+        kwargs["json"] = donnees
+
+    return appel_api("PUT", url, **kwargs)
+
+
+def api_delete(url, **kwargs):
+    return appel_api("DELETE", url, **kwargs)
+
+
+def api_public_get(url, **kwargs):
+    return appel_api("GET", url, authentifie=False, **kwargs)
+
+
+def api_public_post(url, **kwargs):
+    return appel_api("POST", url, authentifie=False, **kwargs)
+
+
+def valeur_actuelle(chemin, cle_id, identifiant, champ):
+    """
+    Relit un champ dans l'API (utile si le formulaire
+    ne l'a pas renvoyé).
+    """
+
+    try:
+        reponse = api_get(chemin)
+
+        if reponse.status_code == 200:
+            for element in reponse.json():
+                if element.get(cle_id) == identifiant:
+                    return element.get(champ) or ""
+
+    except requests.RequestException:
+        pass
+
+    return ""
+
+
+# =========================================================
+# GESTION DES ERREURS GLOBALES
+# =========================================================
+
+def _reponse_attendue_json():
+
+    return (
+        request.is_json
+        or request.method in ("PUT", "DELETE")
+        or request.accept_mimetypes.best == "application/json"
+    )
+
+
+@app.errorhandler(SessionExpiree)
+def gerer_session_expiree(erreur):
+
+    if _reponse_attendue_json():
+        return jsonify({
+            "detail": "Session expirée. Veuillez vous reconnecter."
+        }), 401
+
+    flash(
+        "Votre session a expiré. Veuillez vous reconnecter.",
+        "error"
+    )
+
+    return redirect(url_for("login"))
+
+
+@app.errorhandler(requests.RequestException)
+def gerer_api_indisponible(erreur):
+
+    app.logger.error("Erreur de communication avec l'API : %s", erreur)
+
+    message = (
+        "Le serveur est momentanément indisponible "
+        "(il peut être en cours de démarrage). "
+        "Réessayez dans quelques instants."
+    )
+
+    if _reponse_attendue_json():
+        return jsonify({"detail": message}), 503
+
+    return message, 503
+
+
+@app.errorhandler(413)
+def fichier_trop_volumineux(erreur):
+
+    message = "Fichier trop volumineux."
+
+    if _reponse_attendue_json():
+        return jsonify({"detail": message}), 413
+
+    return message, 413
+
+
+@app.context_processor
+def injecter_configuration():
+
+    # URL de l'API utilisable par le JavaScript des templates.
     return {
-        "Authorization": f"Bearer {session.get('access_token')}"
+        "API_URL": API_PUBLIC_URL,
+        "API_PUBLIC_URL": API_PUBLIC_URL
     }
 
 
 # =========================================================
-# REQUÊTES AUTHENTIFIÉES VERS FASTAPI
+# CONTRÔLE DE SANTÉ (RENDER)
 # =========================================================
 
-def api_get(url, **kwargs):
-    """
-    Effectue une requête GET vers l'API FastAPI.
-
-    Si une URL relative est fournie, par exemple :
-        /services
-
-    elle est automatiquement transformée en :
-        http://127.0.0.1:8000/services
-    """
-
-    # =========================================================
-    # CONSTRUIRE L'URL COMPLÈTE
-    # =========================================================
-
-    if not url.startswith(("http://", "https://")):
-
-        url = (
-            API_URL.rstrip("/")
-            + "/"
-            + url.lstrip("/")
-        )
-
-
-    # =========================================================
-    # AJOUTER LE TOKEN D'AUTHENTIFICATION
-    # =========================================================
-
-    if "headers" not in kwargs:
-        kwargs["headers"] = api_headers()
-
-
-    # =========================================================
-    # ENVOYER LA REQUÊTE
-    # =========================================================
-
-    return requests.get(
-        url,
-        **kwargs
-    )
-
-def api_post(url, **kwargs):
-
-    kwargs["headers"] = api_headers()
-
-    return requests.post(url, **kwargs)
-
-
-def api_put(url, **kwargs):
-
-    kwargs["headers"] = api_headers()
-
-    return requests.put(url, **kwargs)
-
-
-def api_delete(url, **kwargs):
-
-    kwargs["headers"] = api_headers()
-
-    return requests.delete(url, **kwargs)
+@app.route("/sante")
+def sante():
+    return jsonify({"statut": "ok"}), 200
 
 
 # =========================================================
@@ -225,7 +695,7 @@ def accueil():
 
     try:
 
-        reponse = requests.get(
+        reponse = api_public_get(
             f"{API_URL}/accueil/contenu",
             timeout=5
         )
@@ -265,6 +735,10 @@ def accueil():
     # AFFICHER LA PAGE D'ACCUEIL
     # =====================================================
 
+    enrichir_photos_accueil(photos)
+    enrichir_publicites(videos)
+    enrichir_produits(produits)
+
     return render_template(
         "accueil.html",
         photos=photos,
@@ -282,12 +756,9 @@ def login():
     if request.method == "GET":
         return render_template("login.html")
 
-    print("====================================")
-    print("DONNÉES REÇUES PAR FLASK")
-    print(request.form)
-    print("====================================")
+    # Ne jamais afficher request.form : il contient le mot de passe.
 
-    email = request.form.get("email")
+    email = (request.form.get("email") or "").strip()
     mot_de_passe = request.form.get("mot_de_passe")
 
     if not email or not mot_de_passe:
@@ -296,13 +767,28 @@ def login():
             erreur="Veuillez renseigner l'email et le mot de passe."
         )
 
-    reponse = requests.post(
-        f"{API_URL}/login",
-        json={
-            "email": email,
-            "mot_de_passe": mot_de_passe
-        }
-    )
+    try:
+
+        reponse = appel_api(
+            "POST",
+            "/login",
+            authentifie=False,
+            json={
+                "email": email,
+                "mot_de_passe": mot_de_passe
+            }
+        )
+
+    except requests.RequestException:
+
+        return render_template(
+            "login.html",
+            erreur=(
+                "Le serveur est momentanément indisponible "
+                "(il peut être en cours de démarrage). "
+                "Réessayez dans quelques instants."
+            )
+        )
 
     if reponse.status_code != 200:
 
@@ -519,7 +1005,7 @@ def creer_compte():
     # ENVOI DES INFORMATIONS À FASTAPI
     # =========================================================
 
-    reponse = requests.post(
+    reponse = api_public_post(
         f"{API_URL}/utilisateurs",
         json={
             "nom": nom,
@@ -610,7 +1096,9 @@ def mon_compte():
 
     return render_template(
         "mon_compte.html",
-        compte=compte
+        compte=compte,
+        erreur=request.args.get("erreur"),
+        succes=request.args.get("succes")
     )
 
 
@@ -909,7 +1397,7 @@ def clients():
             json={
                 "nom": nom,
                 "prenom": prenom,
-                "date_naissance": date_naissance,
+                "date_naissance": date_naissance or None,
                 "email": email,
                 "telephone": telephone
             }
@@ -955,10 +1443,10 @@ def clients():
             client
             for client in liste_clients
             if recherche in str(client["id_client"])
-            or recherche in client["nom"].lower()
-            or recherche in client["prenom"].lower()
-            or recherche in client["email"].lower()
-            or recherche in client["telephone"].lower()
+            or recherche in (client.get("nom") or "").lower()
+            or recherche in (client.get("prenom") or "").lower()
+            or recherche in (client.get("email") or "").lower()
+            or recherche in (client.get("telephone") or "").lower()
         ]
 
     return render_template(
@@ -996,7 +1484,7 @@ def modifier_client(id_client):
         json={
             "nom": nom,
             "prenom": prenom,
-            "date_naissance": date_naissance,
+            "date_naissance": date_naissance or None,
             "email": email,
             "telephone": telephone
         }
@@ -1073,7 +1561,6 @@ def produits():
         designation = request.form["designation"]
         prix_unitaire = request.form["prix_unitaire"]
         description = request.form.get("description", "")
-        image = request.form.get("image", "")
         stock = request.form.get("stock", 0)
         categorie = request.form.get("categorie", "")
 
@@ -1083,31 +1570,40 @@ def produits():
         # GESTION DE L'IMAGE
         # -------------------------------------------------
 
+        try:
+            float(prix_unitaire)
+            int(stock)
+        except (TypeError, ValueError):
+            return (
+                "Le prix ou le stock est invalide.",
+                400
+            )
+
         fichier_image = request.files.get("image")
 
         nom_image = None
 
         if fichier_image and fichier_image.filename:
 
-            nom_image = fichier_image.filename
+            if not extension_autorisee(
+                fichier_image.filename,
+                EXTENSIONS_IMAGE_SERVICE
+            ):
+                return (
+                    "Format d'image non autorisé. "
+                    "Formats acceptés : JPG, JPEG, PNG et WEBP.",
+                    400
+                )
 
-            dossier_images = os.path.join(
-                app.root_path,
-                "static",
-                "images"
-            )
+            try:
+                nom_image = televerser_media(
+                    fichier_image,
+                    "produits",
+                    "image"
+                )
 
-            os.makedirs(
-                dossier_images,
-                exist_ok=True
-            )
-
-            chemin_image = os.path.join(
-                dossier_images,
-                nom_image
-            )
-
-            fichier_image.save(chemin_image)
+            except ErreurMedia as erreur:
+                return (str(erreur), 500)
 
         # -------------------------------------------------
         # ENVOYER LE PRODUIT À FASTAPI
@@ -1127,6 +1623,7 @@ def produits():
         )
 
         if reponse.status_code not in [200, 201]:
+            supprimer_media(nom_image, "produits", local=True)
             return (
                 f"Erreur lors de l'ajout du produit : "
                 f"{reponse.text}",
@@ -1150,7 +1647,7 @@ def produits():
             reponse.status_code
         )
 
-    liste_produits = reponse.json()
+    liste_produits = enrichir_produits(reponse.json())
 
     # =========================================================
     # RÉCUPÉRATION DES CATÉGORIES DES PRODUITS
@@ -1389,35 +1886,10 @@ def modifier_produit(id_produit):
 
     if fichier_image and fichier_image.filename:
 
-        from werkzeug.utils import secure_filename
-
-        nom_original = secure_filename(
-            fichier_image.filename
-        )
-
-
-        # ---------------------------------------------
-        # EXTENSION
-        # ---------------------------------------------
-
-        extension = (
-            nom_original
-            .rsplit(".", 1)[-1]
-            .lower()
-            if "." in nom_original
-            else ""
-        )
-
-
-        extensions_autorisees = {
-            "jpg",
-            "jpeg",
-            "png",
-            "webp"
-        }
-
-
-        if extension not in extensions_autorisees:
+        if not extension_autorisee(
+            fichier_image.filename,
+            EXTENSIONS_IMAGE_SERVICE
+        ):
 
             return (
                 "Format d'image non autorisé. "
@@ -1425,70 +1897,17 @@ def modifier_produit(id_produit):
                 400
             )
 
-
-        # ---------------------------------------------
-        # NOM UNIQUE
-        # ---------------------------------------------
-
-        import uuid
-
-        nom_fichier = (
-            f"{uuid.uuid4().hex}.{extension}"
-        )
-
-
-        # ---------------------------------------------
-        # DOSSIER DES IMAGES
-        # ---------------------------------------------
-
-        dossier_images = os.path.join(
-            app.root_path,
-            "static",
-            "images"
-        )
-
-
-        os.makedirs(
-            dossier_images,
-            exist_ok=True
-        )
-
-
-        # ---------------------------------------------
-        # CHEMIN COMPLET
-        # ---------------------------------------------
-
-        chemin_image = os.path.join(
-            dossier_images,
-            nom_fichier
-        )
-
-
-        # ---------------------------------------------
-        # ENREGISTREMENT
-        # ---------------------------------------------
-
         try:
 
-            fichier_image.save(
-                chemin_image
+            image = televerser_media(
+                fichier_image,
+                "produits",
+                "image"
             )
 
-        except Exception as erreur:
+        except ErreurMedia as erreur:
 
-            print(
-                "Erreur lors de l'enregistrement "
-                "de l'image :",
-                erreur
-            )
-
-            return (
-                "Impossible d'enregistrer l'image.",
-                500
-            )
-
-
-        image = nom_fichier
+            return (str(erreur), 500)
 
 
     # -----------------------------------------------------
@@ -1504,6 +1923,17 @@ def modifier_produit(id_produit):
             "image_actuelle",
             ""
         )
+
+        # Si le formulaire n'a pas renvoyé l'image actuelle,
+        # on la relit dans l'API pour ne pas l'effacer.
+        if not image:
+
+            image = valeur_actuelle(
+                "/produits",
+                "id_produit",
+                id_produit,
+                "image"
+            )
 
 
     # -----------------------------------------------------
@@ -1557,30 +1987,11 @@ def modifier_produit(id_produit):
             and image
         ):
 
-            chemin_nouvelle_image = os.path.join(
-                app.root_path,
-                "static",
-                "images",
-                image
+            supprimer_media(
+                image,
+                "produits",
+                local=True
             )
-
-            try:
-
-                if os.path.exists(
-                    chemin_nouvelle_image
-                ):
-
-                    os.remove(
-                        chemin_nouvelle_image
-                    )
-
-            except Exception as erreur:
-
-                print(
-                    "Impossible de supprimer "
-                    "la nouvelle image :",
-                    erreur
-                )
 
 
         return (
@@ -1593,6 +2004,21 @@ def modifier_produit(id_produit):
     # -----------------------------------------------------
     # SUCCÈS
     # -----------------------------------------------------
+
+    # Une nouvelle image remplace l'ancienne : on supprime
+    # l'ancien asset Cloudinary (jamais un fichier local,
+    # qui peut être partagé par plusieurs produits).
+
+    ancienne_image = request.form.get("image_actuelle", "")
+
+    if (
+        fichier_image
+        and fichier_image.filename
+        and ancienne_image
+        and ancienne_image != image
+    ):
+
+        supprimer_media(ancienne_image, "produits")
 
     return redirect(
         url_for("produits")
@@ -1722,7 +2148,7 @@ def panier():
         )
 
 
-    produits = reponse_produits.json()
+    produits = enrichir_produits(reponse_produits.json())
 
 
     # =====================================================
@@ -1770,7 +2196,7 @@ def panier():
         )
 
 
-    services = reponse_services.json()
+    services = enrichir_services(reponse_services.json())
 
 
     # =====================================================
@@ -2482,16 +2908,11 @@ def afficher_services():
     # RÉCUPÉRER LES SERVICES DEPUIS FASTAPI
     # -----------------------------------------------------
 
-    services = []
-
     try:
 
-        reponse = api_get(
-            f"{API_URL}/services",
-            timeout=5
-        )
+        reponse = api_get("/services")
 
-    except Exception as erreur:
+    except requests.RequestException as erreur:
 
         return (
             "Impossible de communiquer avec "
@@ -2524,162 +2945,23 @@ def afficher_services():
         )
 
     # -----------------------------------------------------
-    # Récupérer les services
+    # Services + URL des médias (Cloudinary ou local)
     # -----------------------------------------------------
 
-    services = reponse.json()
-
-    # =====================================================
-    # CALCUL DU PANIER GLOBAL
-    # PRODUITS + SERVICES
-    # =====================================================
-
-    nombre_articles_produits = 0
-    nombre_articles_services = 0
-
-    # -----------------------------------------------------
-    # PANIER PRODUITS
-    # -----------------------------------------------------
-
-    panier_produits = session.get(
-        "panier",
-        {}
-    )
-
-    for quantite in panier_produits.values():
-
-        try:
-
-            nombre_articles_produits += int(
-                quantite
-            )
-
-        except (TypeError, ValueError):
-
-            continue
-
-    # -----------------------------------------------------
-    # PANIER SERVICES
-    # -----------------------------------------------------
-
-    panier_services = session.get(
-        "panier_services",
-        {}
-    )
-
-    for quantite in panier_services.values():
-
-        try:
-
-            nombre_articles_services += int(
-                quantite
-            )
-
-        except (TypeError, ValueError):
-
-            continue
-
-    # -----------------------------------------------------
-    # TOTAL DU PANIER
-    #
-    # Exemple :
-    # 2 produits + 3 services = 5
-    # -----------------------------------------------------
-
-    nombre_articles_panier = (
-        nombre_articles_produits
-        + nombre_articles_services
-    )
-
-    # -----------------------------------------------------
-    # Récupérer le rôle
-    # -----------------------------------------------------
-
-    role = session.get(
-        "role"
-    )
+    services = enrichir_services(reponse.json())
 
     # -----------------------------------------------------
     # Afficher la page
+    # (compteur du panier : produits + services)
     # -----------------------------------------------------
 
     return render_template(
         "services.html",
         services=services,
-        role=role,
-        nombre_articles_panier=nombre_articles_panier
+        role=session.get("role"),
+        nombre_articles_panier=compter_articles_panier()
     )
 
-
-
-    # =========================================================
-    # APPEL FASTAPI
-    # =========================================================
-
-    reponse = api_get("/services")
-
-
-    print(
-        "Statut API :",
-        reponse.status_code
-    )
-
-    print(
-        "Réponse API :",
-        reponse.text
-    )
-
-
-    # =========================================================
-    # ERREUR API
-    # =========================================================
-
-    if reponse.status_code != 200:
-
-        flash(
-            "Erreur lors de la récupération des services.",
-            "danger"
-        )
-
-        return render_template(
-            "services.html",
-            services=[]
-        )
-
-
-    # =========================================================
-    # RÉCUPÉRER LES SERVICES
-    # =========================================================
-
-    services = reponse.json()
-
-
-    print(
-        "Type de services :",
-        type(services)
-    )
-
-    print(
-        "Nombre de services :",
-        len(services)
-    )
-
-    print(
-        "Services reçus :",
-        services
-    )
-
-    print("==========================================\n")
-
-
-    # =========================================================
-    # AFFICHER LA PAGE
-    # =========================================================
-
-    return render_template(
-        "services.html",
-        services=services
-    )
 
 # =========================================================
 # AJOUTER UN SERVICE
@@ -2703,406 +2985,164 @@ def ajouter_service():
             403
         )
 
-
     # =====================================================
-    # RÉCUPÉRER LES DONNÉES DU FORMULAIRE
+    # DONNÉES DU FORMULAIRE
     # =====================================================
 
-    nom_service = (
-        request.form.get(
-            "nom_service",
-            ""
-        ).strip()
-    )
-
-    prix = (
-        request.form.get(
-            "prix",
-            ""
-        ).strip()
-    )
-
-    description = (
-        request.form.get(
-            "description",
-            ""
-        ).strip()
-    )
-
-    categorie = (
-        request.form.get(
-            "categorie",
-            ""
-        ).strip()
-    )
-
-
-    # =====================================================
-    # VÉRIFIER LE NOM
-    # =====================================================
+    nom_service = request.form.get("nom_service", "").strip()
+    prix = request.form.get("prix", "").strip()
+    description = request.form.get("description", "").strip()
+    categorie = request.form.get("categorie", "").strip()
+    actif = request.form.get("actif") is not None
 
     if not nom_service:
 
-        flash(
-            "Le nom du service est obligatoire.",
-            "danger"
-        )
+        flash("Le nom du service est obligatoire.", "danger")
 
-        return redirect(
-            url_for("afficher_services")
-        )
-
-
-    # =====================================================
-    # VÉRIFIER LE PRIX
-    # =====================================================
+        return redirect(url_for("afficher_services"))
 
     try:
-
         prix = float(prix)
 
     except (TypeError, ValueError):
 
-        flash(
-            "Veuillez saisir un prix valide.",
-            "danger"
-        )
+        flash("Veuillez saisir un prix valide.", "danger")
 
-        return redirect(
-            url_for("afficher_services")
-        )
-
+        return redirect(url_for("afficher_services"))
 
     if prix < 0:
 
+        flash("Le prix ne peut pas être négatif.", "danger")
+
+        return redirect(url_for("afficher_services"))
+
+    # =====================================================
+    # VÉRIFIER LES FICHIERS AVANT TOUT TÉLÉVERSEMENT
+    # =====================================================
+
+    fichier_image = request.files.get("image")
+    fichier_video = request.files.get("video")
+
+    avec_image = bool(fichier_image and fichier_image.filename)
+    avec_video = bool(fichier_video and fichier_video.filename)
+
+    if avec_image and not extension_autorisee(
+        fichier_image.filename,
+        EXTENSIONS_IMAGE_SERVICE
+    ):
+
         flash(
-            "Le prix ne peut pas être négatif.",
+            "Format d'image non autorisé. "
+            "Utilisez JPG, JPEG, PNG ou WEBP.",
             "danger"
         )
 
-        return redirect(
-            url_for("afficher_services")
+        return redirect(url_for("afficher_services"))
+
+    if avec_video and not extension_autorisee(
+        fichier_video.filename,
+        EXTENSIONS_VIDEO_SERVICE
+    ):
+
+        flash(
+            "Format vidéo non autorisé. "
+            "Utilisez MP4, WEBM ou MOV.",
+            "danger"
         )
 
+        return redirect(url_for("afficher_services"))
 
     # =====================================================
-    # RÉCUPÉRER LE STATUT
-    # =====================================================
-
-    actif = (
-        request.form.get("actif") is not None
-    )
-
-
-    # =====================================================
-    # RÉCUPÉRER LES FICHIERS
-    # =====================================================
-
-    fichier_image = request.files.get(
-        "image"
-    )
-
-    fichier_video = request.files.get(
-        "video"
-    )
-
-
-    # =====================================================
-    # VARIABLES POUR LES NOMS DE FICHIERS
+    # TÉLÉVERSEMENT (Cloudinary en production)
     # =====================================================
 
     nom_image = None
-
     nom_video = None
 
+    def nettoyer():
+        supprimer_media(nom_image, "services_images", local=True)
+        supprimer_media(nom_video, "services_videos", local=True)
 
-    # =====================================================
-    # TRAITEMENT DE L'IMAGE
-    # =====================================================
+    try:
 
-    if (
-        fichier_image
-        and fichier_image.filename
-    ):
-
-        if not extension_autorisee(
-            fichier_image.filename,
-            EXTENSIONS_IMAGE_SERVICE
-        ):
-
-            flash(
-                "Format d'image non autorisé. "
-                "Utilisez JPG, JPEG, PNG ou WEBP.",
-                "danger"
+        if avec_image:
+            nom_image = televerser_media(
+                fichier_image,
+                "services_images",
+                "image"
             )
 
-            return redirect(
-                url_for("afficher_services")
+        if avec_video:
+            nom_video = televerser_media(
+                fichier_video,
+                "services_videos",
+                "video"
             )
 
+    except ErreurMedia as erreur:
 
-        extension = (
-            fichier_image.filename
-            .rsplit(".", 1)[1]
-            .lower()
-        )
+        nettoyer()
 
+        flash(str(erreur), "danger")
 
-        nom_image = (
-            f"{uuid.uuid4().hex}.{extension}"
-        )
-
-
-        chemin_image = os.path.join(
-            SERVICES_IMAGES_DIR,
-            nom_image
-        )
-
-
-        fichier_image.save(
-            chemin_image
-        )
-
-
-    # =====================================================
-    # TRAITEMENT DE LA VIDÉO
-    # =====================================================
-
-    if (
-        fichier_video
-        and fichier_video.filename
-    ):
-
-        if not extension_autorisee(
-            fichier_video.filename,
-            EXTENSIONS_VIDEO_SERVICE
-        ):
-
-            # Supprimer l'image déjà enregistrée
-            # si la vidéo est invalide.
-            if nom_image:
-
-                chemin_image = os.path.join(
-                    SERVICES_IMAGES_DIR,
-                    nom_image
-                )
-
-                if os.path.exists(
-                    chemin_image
-                ):
-
-                    os.remove(
-                        chemin_image
-                    )
-
-
-            flash(
-                "Format vidéo non autorisé. "
-                "Utilisez MP4, WEBM ou MOV.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("afficher_services")
-            )
-
-
-        extension = (
-            fichier_video.filename
-            .rsplit(".", 1)[1]
-            .lower()
-        )
-
-
-        nom_video = (
-            f"{uuid.uuid4().hex}.{extension}"
-        )
-
-
-        chemin_video = os.path.join(
-            SERVICES_VIDEOS_DIR,
-            nom_video
-        )
-
-
-        fichier_video.save(
-            chemin_video
-        )
-
+        return redirect(url_for("afficher_services"))
 
     # =====================================================
     # ENVOYER LE SERVICE À FASTAPI
     # =====================================================
 
     donnees = {
-
-        "nom_service":
-            nom_service,
-
-        "prix":
-            prix,
-
-        "description":
-            description
-            if description
-            else None,
-
-        "categorie":
-            categorie
-            if categorie
-            else None,
-
-        "image":
-            nom_image,
-
-        "video":
-            nom_video,
-
-        "actif":
-            actif
+        "nom_service": nom_service,
+        "prix": prix,
+        "description": description or None,
+        "categorie": categorie or None,
+        "image": nom_image,
+        "video": nom_video,
+        "actif": actif
     }
-
 
     try:
 
-        reponse = api_post(
-            f"{API_URL}/services",
-            json=donnees
-        )
+        reponse = api_post("/services", json=donnees)
 
+    except SessionExpiree:
 
-    except Exception as erreur:
+        nettoyer()
 
-        # Si l'appel API échoue,
-        # supprimer les fichiers éventuellement créés.
+        raise
 
-        if nom_image:
+    except requests.RequestException as erreur:
 
-            chemin_image = os.path.join(
-                SERVICES_IMAGES_DIR,
-                nom_image
-            )
-
-            if os.path.exists(
-                chemin_image
-            ):
-
-                os.remove(
-                    chemin_image
-                )
-
-
-        if nom_video:
-
-            chemin_video = os.path.join(
-                SERVICES_VIDEOS_DIR,
-                nom_video
-            )
-
-            if os.path.exists(
-                chemin_video
-            ):
-
-                os.remove(
-                    chemin_video
-                )
-
+        nettoyer()
 
         flash(
             f"Erreur de communication avec l'API : {erreur}",
             "danger"
         )
 
-        return redirect(
-            url_for("afficher_services")
-        )
+        return redirect(url_for("afficher_services"))
 
+    if reponse.status_code not in [200, 201]:
 
-    # =====================================================
-    # VÉRIFIER LA RÉPONSE FASTAPI
-    # =====================================================
-
-    if reponse.status_code not in [
-        200,
-        201
-    ]:
-
-        # Si FastAPI refuse la création,
-        # supprimer les fichiers.
-
-        if nom_image:
-
-            chemin_image = os.path.join(
-                SERVICES_IMAGES_DIR,
-                nom_image
-            )
-
-            if os.path.exists(
-                chemin_image
-            ):
-
-                os.remove(
-                    chemin_image
-                )
-
-
-        if nom_video:
-
-            chemin_video = os.path.join(
-                SERVICES_VIDEOS_DIR,
-                nom_video
-            )
-
-            if os.path.exists(
-                chemin_video
-            ):
-
-                os.remove(
-                    chemin_video
-                )
-
+        nettoyer()
 
         try:
-
             erreur_api = reponse.json()
 
         except Exception:
-
-            erreur_api = {
-                "detail": reponse.text
-            }
-
+            erreur_api = {"detail": reponse.text}
 
         flash(
             "Impossible d'ajouter le service : "
-            + str(
-                erreur_api.get(
-                    "detail",
-                    "Erreur inconnue."
-                )
-            ),
+            + str(erreur_api.get("detail", "Erreur inconnue.")),
             "danger"
         )
 
-        return redirect(
-            url_for("afficher_services")
-        )
+        return redirect(url_for("afficher_services"))
 
+    flash("Service ajouté avec succès.", "success")
 
-    # =====================================================
-    # SUCCÈS
-    # =====================================================
-
-    flash(
-        "Service ajouté avec succès.",
-        "success"
-    )
-
-
-    return redirect(
-        url_for("afficher_services")
-    )
-
+    return redirect(url_for("afficher_services"))
 
 
 # =========================================================
@@ -3132,27 +3172,18 @@ def modifier_service(
     # Récupérer le service actuel
     # -----------------------------------------------------
 
-    reponse_services = api_get(
-        f"{API_URL}/services"
-    )
+    reponse_services = api_get("/services")
 
     if not reponse_services.ok:
 
-        flash(
-            "Impossible de récupérer les services.",
-            "error"
-        )
+        flash("Impossible de récupérer les services.", "error")
 
-        return redirect(
-            url_for("afficher_services")
-        )
-
-    services_liste = reponse_services.json()
+        return redirect(url_for("afficher_services"))
 
     service_actuel = next(
         (
             service
-            for service in services_liste
+            for service in reponse_services.json()
             if service["id_service"] == id_service
         ),
         None
@@ -3160,179 +3191,109 @@ def modifier_service(
 
     if service_actuel is None:
 
-        flash(
-            "Service introuvable.",
-            "error"
-        )
+        flash("Service introuvable.", "error")
 
-        return redirect(
-            url_for("afficher_services")
-        )
+        return redirect(url_for("afficher_services"))
 
     # -----------------------------------------------------
     # Données du formulaire
     # -----------------------------------------------------
 
-    nom_service = request.form.get(
-        "nom_service",
-        ""
-    ).strip()
-
-    prix = request.form.get(
-        "prix",
-        "0"
-    )
-
-    description = request.form.get(
-        "description",
-        ""
-    ).strip()
-
-    categorie = request.form.get(
-        "categorie",
-        ""
-    ).strip()
-
-    actif = request.form.get(
-        "actif"
-    ) == "on"
-
-    # -----------------------------------------------------
-    # Validation
-    # -----------------------------------------------------
+    nom_service = request.form.get("nom_service", "").strip()
+    prix = request.form.get("prix", "0")
+    description = request.form.get("description", "").strip()
+    categorie = request.form.get("categorie", "").strip()
+    actif = request.form.get("actif") == "on"
 
     if not nom_service:
 
-        flash(
-            "Le nom du service est obligatoire.",
-            "error"
-        )
+        flash("Le nom du service est obligatoire.", "error")
 
-        return redirect(
-            url_for("services")
-        )
+        return redirect(url_for("afficher_services"))
 
     try:
         prix = float(prix)
 
     except (ValueError, TypeError):
 
-        flash(
-            "Le prix est invalide.",
-            "error"
-        )
+        flash("Le prix est invalide.", "error")
 
-        return redirect(
-            url_for("afficher_services")
-        )
+        return redirect(url_for("afficher_services"))
 
     # -----------------------------------------------------
-    # Conserver les anciens médias
+    # Médias actuels (conservés si aucun nouveau fichier)
     # -----------------------------------------------------
 
-    nom_image = service_actuel.get(
-        "image"
-    )
+    ancienne_image = service_actuel.get("image")
+    ancienne_video = service_actuel.get("video")
 
-    nom_video = service_actuel.get(
-        "video"
-    )
+    nom_image = ancienne_image
+    nom_video = ancienne_video
+
+    fichier_image = request.files.get("image")
+    fichier_video = request.files.get("video")
+
+    avec_image = bool(fichier_image and fichier_image.filename)
+    avec_video = bool(fichier_video and fichier_video.filename)
 
     # -----------------------------------------------------
-    # Nouvelle image éventuelle
+    # Vérifier les formats avant tout téléversement
     # -----------------------------------------------------
 
-    fichier_image = request.files.get(
-        "image"
-    )
-
-    if (
-        fichier_image
-        and fichier_image.filename
+    if avec_image and not extension_autorisee(
+        fichier_image.filename,
+        EXTENSIONS_IMAGE_SERVICE
     ):
 
-        if not extension_autorisee(
-            fichier_image.filename,
-            EXTENSIONS_IMAGE_SERVICE
-        ):
+        flash("Format d'image non autorisé.", "error")
 
-            flash(
-                "Format d'image non autorisé.",
-                "error"
-            )
+        return redirect(url_for("afficher_services"))
 
-            return redirect(
-                url_for("services")
-            )
-
-        extension = (
-            fichier_image.filename
-            .rsplit(".", 1)[1]
-            .lower()
-        )
-
-        nom_image = (
-            f"service_"
-            f"{uuid.uuid4().hex}."
-            f"{extension}"
-        )
-
-        chemin_image = os.path.join(
-            SERVICES_IMAGES_DIR,
-            nom_image
-        )
-
-        fichier_image.save(
-            chemin_image
-        )
-
-    # -----------------------------------------------------
-    # Nouvelle vidéo éventuelle
-    # -----------------------------------------------------
-
-    fichier_video = request.files.get(
-        "video"
-    )
-
-    if (
-        fichier_video
-        and fichier_video.filename
+    if avec_video and not extension_autorisee(
+        fichier_video.filename,
+        EXTENSIONS_VIDEO_SERVICE
     ):
 
-        if not extension_autorisee(
-            fichier_video.filename,
-            EXTENSIONS_VIDEO_SERVICE
-        ):
+        flash("Format de vidéo non autorisé.", "error")
 
-            flash(
-                "Format de vidéo non autorisé.",
-                "error"
+        return redirect(url_for("afficher_services"))
+
+    # -----------------------------------------------------
+    # Téléversement des nouveaux médias
+    # -----------------------------------------------------
+
+    nouvelle_image = None
+    nouvelle_video = None
+
+    def nettoyer():
+        supprimer_media(nouvelle_image, "services_images", local=True)
+        supprimer_media(nouvelle_video, "services_videos", local=True)
+
+    try:
+
+        if avec_image:
+            nouvelle_image = televerser_media(
+                fichier_image,
+                "services_images",
+                "image"
             )
+            nom_image = nouvelle_image
 
-            return redirect(
-                url_for("afficher_services")
+        if avec_video:
+            nouvelle_video = televerser_media(
+                fichier_video,
+                "services_videos",
+                "video"
             )
+            nom_video = nouvelle_video
 
-        extension = (
-            fichier_video.filename
-            .rsplit(".", 1)[1]
-            .lower()
-        )
+    except ErreurMedia as erreur:
 
-        nom_video = (
-            f"service_"
-            f"{uuid.uuid4().hex}."
-            f"{extension}"
-        )
+        nettoyer()
 
-        chemin_video = os.path.join(
-            SERVICES_VIDEOS_DIR,
-            nom_video
-        )
+        flash(str(erreur), "error")
 
-        fichier_video.save(
-            chemin_video
-        )
+        return redirect(url_for("afficher_services"))
 
     # -----------------------------------------------------
     # Mise à jour FastAPI
@@ -3348,31 +3309,40 @@ def modifier_service(
         "actif": actif
     }
 
-    reponse = api_put(
-        f"{API_URL}/services/{id_service}",
-        json=donnees
-    )
+    try:
+
+        reponse = api_put(
+            f"/services/{id_service}",
+            json=donnees
+        )
+
+    except (SessionExpiree, requests.RequestException):
+
+        nettoyer()
+
+        raise
 
     if not reponse.ok:
 
-        flash(
-            "Erreur lors de la modification du service.",
-            "error"
-        )
+        nettoyer()
 
-        return redirect(
-            url_for("services")
-        )
+        flash("Erreur lors de la modification du service.", "error")
 
-    flash(
-        "Service modifié avec succès.",
-        "success"
-    )
+        return redirect(url_for("afficher_services"))
 
-    return redirect(
-        url_for("afficher_services")
-    )
+    # -----------------------------------------------------
+    # Supprimer les anciens médias Cloudinary remplacés
+    # -----------------------------------------------------
 
+    if nouvelle_image:
+        supprimer_media(ancienne_image, "services_images")
+
+    if nouvelle_video:
+        supprimer_media(ancienne_video, "services_videos")
+
+    flash("Service modifié avec succès.", "success")
+
+    return redirect(url_for("afficher_services"))
 
 
 # =========================================================
@@ -3421,7 +3391,7 @@ def supprimer_service(
         )
 
         return redirect(
-            url_for("services")
+            url_for("afficher_services")
         )
 
     flash(
@@ -3863,7 +3833,7 @@ def modifier_statut_service(
         )
 
     return redirect(
-        url_for("services")
+        url_for("afficher_services")
     )
 
 
@@ -3875,9 +3845,6 @@ def modifier_statut_service(
 # =========================================================
 # PAGE : COMMANDES
 # =========================================================
-
-from datetime import date
-
 
 @app.route("/commandes")
 def commandes():
@@ -3896,17 +3863,6 @@ def commandes():
     reponse = api_get(
         f"{API_URL}/commandes"
     )
-
-    print("====================================")
-    print("RÉPONSE FASTAPI /commandes")
-    print(reponse.status_code)
-
-    try:
-        print(reponse.json())
-    except Exception:
-        print(reponse.text)
-
-    print("====================================")
 
     if reponse.status_code != 200:
         return (
@@ -5099,7 +5055,7 @@ def annuler_commande(id_commande):
 
     token = session["access_token"]
 
-    reponse = requests.delete(
+    reponse = api_delete(
         f"{API_URL}/mes-commandes/"
         f"{id_commande}/annuler",
         headers={
@@ -5342,6 +5298,9 @@ def gestion_accueil():
         publicites = []
 
 
+    enrichir_photos_accueil(photos)
+    enrichir_publicites(publicites)
+
     return render_template(
         "gestion_accueil.html",
         photos=photos,
@@ -5363,91 +5322,69 @@ def ajouter_photo_accueil():
     if not role_autorise("admin"):
         return "Accès refusé.", 403
 
-
     fichier = request.files.get("photo")
 
-
     if not fichier or fichier.filename == "":
-        return redirect(
-            url_for("gestion_accueil")
-        )
+        return redirect(url_for("gestion_accueil"))
 
-
-    extensions_autorisees = (
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".webp",
-        ".gif"
-    )
-
-
-    nom_original = fichier.filename.lower()
-
-
-    if not nom_original.endswith(
-        extensions_autorisees
+    if not extension_autorisee(
+        fichier.filename,
+        EXTENSIONS_PHOTO_ACCUEIL
     ):
-
         return (
             "Format de photo non autorisé.",
             400
         )
 
-
-    # Sécuriser le nom
-    nom_image = secure_filename(
-        fichier.filename
-    )
-
-
     # -----------------------------------------------------
-    # DOSSIER
+    # TÉLÉVERSEMENT (Cloudinary en production)
     # -----------------------------------------------------
 
-    dossier = os.path.join(
-        app.root_path,
-        "static",
-        "accueil",
-        "photos"
-    )
+    try:
 
-    os.makedirs(
-        dossier,
-        exist_ok=True
-    )
+        nom_image = televerser_media(
+            fichier,
+            "accueil_photos",
+            "image"
+        )
 
+    except ErreurMedia as erreur:
 
-    # -----------------------------------------------------
-    # ENREGISTRER LE FICHIER
-    # -----------------------------------------------------
-
-    chemin = os.path.join(
-        dossier,
-        nom_image
-    )
-
-    fichier.save(chemin)
-
+        return (str(erreur), 500)
 
     # -----------------------------------------------------
-    # ENREGISTRER DANS SQL SERVER
+    # ENREGISTRER DANS LA BASE VIA FASTAPI
     # -----------------------------------------------------
 
-    response = api_post(
-        f"{API_URL}/accueil/photos",
-        params={
-            "nom_fichier": nom_image
-        },
-        timeout=10
-    )
+    try:
 
+        response = api_post(
+            "/accueil/photos",
+            params={
+                "nom_fichier": nom_image
+            }
+        )
+
+    except SessionExpiree:
+
+        supprimer_media(nom_image, "accueil_photos", local=True)
+
+        raise
+
+    except requests.RequestException:
+
+        supprimer_media(nom_image, "accueil_photos", local=True)
+
+        return (
+            "Impossible de contacter le serveur. "
+            "Réessayez dans quelques instants.",
+            503
+        )
 
     if response.status_code not in [200, 201]:
 
         # Si l'API échoue, supprimer le fichier
-        if os.path.exists(chemin):
-            os.remove(chemin)
+        supprimer_media(nom_image, "accueil_photos", local=True)
 
         return (
             f"Erreur lors de l'enregistrement : "
@@ -5455,10 +5392,7 @@ def ajouter_photo_accueil():
             500
         )
 
-
-    return redirect(
-        url_for("gestion_accueil")
-    )
+    return redirect(url_for("gestion_accueil"))
 
 
 # =========================================================
@@ -5474,7 +5408,6 @@ def supprimer_photo_accueil(id_photo):
     if not role_autorise("admin"):
         return "Accès refusé.", 403
 
-
     # -----------------------------------------------------
     # Récupérer les informations avant suppression
     # -----------------------------------------------------
@@ -5483,10 +5416,7 @@ def supprimer_photo_accueil(id_photo):
 
     try:
 
-        response = api_get(
-            f"{API_URL}/accueil/photos",
-            timeout=5
-        )
+        response = api_get("/accueil/photos")
 
         if response.status_code == 200:
             photos = response.json()
@@ -5494,7 +5424,6 @@ def supprimer_photo_accueil(id_photo):
     except requests.RequestException:
 
         pass
-
 
     photo = next(
         (
@@ -5504,16 +5433,11 @@ def supprimer_photo_accueil(id_photo):
         None
     )
 
-
     # -----------------------------------------------------
     # Supprimer dans l'API
     # -----------------------------------------------------
 
-    response = api_delete(
-        f"{API_URL}/accueil/photos/{id_photo}",
-        timeout=10
-    )
-
+    response = api_delete(f"/accueil/photos/{id_photo}")
 
     if response.status_code != 200:
 
@@ -5522,28 +5446,19 @@ def supprimer_photo_accueil(id_photo):
             500
         )
 
-
     # -----------------------------------------------------
-    # Supprimer également le fichier
+    # Supprimer également le fichier (Cloudinary ou local)
     # -----------------------------------------------------
 
     if photo:
 
-        chemin = os.path.join(
-            app.root_path,
-            "static",
-            "accueil",
-            "photos",
-            photo["nom_fichier"]
+        supprimer_media(
+            photo.get("nom_fichier"),
+            "accueil_photos",
+            local=True
         )
 
-        if os.path.exists(chemin):
-            os.remove(chemin)
-
-
-    return redirect(
-        url_for("gestion_accueil")
-    )
+    return redirect(url_for("gestion_accueil"))
 
 
 # =========================================================
@@ -5559,7 +5474,6 @@ def ajouter_publicite():
     if not role_autorise("admin"):
         return "Accès refusé.", 403
 
-
     fichier = request.files.get("video")
 
     titre = request.form.get(
@@ -5567,97 +5481,74 @@ def ajouter_publicite():
         ""
     ).strip()
 
-
     if not fichier or fichier.filename == "":
-        return redirect(
-            url_for("gestion_accueil")
-        )
+        return redirect(url_for("gestion_accueil"))
 
-
-    extensions_autorisees = (
-        ".mp4",
-        ".webm",
-        ".ogg"
-    )
-
-
-    nom_original = fichier.filename.lower()
-
-
-    if not nom_original.endswith(
-        extensions_autorisees
+    if not extension_autorisee(
+        fichier.filename,
+        EXTENSIONS_VIDEO_ACCUEIL
     ):
-
         return (
             "Format vidéo non autorisé.",
             400
         )
 
-
-    nom_video = secure_filename(
-        fichier.filename
-    )
-
-
     # -----------------------------------------------------
-    # DOSSIER
+    # TÉLÉVERSEMENT (Cloudinary en production)
     # -----------------------------------------------------
 
-    dossier = os.path.join(
-        app.root_path,
-        "static",
-        "accueil",
-        "videos"
-    )
+    try:
 
-    os.makedirs(
-        dossier,
-        exist_ok=True
-    )
+        nom_video = televerser_media(
+            fichier,
+            "accueil_videos",
+            "video"
+        )
 
+    except ErreurMedia as erreur:
 
-    chemin = os.path.join(
-        dossier,
-        nom_video
-    )
-
+        return (str(erreur), 500)
 
     # -----------------------------------------------------
-    # ENREGISTRER LE FICHIER
+    # ENREGISTRER DANS LA BASE VIA FASTAPI
     # -----------------------------------------------------
 
-    fichier.save(chemin)
+    try:
 
+        response = api_post(
+            "/accueil/publicites",
+            params={
+                "nom_fichier": nom_video,
+                "titre": titre or None
+            }
+        )
 
-    # -----------------------------------------------------
-    # ENREGISTRER DANS LA BASE
-    # -----------------------------------------------------
+    except SessionExpiree:
 
-    response = api_post(
-        f"{API_URL}/accueil/publicites",
-        params={
-            "nom_fichier": nom_video,
-            "titre": titre or None
-        },
-        timeout=10
-    )
+        supprimer_media(nom_video, "accueil_videos", local=True)
 
+        raise
+
+    except requests.RequestException:
+
+        supprimer_media(nom_video, "accueil_videos", local=True)
+
+        return (
+            "Impossible de contacter le serveur. "
+            "Réessayez dans quelques instants.",
+            503
+        )
 
     if response.status_code not in [200, 201]:
 
-        if os.path.exists(chemin):
-            os.remove(chemin)
+        supprimer_media(nom_video, "accueil_videos", local=True)
 
         return (
             f"Erreur : {response.text}",
             500
         )
 
-
-    return redirect(
-        url_for("gestion_accueil")
-    )
-
+    return redirect(url_for("gestion_accueil"))
 
 
 # =========================================================
@@ -5673,7 +5564,6 @@ def supprimer_publicite(id_publicite):
     if not role_autorise("admin"):
         return "Accès refusé.", 403
 
-
     # -----------------------------------------------------
     # Récupérer la publicité
     # -----------------------------------------------------
@@ -5682,10 +5572,7 @@ def supprimer_publicite(id_publicite):
 
     try:
 
-        response = api_get(
-            f"{API_URL}/accueil/publicites",
-            timeout=5
-        )
+        response = api_get("/accueil/publicites")
 
         if response.status_code == 200:
             publicites = response.json()
@@ -5693,7 +5580,6 @@ def supprimer_publicite(id_publicite):
     except requests.RequestException:
 
         pass
-
 
     publicite = next(
         (
@@ -5703,16 +5589,11 @@ def supprimer_publicite(id_publicite):
         None
     )
 
-
     # -----------------------------------------------------
     # Supprimer de la base
     # -----------------------------------------------------
 
-    response = api_delete(
-        f"{API_URL}/accueil/publicites/{id_publicite}",
-        timeout=10
-    )
-
+    response = api_delete(f"/accueil/publicites/{id_publicite}")
 
     if response.status_code != 200:
 
@@ -5721,29 +5602,19 @@ def supprimer_publicite(id_publicite):
             500
         )
 
-
     # -----------------------------------------------------
-    # Supprimer le fichier
+    # Supprimer le fichier (Cloudinary ou local)
     # -----------------------------------------------------
 
     if publicite:
 
-        chemin = os.path.join(
-            app.root_path,
-            "static",
-            "accueil",
-            "videos",
-            publicite["nom_fichier"]
+        supprimer_media(
+            publicite.get("nom_fichier"),
+            "accueil_videos",
+            local=True
         )
 
-        if os.path.exists(chemin):
-            os.remove(chemin)
-
-
-    return redirect(
-        url_for("gestion_accueil")
-    )
-
+    return redirect(url_for("gestion_accueil"))
 
 
 # =========================================================
@@ -5856,7 +5727,7 @@ def messages_commande(id_commande):
         "messages.html",
         messages=messages,
         id_commande=id_commande,
-        API_URL=API_URL
+        API_URL=API_PUBLIC_URL
     )
 
 # =========================================================
@@ -5898,7 +5769,7 @@ def envoyer_message(id_commande):
     # Envoyer le message à FastAPI
     # -----------------------------------------------------
 
-    reponse = requests.post(
+    reponse = api_post(
         f"{API_URL}/commandes/{id_commande}/messages",
         json={
             "message": texte
@@ -6004,7 +5875,7 @@ def envoyer_message_vocal(id_commande):
 
     try:
 
-        reponse = requests.post(
+        reponse = api_post(
 
             f"{API_URL}/commandes/"
             f"{id_commande}/messages/vocal",
@@ -6084,7 +5955,7 @@ def marquer_message_lu(id_commande, id_message):
     # Envoyer la demande à FastAPI
     # -----------------------------------------------------
 
-    reponse = requests.put(
+    reponse = api_put(
         f"{API_URL}/commandes/"
         f"{id_commande}/messages/"
         f"{id_message}/lu",
@@ -6138,7 +6009,7 @@ def supprimer_message(id_commande, id_message):
     # Envoyer la demande à FastAPI
     # -----------------------------------------------------
 
-    reponse = requests.delete(
+    reponse = api_delete(
         f"{API_URL}/commandes/"
         f"{id_commande}/messages/"
         f"{id_message}",
@@ -6194,7 +6065,7 @@ def nombre_messages_non_lus():
         # Demander le nombre à FastAPI
         # -------------------------------------------------
 
-        reponse = requests.get(
+        reponse = api_get(
             f"{API_URL}/messages/non-lus",
             headers=api_headers()
         )
@@ -6273,7 +6144,7 @@ def mes_messages():
 
     try:
 
-        reponse = requests.get(
+        reponse = api_get(
             f"{API_URL}/messages/conversations",
             headers=api_headers()
         )
@@ -6667,7 +6538,7 @@ def notification_lue(id_notification):
         }), 401
 
 
-    reponse = requests.put(
+    reponse = api_put(
 
         f"{API_URL}/notifications/"
         f"{id_notification}/lue",
@@ -6701,7 +6572,7 @@ def notifications_toutes_lues():
         }), 401
 
 
-    reponse = requests.put(
+    reponse = api_put(
 
         f"{API_URL}/notifications/toutes/lues",
 
@@ -6723,7 +6594,10 @@ def notifications_toutes_lues():
 
 if __name__ == "__main__":
 
+    # En production, Render lance l'application avec gunicorn :
+    #     gunicorn app:app
     app.run(
-        debug=True,
-        port=5000
+        host="0.0.0.0" if EN_PRODUCTION else "127.0.0.1",
+        port=int(os.getenv("PORT", "5000")),
+        debug=not EN_PRODUCTION
     )
