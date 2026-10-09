@@ -1,0 +1,430 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+Créer un compte - Gestion de Boutique
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .inscription-page {
+        max-width: 900px;
+        margin: 45px auto;
+        padding: 0 20px 50px;
+        color: #172033;
+    }
+
+    .inscription-card {
+        display: grid;
+        grid-template-columns: 0.85fr 1.15fr;
+        background: #fff;
+        border: 1px solid #e8edf5;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 15px 45px rgba(15, 23, 42, .09);
+    }
+
+    .inscription-intro {
+        padding: 42px 30px;
+        color: white;
+        background: linear-gradient(145deg, #1d4ed8, #6d28d9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .inscription-logo {
+        font-size: 46px;
+        margin-bottom: 20px;
+    }
+
+    .inscription-intro h1 {
+        font-size: 29px;
+        line-height: 1.25;
+        margin: 0 0 15px;
+    }
+
+    .inscription-intro p {
+        color: #e0e7ff;
+        line-height: 1.8;
+        font-size: 14px;
+    }
+
+    .inscription-avantage {
+        margin-top: 25px;
+        line-height: 2.2;
+        font-size: 14px;
+    }
+
+    .inscription-formulaire {
+        padding: 38px 32px;
+    }
+
+    .inscription-formulaire h2 {
+        font-size: 24px;
+        margin: 0 0 8px;
+    }
+
+    .inscription-description {
+        color: #718096;
+        font-size: 14px;
+        margin-bottom: 25px;
+    }
+
+    .inscription-erreur {
+        padding: 13px 15px;
+        border-radius: 11px;
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
+        color: #be123c;
+        font-size: 14px;
+        margin-bottom: 20px;
+        overflow-wrap: anywhere;
+    }
+
+    .inscription-grille {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    .inscription-champ {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .inscription-champ.large {
+        grid-column: 1 / -1;
+    }
+
+    .inscription-champ label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 8px;
+    }
+
+    .inscription-champ input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 13px;
+        border: 1px solid #dbe2ea;
+        border-radius: 10px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    .inscription-champ input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+    }
+
+    .inscription-champ input:invalid:not(:placeholder-shown) {
+        border-color: #e2e8f0;
+    }
+
+    .inscription-aide {
+        font-size: 12px;
+        color: #718096;
+        margin-top: 6px;
+    }
+
+    .inscription-bouton {
+        width: 100%;
+        margin-top: 24px;
+        padding: 14px 18px;
+        border: none;
+        border-radius: 11px;
+        color: white;
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform .2s, box-shadow .2s;
+        box-shadow: 0 7px 18px rgba(37, 99, 235, .2);
+    }
+
+    .inscription-bouton:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, .28);
+    }
+
+    .inscription-connexion {
+        text-align: center;
+        font-size: 14px;
+        color: #64748b;
+        margin-top: 22px;
+    }
+
+    .inscription-connexion a {
+        color: #2563eb;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .inscription-connexion a:hover {
+        text-decoration: underline;
+    }
+
+    .inscription-password {
+        position: relative;
+    }
+
+    .inscription-password input {
+        padding-right: 45px;
+    }
+
+    .inscription-oeil {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 17px;
+        padding: 5px;
+    }
+
+    @media (max-width: 700px) {
+        .inscription-card {
+            grid-template-columns: 1fr;
+        }
+
+        .inscription-intro {
+            padding: 28px 24px;
+        }
+
+        .inscription-logo {
+            font-size: 35px;
+            margin-bottom: 10px;
+        }
+
+        .inscription-intro h1 {
+            font-size: 25px;
+        }
+
+        .inscription-avantage {
+            margin-top: 10px;
+        }
+
+        .inscription-formulaire {
+            padding: 28px 22px;
+        }
+    }
+
+    @media (max-width: 450px) {
+        .inscription-page {
+            margin-top: 20px;
+            padding: 0 10px 30px;
+        }
+
+        .inscription-grille {
+            grid-template-columns: 1fr;
+        }
+
+        .inscription-champ.large {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="inscription-page">
+    <div class="inscription-card">
+
+        <aside class="inscription-intro">
+            <div class="inscription-logo">🛍️</div>
+
+            <h1>Bienvenue dans votre boutique !</h1>
+
+            <p>
+                Créez votre espace personnel pour découvrir nos produits,
+                commander nos services et suivre vos commandes.
+            </p>
+
+            <div class="inscription-avantage">
+                <div>✓ Un espace personnel sécurisé</div>
+                <div>✓ Un suivi de vos commandes</div>
+                <div>✓ Un accès à nos produits et services</div>
+            </div>
+        </aside>
+
+        <section class="inscription-formulaire">
+            <h2>Créer un compte</h2>
+
+            <p class="inscription-description">
+                Remplissez les informations ci-dessous pour vous inscrire.
+            </p>
+
+            {% if erreur %}
+                <div class="inscription-erreur" role="alert">
+                    ⚠️ {{ erreur }}
+                </div>
+            {% endif %}
+
+            <form
+                method="POST"
+                action="{{ url_for('creer_compte') }}"
+                id="formulaire-inscription"
+            >
+                <div class="inscription-grille">
+
+                    <div class="inscription-champ">
+                        <label for="nom">Nom *</label>
+                        <input
+                            type="text"
+                            id="nom"
+                            name="nom"
+                            autocomplete="family-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="inscription-champ">
+                        <label for="prenom">Prénom *</label>
+                        <input
+                            type="text"
+                            id="prenom"
+                            name="prenom"
+                            autocomplete="given-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="inscription-champ large">
+                        <label for="email">Adresse e-mail *</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            autocomplete="email"
+                            maxlength="255"
+                            placeholder="exemple@email.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="inscription-champ">
+                        <label for="telephone">Téléphone *</label>
+                        <input
+                            type="tel"
+                            id="telephone"
+                            name="telephone"
+                            autocomplete="tel"
+                            maxlength="30"
+                            placeholder="+221 77 000 00 00"
+                            required
+                        >
+                    </div>
+
+                    <div class="inscription-champ">
+                        <label for="date_naissance">
+                            Date de naissance
+                        </label>
+                        <input
+                            type="date"
+                            id="date_naissance"
+                            name="date_naissance"
+                            autocomplete="bday"
+                        >
+                    </div>
+
+                    <div class="inscription-champ large">
+                        <label for="mot_de_passe">Mot de passe *</label>
+                        <div class="inscription-password">
+                            <input
+                                type="password"
+                                id="mot_de_passe"
+                                name="mot_de_passe"
+                                autocomplete="new-password"
+                                minlength="8"
+                                required
+                            >
+                            <button
+                                type="button"
+                                class="inscription-oeil"
+                                onclick="basculerMotDePasse('mot_de_passe', this)"
+                                aria-label="Afficher ou masquer le mot de passe"
+                            >👁️</button>
+                        </div>
+                        <span class="inscription-aide">
+                            Minimum 8 caractères.
+                        </span>
+                    </div>
+
+                    <div class="inscription-champ large">
+                        <label for="confirmation">
+                            Confirmer le mot de passe *
+                        </label>
+                        <div class="inscription-password">
+                            <input
+                                type="password"
+                                id="confirmation"
+                                name="confirmation"
+                                autocomplete="new-password"
+                                minlength="8"
+                                required
+                            >
+                            <button
+                                type="button"
+                                class="inscription-oeil"
+                                onclick="basculerMotDePasse('confirmation', this)"
+                                aria-label="Afficher ou masquer la confirmation"
+                            >👁️</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <button type="submit" class="inscription-bouton">
+                    Créer mon compte →
+                </button>
+            </form>
+
+            <div class="inscription-connexion">
+                Vous avez déjà un compte ?
+                <a href="{{ url_for('login') }}">Se connecter</a>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script>
+    function basculerMotDePasse(id, bouton) {
+        const champ = document.getElementById(id);
+
+        if (!champ) return;
+
+        if (champ.type === "password") {
+            champ.type = "text";
+            bouton.textContent = "🙈";
+        } else {
+            champ.type = "password";
+            bouton.textContent = "👁️";
+        }
+    }
+
+    document.getElementById("formulaire-inscription")
+        .addEventListener("submit", function (event) {
+            const motDePasse =
+                document.getElementById("mot_de_passe").value;
+
+            const confirmation =
+                document.getElementById("confirmation").value;
+
+            if (motDePasse !== confirmation) {
+                event.preventDefault();
+                alert("Les deux mots de passe ne correspondent pas.");
+                document.getElementById("confirmation").focus();
+            }
+        });
+</script>
+
+{% endblock %}
+
