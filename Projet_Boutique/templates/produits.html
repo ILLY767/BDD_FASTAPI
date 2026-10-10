@@ -2746,33 +2746,35 @@ function ouvrirModificationProduit(
         );
 
 
-    if (image) {
+    
+        if (image) {
 
-        if (preview) {
+            if (preview) {
 
-            preview.src =
-                `/static/images/${image}`;
+                // URL Cloudinary : conserver l'adresse complète.
+                // Image locale : utiliser le dossier static/images.
+                const urlImage =
+                    /^(https?:\/\/|data:)/i.test(image)
+                        ? image
+                        : `/static/images/${image.replace(/^\/+/, "")}`;
 
-            preview.style.display =
-                "block";
+                preview.src = urlImage;
+
+                preview.style.display = "block";
+            }
+
+            if (nomImage) {
+                nomImage.textContent = image;
+            }
+
+        } else {
+
+            if (preview) {
+                preview.src = "";
+                preview.style.display = "none";
+            }
         }
 
-        if (nomImage) {
-
-            nomImage.textContent =
-                image;
-        }
-
-
-    } else {
-
-        if (preview) {
-
-            preview.src = "";
-
-            preview.style.display =
-                "none";
-        }
 
         if (nomImage) {
 
@@ -2814,7 +2816,7 @@ function ouvrirModificationProduit(
         document.body.style.overflow =
             "hidden";
     }
-}
+
 
 
 /* =========================================================
