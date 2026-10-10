@@ -1,2138 +1,330 @@
 {% extends "base.html" %}
 
-{% block title %}
-Produits - Gestion de Boutique
-{% endblock %}
+{% block title %}Produits - Gestion de Boutique{% endblock %}
 
 {% block content %}
-
 <style>
-
-    .produits-container {
-        max-width: 1200px;
-        margin: 30px auto;
-    }
-
-    .titre-page {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 25px;
-    }
-
-    .titre-page h2 {
-        margin: 0;
-        font-size: 28px;
-    }
-
-    .card {
-        background: white;
-        padding: 25px;
-        margin-bottom: 25px;
-        border-radius: 12px;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    }
-
-    .card h3 {
-        margin-top: 0;
-        margin-bottom: 20px;
-    }
-
-
-    /* ================================
-       FORMULAIRE
-       ================================= */
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 18px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group.full-width {
-        grid-column: 1 / -1;
-    }
-
-    .form-group label {
-        margin-bottom: 7px;
-        font-weight: bold;
-    }
-
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-        padding: 11px;
-        border: 1px solid #ccc;
-        border-radius: 7px;
-        font-size: 15px;
-        font-family: inherit;
-    }
-
-    .form-group textarea {
-        min-height: 100px;
-        resize: vertical;
-    }
-
-    .form-help {
-        font-size: 12px;
-        color: #777;
-        margin-top: 5px;
-    }
-
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .checkbox-group input {
-        width: 18px;
-        height: 18px;
-    }
-
-    .form-actions {
-        grid-column: 1 / -1;
-        margin-top: 5px;
-    }
-
-
-    /* ================================
-       BOUTONS
-       ================================= */
-
-    button {
-        border: none;
-        border-radius: 7px;
-        padding: 10px 15px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    .btn-ajouter {
-        background: #198754;
-        color: white;
-        padding: 12px 22px;
-    }
-
-    .btn-modifier {
-        background: #0d6efd;
-        color: white;
-    }
-
-    .btn-supprimer {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-annuler {
-        background: #6c757d;
-        color: white;
-        display: none;
-    }
-
-
-    /* ================================
-       RECHERCHE
-       ================================= */
-
-    .recherche {
-        display: flex;
-        gap: 10px;
-    }
-
-    .recherche input {
-        flex: 1;
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 7px;
-        font-size: 15px;
-    }
-
-    .btn-rechercher {
-        background: #343a40;
-        color: white;
-        padding: 12px 20px;
-    }
-
-    .btn-tous {
-        background: #6c757d;
-        color: white;
-        padding: 12px 20px;
-        text-decoration: none;
-        border-radius: 7px;
-    }
-
-
-    /* ================================
-       TABLEAU
-       ================================= */
-
-    .table-container {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 900px;
-    }
-
-    th {
-        background: #343a40;
-        color: white;
-        padding: 14px;
-        text-align: left;
-    }
-
-    td {
-        padding: 13px;
-        border-bottom: 1px solid #ddd;
-        vertical-align: middle;
-    }
-
-    tr:hover {
-        background: #f8f9fa;
-    }
-
-    .actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .prix {
-        font-weight: bold;
-        white-space: nowrap;
-    }
-
-    .stock {
-        font-weight: bold;
-    }
-
-    .stock-faible {
-        color: #dc3545;
-    }
-
-    .stock-normal {
-        color: #198754;
-    }
-
-    .statut {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .en-ligne {
-        background: #d1e7dd;
-        color: #0f5132;
-    }
-
-    .hors-ligne {
-        background: #f8d7da;
-        color: #842029;
-    }
-
-    .image-produit {
-        width: 65px;
-        height: 65px;
-        object-fit: cover;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-    }
-
-    .image-placeholder {
-        width: 65px;
-        height: 65px;
-        border-radius: 8px;
-        background: #f1f1f1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 25px;
-    }
-
-    .aucun {
-        text-align: center;
-        padding: 25px;
-        color: #777;
-    }
-
-
-    /* ================================
-       CATALOGUE CLIENT
-       ================================ */
-
-    .catalogue-client {
-        background: #f8f9fa;
-    }
-
-    .produits-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 25px;
-    }
-
-    .produit-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .produit-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-    }
-
-    .produit-image-container {
-        width: 100%;
-        height: 230px;
-        background: #f1f1f1;
-        overflow: hidden;
-    }
-
-    .produit-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-    }
-
-    .produit-image:hover {
-        transform: scale(1.03);
-    }
-
-    .produit-image-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 60px;
-    }
-
-    .produit-informations {
-        padding: 20px;
-    }
-
-    .produit-informations h3 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 20px;
-        cursor: pointer;
-    }
-
-    .produit-informations h3:hover {
-        text-decoration: underline;
-    }
-
-    .produit-categorie {
-        color: #666;
-        font-size: 14px;
-    }
-
-    .produit-description {
-        color: #555;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-
-    .produit-prix {
-        font-size: 21px;
-        font-weight: bold;
-        margin: 15px 0;
-    }
-
-    .disponibilite {
-        font-weight: bold;
-        font-size: 14px;
-    }
-
-    .disponible {
-        color: #198754;
-    }
-
-    .rupture {
-        color: #dc3545;
-    }
-
-    .btn-panier {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 7px;
-        background: #198754;
-        color: white;
-        font-size: 15px;
-        cursor: pointer;
-    }
-
-    .btn-panier:hover {
-        background: #157347;
-    }
-
-    .btn-panier.indisponible {
-        background: #6c757d;
-        cursor: not-allowed;
-    }
-
-
-    /* ================================
-       MODAL PRODUIT
-       ================================ */
-
-    .modal-produit {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.75);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        padding: 20px;
-        box-sizing: border-box;
-    }
-
-    .modal-contenu {
-        position: relative;
-        width: 100%;
-        max-width: 950px;
-        max-height: 90vh;
-        background: white;
-        border-radius: 15px;
-        overflow: auto;
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .modal-fermer {
-        position: absolute;
-        top: 12px;
-        right: 15px;
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.65);
-        color: white;
-        font-size: 28px;
-        line-height: 40px;
-        z-index: 2;
-    }
-
-    .modal-fermer:hover {
-        background: #dc3545;
-    }
-
-    .modal-image-container {
-        min-height: 450px;
-        background: #f1f1f1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    }
-
-    .modal-image {
-        width: 100%;
-        height: 100%;
-        max-height: 550px;
-        object-fit: contain;
-        border-radius: 8px;
-    }
-
-    .modal-informations {
-        padding: 45px 35px 35px 35px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .modal-informations h2 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-size: 30px;
-    }
-
-    .modal-categorie {
-        color: #666;
-        font-size: 15px;
-    }
-
-    .modal-prix {
-        font-size: 26px;
-        font-weight: bold;
-        margin: 20px 0;
-    }
-
-    .modal-description {
-        color: #555;
-        line-height: 1.6;
-        margin-bottom: 15px;
-    }
-
-    .modal-informations .btn-panier {
-        margin-top: 20px;
-    }
-
-
-    /* ================================
-       RESPONSIVE
-       ================================ */
-
-    @media (max-width: 900px) {
-
-        .produits-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .modal-contenu {
-            grid-template-columns: 1fr;
-            max-height: 92vh;
-        }
-
-        .modal-image-container {
-            min-height: 300px;
-            max-height: 400px;
-        }
-
-        .modal-informations {
-            padding: 30px;
-        }
-    }
-
-    @media (max-width: 768px) {
-
-        .produits-container {
-            margin: 15px;
-        }
-
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .form-group.full-width,
-        .form-actions {
-            grid-column: auto;
-        }
-
-        .titre-page {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .recherche {
-            flex-direction: column;
-        }
-
-        .modal-produit {
-            padding: 10px;
-        }
-
-        .modal-contenu {
-            border-radius: 10px;
-        }
-
-        .modal-image-container {
-            min-height: 250px;
-        }
-
-        .modal-informations {
-            padding: 25px;
-        }
-
-        .modal-informations h2 {
-            font-size: 24px;
-        }
-
-        .modal-prix {
-            font-size: 22px;
-        }
-    }
-
-    @media (max-width: 600px) {
-
-        .produits-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    
-
-    .panier-barre {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 25px;
-    }
-
-    .btn-ouvrir-panier {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 20px;
-        background: #222;
-        color: white;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: 0.2s;
-    }
-
-    .btn-ouvrir-panier:hover {
-        background: #444;
-    }
-
-    #nombrePanier {
-        min-width: 24px;
-        height: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: white;
-        color: #222;
-        border-radius: 50%;
-        font-size: 13px;
-        font-weight: bold;
-    }
-
-    .btn-mes-commandes {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background: #333;
-        color: white;
-        text-decoration: none;
-        border-radius: 6px;
-        font-weight: 600;
-        transition: 0.2s;
-    }
-
-    .btn-mes-commandes:hover {
-        opacity: 0.85;
-    }
-
-
-
-/* =========================================
-   NOUVEAU DESIGN : ESPACE CLIENT
-   ========================================= */
-
-.catalogue-client {
-    background: #f3f7f4;
-    padding: 25px;
-    border: 1px solid #e0ebe3;
-}
-
-/* Titres */
-.catalogue-client .titre-page h2,
-.recherche-client h3 {
-    color: #174b35;
-    font-weight: 700;
-}
-
-/* Cartes de recherche et catalogue */
-.recherche-client {
-    background: linear-gradient(135deg, #ffffff, #f0f8f2);
-    border: 1px solid #dcebe0;
-    border-left: 5px solid #198754;
-    border-radius: 14px;
-    box-shadow: 0 5px 18px rgba(25, 135, 84, 0.08);
-}
-
-/* Champ de recherche */
-.recherche-client .recherche input {
-    min-width: 0;
-    border: 1px solid #cbded0;
-    background: #ffffff;
-    border-radius: 9px;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.recherche-client .recherche input:focus {
-    border-color: #198754;
-    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.13);
-}
-
-/* Bouton rechercher */
-.recherche-client .btn-rechercher {
-    background: #198754;
-    color: #ffffff;
-    border-radius: 9px;
-    font-weight: 600;
-    transition: background 0.2s, transform 0.2s;
-}
-
-.recherche-client .btn-rechercher:hover {
-    background: #146c43;
-    transform: translateY(-1px);
-}
-
-/* Bouton tout afficher */
-.recherche-client .btn-tous {
-    background: #e6f2e9;
-    color: #175c39;
-    border: 1px solid #c9e2d0;
-    border-radius: 9px;
-    font-weight: 600;
-}
-
-.recherche-client .btn-tous:hover {
-    background: #d5eadb;
-}
-
-/* Barre panier */
-.panier-barre {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 16px 20px;
-    margin-bottom: 25px;
-    border-radius: 14px;
-    background: linear-gradient(120deg, #174b35, #238653);
-    box-shadow: 0 5px 16px rgba(23, 75, 53, 0.18);
-}
-
-/* Bouton Mon panier */
-.btn-ouvrir-panier {
-    background: #ffffff;
-    color: #174b35;
-    border: 1px solid #ffffff;
-    border-radius: 9px;
-    font-weight: 700;
-}
-
-.btn-ouvrir-panier:hover {
-    background: #eaf5ed;
-}
-
-/* Compteur */
-#nombrePanier {
-    background: #f5c451;
-    color: #3c2b00;
-    min-width: 27px;
-    height: 27px;
-}
-
-/* Bouton Mes commandes */
-.btn-mes-commandes {
-    background: #f5c451;
-    color: #3c2b00;
-    border-radius: 9px;
-    font-weight: 700;
-}
-
-.btn-mes-commandes:hover {
-    background: #ffda7b;
-    opacity: 1;
-}
-
-/* Cartes produits */
-.produit-card {
-    border: 1px solid #e5ebe6;
-    border-radius: 15px;
-    box-shadow: 0 4px 14px rgba(20, 60, 35, 0.07);
-}
-
-.produit-card:hover {
-    transform: translateY(-5px);
-    border-color: #b7d8c1;
-    box-shadow: 0 10px 25px rgba(20, 60, 35, 0.13);
-}
-
-/* Prix */
-.produit-prix {
-    color: #176b42;
-    font-size: 23px;
-}
-
-/* Bouton Ajouter au panier */
-.btn-panier {
-    background: #198754;
-    border-radius: 9px;
-    font-weight: 600;
-    transition: background 0.2s, transform 0.2s;
-}
-
-.btn-panier:hover {
-    background: #146c43;
-    transform: translateY(-1px);
-}
-
-/* Adaptation aux téléphones */
-@media (max-width: 768px) {
-    .catalogue-client {
-        padding: 15px;
-    }
-
-    .panier-barre {
-        justify-content: stretch;
-        padding: 14px;
-    }
-
-    .panier-barre a {
-        flex: 1;
-        justify-content: center;
-        text-align: center;
-    }
-
-    .recherche-client .recherche {
-        flex-direction: column;
-    }
-
-    .recherche-client .recherche input,
-    .recherche-client .recherche button,
-    .recherche-client .recherche a {
-        width: 100%;
-        box-sizing: border-box;
-        text-align: center;
-    }
-}
-
-
-/* =========================================================
-   MODAL : MODIFICATION PRODUIT
-   ========================================================= */
-
-.modal-modification {
-
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 100%;
-
-    background: rgba(0, 0, 0, 0.75);
-
-    display: none;
-
-    align-items: center;
-    justify-content: center;
-
-    z-index: 10000;
-
-    padding: 20px;
-
-    box-sizing: border-box;
-}
-
-
-.modal-modification-contenu {
-
-    position: relative;
-
-    width: 100%;
-
-    max-width: 850px;
-
-    max-height: 90vh;
-
-    overflow-y: auto;
-
-    background: white;
-
-    border-radius: 15px;
-
-    padding: 30px;
-
-    box-sizing: border-box;
-
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-
-
-.modal-modification-contenu h2 {
-
-    margin-top: 0;
-
-    margin-bottom: 25px;
-
-    color: #174b35;
-}
-
-
-.modal-modification-fermer {
-
-    position: absolute;
-
-    top: 12px;
-    right: 15px;
-
-    width: 40px;
-    height: 40px;
-
-    padding: 0;
-
-    border-radius: 50%;
-
-    background: #343a40;
-
-    color: white;
-
-    font-size: 26px;
-
-    line-height: 40px;
-
-    cursor: pointer;
-}
-
-
-.modal-modification-fermer:hover {
-
-    background: #dc3545;
-}
-
-
-/* =========================================================
-   APERÇU IMAGE
-   ========================================================= */
-
-.image-modification-container {
-
-    display: flex;
-
-    gap: 25px;
-
-    align-items: center;
-
-    margin-top: 10px;
-
-    padding: 15px;
-
-    background: #f8f9fa;
-
-    border: 1px solid #ddd;
-
-    border-radius: 10px;
-}
-
-
-.image-modification-preview {
-
-    width: 140px;
-    height: 140px;
-
-    object-fit: cover;
-
-    border-radius: 10px;
-
-    border: 1px solid #ccc;
-
-    background: #f1f1f1;
-}
-
-
-.image-modification-info {
-
-    flex: 1;
-}
-
-
-.image-modification-info strong {
-
-    display: block;
-
-    margin-bottom: 8px;
-}
-
-
-.image-modification-info small {
-
-    color: #777;
-}
-
-
-/* =========================================================
-   ACTIONS
-   ========================================================= */
-
-.modal-modification-actions {
-
-    display: flex;
-
-    justify-content: flex-end;
-
-    gap: 10px;
-
-    margin-top: 25px;
-
-    padding-top: 20px;
-
-    border-top: 1px solid #ddd;
-}
-
-
-.btn-enregistrer-modification {
-
-    background: #198754;
-
-    color: white;
-
-    padding: 12px 20px;
-
-    font-weight: 600;
-}
-
-
-.btn-enregistrer-modification:hover {
-
-    background: #146c43;
-}
-
-
-.btn-annuler-modification {
-
-    background: #6c757d;
-
-    color: white;
-
-    padding: 12px 20px;
-}
-
-
-.btn-annuler-modification:hover {
-
-    background: #565e64;
-}
-
-
-@media (max-width: 700px) {
-
-    .modal-modification {
-
-        padding: 10px;
-    }
-
-    .modal-modification-contenu {
-
-        padding: 20px;
-    }
-
-    .image-modification-container {
-
-        flex-direction: column;
-
-        align-items: flex-start;
-    }
-
-}
-
-
-
-/* =========================================================
-   RECHERCHE + FILTRE CATÉGORIE
-   ========================================================= */
-
-.recherche-produits {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 100%;
-    margin-bottom: 25px;
-}
-
-
-/* =========================================================
-   CHAMP DE RECHERCHE
-   ========================================================= */
-
-.champ-recherche-produit {
-    flex: 1;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.champ-recherche-produit .icone-recherche {
-    position: absolute;
-    left: 15px;
-    font-size: 18px;
-    pointer-events: none;
-}
-
-.champ-recherche-produit input {
-    width: 100%;
-    box-sizing: border-box;
-
-    padding: 13px 18px 13px 45px;
-
-    border: 1px solid #ddd;
-    border-radius: 10px;
-
-    font-size: 15px;
-    outline: none;
-
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.champ-recherche-produit input:focus {
-    border-color: #2563eb;
-
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.10);
-}
-
-
-/* =========================================================
-   FILTRE CATÉGORIE
-   ========================================================= */
-
-.filtre-categorie-produit {
-    width: 240px;
-    flex-shrink: 0;
-}
-
-.select-categorie {
-    width: 100%;
-    box-sizing: border-box;
-
-    padding: 13px 40px 13px 15px;
-
-    border: 1px solid #ddd;
-    border-radius: 10px;
-
-    background-color: white;
-
-    font-size: 15px;
-    color: #333;
-
-    cursor: pointer;
-    outline: none;
-
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.select-categorie:focus {
-    border-color: #2563eb;
-
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.10);
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .recherche-produits {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .filtre-categorie-produit {
-        width: 100%;
-    }
-
-}
-
+    .produits-container{max-width:1200px;margin:30px auto;padding:0 12px}
+    .titre-page{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:25px}
+    .titre-page h2{margin:0;font-size:28px}
+    .card{background:#fff;padding:25px;margin-bottom:25px;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.08)}
+    .card h3{margin:0 0 20px}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .form-group{display:flex;flex-direction:column;min-width:0}
+    .form-group.full-width,.form-actions{grid-column:1/-1}
+    .form-group label{margin-bottom:7px;font-weight:700}
+    .form-group input,.form-group textarea,.form-group select{box-sizing:border-box;width:100%;padding:11px;border:1px solid #ccc;border-radius:7px;font-size:15px;font-family:inherit}
+    .form-group textarea{min-height:100px;resize:vertical}
+    .form-help{font-size:12px;color:#777;margin-top:5px}
+    .checkbox-group{display:flex;align-items:center;gap:10px;margin-top:10px}
+    .checkbox-group input{width:18px;height:18px}
+    button{border:0;border-radius:7px;padding:10px 15px;cursor:pointer;font-size:14px}
+    button:disabled{opacity:.65;cursor:not-allowed}
+    .btn-ajouter,.btn-enregistrer-modification{background:#198754;color:#fff;padding:12px 20px;font-weight:600}
+    .btn-modifier{background:#0d6efd;color:#fff}
+    .btn-supprimer{background:#dc3545;color:#fff}
+    .btn-rechercher{background:#198754;color:#fff;padding:12px 20px}
+    .btn-tous{background:#e6f2e9;color:#175c39;padding:12px 20px;text-decoration:none;border-radius:7px}
+    .table-container{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    th{background:#343a40;color:#fff;padding:14px;text-align:left}
+    td{padding:13px;border-bottom:1px solid #ddd;vertical-align:middle}
+    tbody tr:hover{background:#f8f9fa}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .actions form{margin:0}
+    .prix{font-weight:700;white-space:nowrap}
+    .stock{font-weight:700}.stock-faible{color:#dc3545}.stock-normal{color:#198754}
+    .statut{display:inline-block;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700}
+    .en-ligne{background:#d1e7dd;color:#0f5132}.hors-ligne{background:#f8d7da;color:#842029}
+    .image-produit,.image-placeholder{width:65px;height:65px;border-radius:8px}
+    .image-produit{object-fit:cover;border:1px solid #ddd}
+    .image-placeholder{background:#f1f1f1;display:flex;align-items:center;justify-content:center;font-size:25px}
+    .aucun{text-align:center;padding:25px;color:#777}
+    .catalogue-client{background:#f3f7f4;padding:25px;border:1px solid #e0ebe3}
+    .catalogue-client .titre-page h2,.recherche-client h3{color:#174b35;font-weight:700}
+    .recherche-client{background:linear-gradient(135deg,#fff,#f0f8f2);border:1px solid #dcebe0;border-left:5px solid #198754;border-radius:14px}
+    .panier-barre{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:12px;padding:16px 20px;margin-bottom:25px;border-radius:14px;background:linear-gradient(120deg,#174b35,#238653);box-shadow:0 5px 16px rgba(23,75,53,.18)}
+    .btn-ouvrir-panier,.btn-mes-commandes{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;text-decoration:none;border-radius:9px;font-weight:700}
+    .btn-ouvrir-panier{background:#fff;color:#174b35}
+    .btn-mes-commandes{background:#f5c451;color:#3c2b00}
+    #nombrePanier{min-width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;background:#f5c451;color:#3c2b00;border-radius:50%;font-size:13px}
+    .produits-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}
+    .produit-card{min-width:0;background:#fff;border:1px solid #e5ebe6;border-radius:15px;overflow:hidden;box-shadow:0 4px 14px rgba(20,60,35,.07);transition:transform .2s,box-shadow .2s}
+    .produit-card:hover{transform:translateY(-4px);box-shadow:0 10px 25px rgba(20,60,35,.13)}
+    .produit-image-container{height:230px;background:#f1f1f1;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .produit-image,.produit-video{width:100%;height:100%;object-fit:cover}
+    .produit-image{cursor:pointer;transition:transform .2s}.produit-image:hover{transform:scale(1.03)}
+    .produit-image-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;color:#888}
+    .produit-informations{padding:20px}
+    .produit-informations h3{margin:0 0 10px;font-size:20px;cursor:pointer;overflow-wrap:anywhere}
+    .produit-informations h3:hover{text-decoration:underline}
+    .produit-categorie{color:#666;font-size:14px}
+    .produit-description{color:#555;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+    .produit-prix{font-size:23px;font-weight:700;color:#176b42;margin:15px 0}
+    .disponibilite{font-weight:700;font-size:14px}.disponible{color:#198754}.rupture{color:#dc3545}
+    .btn-panier{width:100%;padding:12px;background:#198754;color:#fff;font-size:15px;font-weight:600}
+    .btn-panier:hover{background:#146c43}.btn-panier.indisponible{background:#6c757d;cursor:not-allowed}
+    .recherche-produits{display:flex;align-items:center;gap:15px;width:100%;margin-bottom:25px}
+    .champ-recherche-produit{flex:1;min-width:0;position:relative;display:flex;align-items:center}
+    .icone-recherche{position:absolute;left:15px;font-size:18px;pointer-events:none}
+    .champ-recherche-produit input,.select-categorie{box-sizing:border-box;width:100%;padding:13px 15px;border:1px solid #cbded0;border-radius:10px;background:#fff;font-size:15px;outline:none}
+    .champ-recherche-produit input{padding-left:45px}
+    .champ-recherche-produit input:focus,.select-categorie:focus{border-color:#198754;box-shadow:0 0 0 3px rgba(25,135,84,.12)}
+    .filtre-categorie-produit{width:240px;flex-shrink:0}
+    .modal-produit,.modal-modification{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;box-sizing:border-box}
+    .modal-contenu{position:relative;width:100%;max-width:950px;max-height:90vh;background:#fff;border-radius:15px;overflow:auto;display:grid;grid-template-columns:1.1fr 1fr;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+    .modal-fermer,.modal-modification-fermer{position:absolute;top:12px;right:15px;width:40px;height:40px;padding:0;border-radius:50%;background:rgba(0,0,0,.75);color:#fff;font-size:27px;line-height:40px;z-index:2}
+    .modal-fermer:hover,.modal-modification-fermer:hover{background:#dc3545}
+    .modal-image-container{min-height:350px;background:#f1f1f1;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-image,.modal-video{width:100%;max-height:550px;object-fit:contain;border-radius:8px}
+    .modal-informations{padding:45px 35px 35px;display:flex;flex-direction:column;justify-content:center;overflow-wrap:anywhere}
+    .modal-informations h2{margin:0 0 15px;font-size:30px}
+    .modal-categorie{color:#666;font-size:15px}.modal-prix{font-size:26px;font-weight:700;margin:20px 0}
+    .modal-description{color:#555;line-height:1.6;margin-bottom:15px}
+    .modal-modification{z-index:10000}
+    .modal-modification-contenu{position:relative;width:100%;max-width:850px;max-height:90vh;overflow-y:auto;background:#fff;border-radius:15px;padding:30px;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+    .modal-modification-contenu h2{margin:0 0 25px;color:#174b35}
+    .modal-modification-fermer{background:#343a40}
+    .image-modification-container{display:flex;gap:25px;align-items:center;margin-top:10px;padding:15px;background:#f8f9fa;border:1px solid #ddd;border-radius:10px}
+    .image-modification-preview{width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid #ccc;background:#f1f1f1}
+    .image-modification-info{flex:1;min-width:0;overflow-wrap:anywhere}.image-modification-info strong{display:block;margin-bottom:8px}.image-modification-info small{color:#777}
+    .modal-modification-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:25px;padding-top:20px;border-top:1px solid #ddd}
+    .btn-annuler-modification{background:#6c757d;color:#fff;padding:12px 20px}
+    @media(max-width:900px){.produits-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.modal-contenu{grid-template-columns:1fr;max-height:92vh}.modal-image-container{min-height:250px;max-height:400px}.modal-informations{padding:30px}}
+    @media(max-width:700px){.produits-container{margin:15px auto}.form-grid{grid-template-columns:1fr}.form-group.full-width,.form-actions{grid-column:auto}.titre-page{align-items:flex-start;flex-direction:column}.recherche-produits{align-items:stretch;flex-direction:column}.filtre-categorie-produit{width:100%}.panier-barre{justify-content:stretch;padding:14px}.panier-barre a{flex:1}.modal-produit,.modal-modification{padding:10px}.modal-modification-contenu{padding:20px}.image-modification-container{align-items:flex-start;flex-direction:column}.modal-informations h2{font-size:24px}.modal-prix{font-size:22px}}
+    @media(max-width:600px){.produits-grid{grid-template-columns:1fr}.catalogue-client{padding:15px}.card{padding:18px}}
 </style>
 
 <div class="produits-container">
-
-
-<!-- =================================================
-     TITRE
-     ================================================= -->
-
-<div class="titre-page">
-
-    <h2>
-        {% if role == "client" %}
-            🛍️ Découvrir nos produits
-        {% else %}
-            📦 Gestion des produits
-        {% endif %}
-    </h2>
-
-    <strong>
-        {{ produits|length }} produit(s)
-    </strong>
-
-</div>
-
-
-<!-- =================================================
-     AJOUTER UN PRODUIT
-     ================================================= -->
-
-{% if role == "admin" or role == "vendeur" %}
-
-<div class="card">
-
-    <h3>➕ Ajouter un produit</h3>
-
-    <form method="POST" enctype="multipart/form-data">
-
-        <div class="form-grid">
-
-            <!-- DÉSIGNATION -->
-
-            <div class="form-group">
-
-                <label for="designation">
-                    Nom du produit
-                </label>
-
-                <input
-                    type="text"
-                    id="designation"
-                    name="designation"
-                    placeholder="Ex : Ordinateur portable"
-                    required
-                >
-
-            </div>
-
-
-            <!-- PRIX -->
-
-            <div class="form-group">
-
-                <label for="prix_unitaire">
-                    Prix unitaire (FCFA)
-                </label>
-
-                <input
-                    type="number"
-                    id="prix_unitaire"
-                    name="prix_unitaire"
-                    step="0.01"
-                    min="0"
-                    placeholder="Ex : 450000"
-                    required
-                >
-
-            </div>
-
-
-            <!-- CATÉGORIE -->
-
-            <div class="form-group">
-
-                <label for="categorie">
-                    Catégorie
-                </label>
-
-                <input
-                    type="text"
-                    id="categorie"
-                    name="categorie"
-                    placeholder="Ex : Informatique"
-                >
-
-            </div>
-
-
-            <!-- STOCK -->
-
-            <div class="form-group">
-
-                <label for="stock">
-                    Stock disponible
-                </label>
-
-                <input
-                    type="number"
-                    id="stock"
-                    name="stock"
-                    min="0"
-                    value="0"
-                    required
-                >
-
-            </div>
-
-
-            <!-- IMAGE -->
-
-            <div class="form-group full-width">
-
-                <label for="image">
-                    Image du produit
-                </label>
-
-                <input
-                    type="file"
-                    id="image"
-                    name="image"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                >
-
-                <span class="form-help">
-                    Formats acceptés : JPG, JPEG, PNG et WEBP.
-                </span>
-
-            </div>
-
-
-            <!-- DESCRIPTION -->
-
-            <div class="form-group full-width">
-
-                <label for="description">
-                    Description
-                </label>
-
-                <textarea
-                    id="description"
-                    name="description"
-                    placeholder="Décrivez le produit..."
-                ></textarea>
-
-            </div>
-
-
-            <!-- STATUT -->
-
-            <div class="form-group">
-
-                <label>
-                    Visibilité du produit
-                </label>
-
-                <div class="checkbox-group">
-
-                    <input
-                        type="checkbox"
-                        id="actif"
-                        name="actif"
-                        value="1"
-                        checked
-                    >
-
-                    <label for="actif">
-                        Produit en ligne
-                    </label>
-
-                </div>
-
-            </div>
-
-
-            <!-- BOUTON -->
-
-            <div class="form-actions">
-
-                <button
-                    type="submit"
-                    class="btn-ajouter"
-                >
-                    ➕ Ajouter le produit
-                </button>
-
-            </div>
-
-        </div>
-
-    </form>
-<!-- =========================================================
-     MODAL : MODIFICATION PRODUIT
-     ========================================================= -->
-
-<div
-    id="modalModificationProduit"
-    class="modal-modification"
-    onclick="fermerModificationSiExterieur(event)"
->
-
-    <div
-        class="modal-modification-contenu"
-        onclick="event.stopPropagation()"
-    >
-
-        <!-- BOUTON FERMER -->
-
-        <button
-            type="button"
-            class="modal-modification-fermer"
-            onclick="fermerModificationProduit()"
-            aria-label="Fermer"
-        >
-            ×
-        </button>
-
-
-        <!-- TITRE -->
-
-        <h2>
-            ✏️ Modifier le produit
-        </h2>
-
-
-        <!-- FORMULAIRE -->
-
-        <form
-            id="formModificationProduit"
-            method="POST"
-            enctype="multipart/form-data"
-        >
-        <input
-            type="hidden"
-            id="imageActuelleModification"
-            name="image_actuelle"
-        >
-            <div class="form-grid">
-
-                <!-- DÉSIGNATION -->
-
-                <div class="form-group">
-
-                    <label for="modificationDesignation">
-                        Nom du produit
-                    </label>
-
-                    <input
-                        type="text"
-                        id="modificationDesignation"
-                        name="designation"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- PRIX -->
-
-                <div class="form-group">
-
-                    <label for="modificationPrix">
-                        Prix unitaire (FCFA)
-                    </label>
-
-                    <input
-                        type="number"
-                        id="modificationPrix"
-                        name="prix_unitaire"
-                        step="0.01"
-                        min="0"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- CATÉGORIE -->
-
-                <div class="form-group">
-
-                    <label for="modificationCategorie">
-                        Catégorie
-                    </label>
-
-                    <input
-                        type="text"
-                        id="modificationCategorie"
-                        name="categorie"
-                    >
-
-                </div>
-
-
-                <!-- STOCK -->
-
-                <div class="form-group">
-
-                    <label for="modificationStock">
-                        Stock disponible
-                    </label>
-
-                    <input
-                        type="number"
-                        id="modificationStock"
-                        name="stock"
-                        min="0"
-                        required
-                    >
-
-                </div>
-
-
-                <!-- IMAGE -->
-
-                <div class="form-group full-width">
-
-                    <label for="modificationImage">
-
-                        Image du produit
-
-                    </label>
-
-                    <input
-                        type="file"
-                        id="modificationImage"
-                        name="image"
-                        accept="image/png, image/jpeg, image/jpg, image/webp"
-                    >
-
-                    <span class="form-help">
-
-                        Laissez vide pour conserver
-                        l'image actuelle.
-
-                    </span>
-
-
-                    <!-- APERÇU -->
-
-                    <div class="image-modification-container">
-
-                        <img
-                            id="imageModificationPreview"
-                            class="image-modification-preview"
-                            src=""
-                            alt="Aperçu du produit"
-                        >
-
-                        <div class="image-modification-info">
-
-                            <strong>
-                                Image actuelle
-                            </strong>
-
-                            <small
-                                id="nomImageModification"
-                            >
-                                Aucune image
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- DESCRIPTION -->
-
-                <div class="form-group full-width">
-
-                    <label for="modificationDescription">
-
-                        Description
-
-                    </label>
-
-                    <textarea
-                        id="modificationDescription"
-                        name="description"
-                        placeholder="Décrivez le produit..."
-                    ></textarea>
-
-                </div>
-
-
-                <!-- STATUT -->
-
-                <div class="form-group">
-
-                    <label>
-                        Visibilité du produit
-                    </label>
-
-                    <div class="checkbox-group">
-
-                        <input
-                            type="checkbox"
-                            id="modificationActif"
-                            name="actif"
-                            value="1"
-                        >
-
-                        <label for="modificationActif">
-
-                            Produit en ligne
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- ACTIONS -->
-
-            <div class="modal-modification-actions">
-
-                <button
-                    type="button"
-                    class="btn-annuler-modification"
-                    onclick="fermerModificationProduit()"
-                >
-                    Annuler
-                </button>
-
-                <button
-                    type="submit"
-                    class="btn-enregistrer-modification"
-                >
-                    💾 Enregistrer les modifications
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
-
-</div>
-
-{% endif %}
-
-
-
-<!-- =================================================
-     Bouton Panier
-     ================================================= -->
-
-{% if role == "client" %}
-
-<div class="panier-barre">
-
-    <a
-        href="{{ url_for('panier') }}"
-        class="btn-ouvrir-panier"
-    >
-        🛒 Mon panier
-        <span id="nombrePanier">
-            {{ nombre_articles_panier }}
-        </span>
-    </a>
-
-    <a
-        href="{{ url_for('mes_commandes') }}"
-        class="btn-mes-commandes"
-    >
-        📦 Mes commandes
-    </a>
-
-</div>
-
-{% endif %}
-
-
-<!-- =================================================
-     RECHERCHE
-     ================================================= -->
-
-<div class="card {% if role == 'client' %}recherche-client{% endif %}">
-
-    <h3>
-        {% if role == "client" %}
-            🔎 Trouver un produit
-        {% else %}
-            🔎 Rechercher un produit
-        {% endif %}
-    </h3>
-
-    <form
-        method="GET"
-        action="{{ url_for('produits') }}"
-    >
-
-        <!-- =========================================================
-     RECHERCHE + FILTRE PAR CATÉGORIE
-     ========================================================= -->
-
-<div class="recherche-produits">
-
-    <!-- CHAMP DE RECHERCHE -->
-    <div class="champ-recherche-produit">
-
-        <span class="icone-recherche">
-            🔎
-        </span>
-
-        <input
-            type="text"
-            id="rechercheProduit"
-            placeholder="Rechercher un produit..."
-            autocomplete="off"
-        >
-
-    </div>
-
-
-    <!-- FILTRE PAR CATÉGORIE -->
-    <div class="filtre-categorie-produit">
-
-        <select
-            id="filtreCategorie"
-            class="select-categorie"
-        >
-
-            <option value="">
-                Toutes les catégories
-            </option>
-
-            {% for categorie in categories_produits %}
-
-                <option value="{{ categorie }}">
-                    {{ categorie }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-</div>
-
-<!-- =================================================
-     CATALOGUE CLIENT
-     ================================================= -->
-
-{% if role == "client" %}
-
-<div class="card catalogue-client">
-
     <div class="titre-page">
-
-        <h2>🛍️ Nos produits</h2>
-
-        <strong>
-            {{ produits|selectattr("actif")|list|length }} produit(s)
-        </strong>
-
+        <h2>{% if role == "client" %}🛍️ Découvrir nos produits{% else %}📦 Gestion des produits{% endif %}</h2>
+        <strong>{{ produits|length }} produit(s)</strong>
     </div>
 
-
-    <div class="produits-grid">
-
-        {% for produit in produits %}
-
-            {% if produit.actif %}
-
-            <div class="produit-card">
-
-
-                <!-- IMAGE -->
-
-                <div class="produit-image-container">
-
-                    {% if produit.image %}
-
-                    <img
-                        src="{{ url_for('static', filename='images/' ~ produit.image) }}"
-                        alt="{{ produit.designation }}"
-                        class="produit-image"
-                        onclick="voirProduit(this)"
-                    >
-
-                    {% else %}
-
-                    <div class="produit-image-placeholder">
-                        📦
+    {% if role == "admin" or role == "vendeur" %}
+    <div class="card">
+        <h3>➕ Ajouter un produit</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="designation">Nom du produit</label>
+                    <input type="text" id="designation" name="designation" placeholder="Ex : Ordinateur portable" required>
+                </div>
+                <div class="form-group">
+                    <label for="prix_unitaire">Prix unitaire (FCFA)</label>
+                    <input type="number" id="prix_unitaire" name="prix_unitaire" step="0.01" min="0" placeholder="Ex : 450000" required>
+                </div>
+                <div class="form-group">
+                    <label for="categorie">Catégorie</label>
+                    <input type="text" id="categorie" name="categorie" placeholder="Ex : Informatique">
+                </div>
+                <div class="form-group">
+                    <label for="stock">Stock disponible</label>
+                    <input type="number" id="stock" name="stock" min="0" value="0" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="image">Image du produit</label>
+                    <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/webp">
+                    <span class="form-help">Formats acceptés : JPG, JPEG, PNG et WEBP.</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Décrivez le produit..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Visibilité du produit</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="actif" name="actif" value="1" checked>
+                        <label for="actif">Produit en ligne</label>
                     </div>
-
-                    {% endif %}
-
                 </div>
-
-
-                <!-- INFORMATIONS -->
-
-                <div class="produit-informations">
-
-
-                    <!-- NOM -->
-
-                    <h3
-                        class="produit-nom"
-                        onclick="voirProduitDepuisNom(this)"
-                    >
-                        {{ produit.designation }}
-                    </h3>
-
-
-                    <!-- CATÉGORIE -->
-
-                    <p class="produit-categorie">
-
-                        🏷️
-                        {{ produit.categorie or "Non catégorisé" }}
-
-                    </p>
-
-
-                    <!-- DESCRIPTION -->
-
-                    {% if produit.description %}
-
-                    <p class="produit-description">
-                        {{ produit.description }}
-                    </p>
-
-                    {% else %}
-
-                    <p class="produit-description">
-                        Aucune description disponible.
-                    </p>
-
-                    {% endif %}
-
-
-                    <!-- PRIX -->
-
-                    <p class="produit-prix">
-
-                        {{ "%.2f"|format(produit.prix_unitaire) }}
-                        FCFA
-
-                    </p>
-
-
-                    <!-- DISPONIBILITÉ -->
-
-                    {% if produit.stock > 0 %}
-
-                    <p class="disponibilite disponible">
-                        🟢 Disponible
-                    </p>
-
-                    {% else %}
-
-                    <p class="disponibilite rupture">
-                        🔴 Rupture de stock
-                    </p>
-
-                    {% endif %}
-
-
-                    <!-- BOUTON PANIER -->
-
-                    {% if produit.stock > 0 %}
-
-                    <button
-                        type="button"
-                        class="btn-panier"
-                        data-id="{{ produit.id_produit }}"
-                        onclick="ajouterAuPanier(this.dataset.id)"
-                    >
-                        🛒 Ajouter au panier
-                    </button>
-
-                    {% else %}
-
-                    <button
-                        type="button"
-                        class="btn-panier indisponible"
-                        disabled
-                    >
-                        Rupture de stock
-                    </button>
-
-                    {% endif %}
-
-
+                <div class="form-actions">
+                    <button type="submit" class="btn-ajouter">➕ Ajouter le produit</button>
                 </div>
-
             </div>
-
-            {% endif %}
-
-        {% endfor %}
-
-        {% if produits|selectattr("actif")|list|length == 0 %}
-        <div class="aucun">
-            Aucun produit disponible actuellement.
-        </div>
-        {% endif %}
-
+        </form>
     </div>
 
-</div>
-
-{% endif %}
-
-
-
-
-<!-- =================================================
-     MODAL PRODUIT
-     ================================================= -->
-
-{% if role == "client" %}
-
-<div
-    id="modalProduit"
-    class="modal-produit"
-    style="display: none;"
-    onclick="fermerProduitSiExterieur(event)"
->
-
-    <div
-        class="modal-contenu"
-        onclick="event.stopPropagation()"
-    >
-
-
-        <!-- BOUTON FERMER -->
-
-        <button
-            type="button"
-            class="modal-fermer"
-            onclick="fermerProduit()"
-            aria-label="Fermer"
-        >
-            ×
-        </button>
-
-
-        <!-- IMAGE -->
-
-        <div class="modal-image-container">
-
-            <img
-                id="modalImage"
-                src=""
-                alt="Image du produit"
-                class="modal-image"
-            >
-
-        </div>
-
-
-        <!-- INFORMATIONS -->
-
-        <div class="modal-informations">
-
-            <h2 id="modalNom"></h2>
-
-            <p class="modal-categorie">
-
-                🏷️
-                <span id="modalCategorie"></span>
-
-            </p>
-
-            <p
-                id="modalPrix"
-                class="modal-prix"
-            ></p>
-
-            <p
-                id="modalDescription"
-                class="modal-description"
-            ></p>
-
-            <p
-                id="modalDisponibilite"
-                class="disponibilite"
-            ></p>
-
-            <button
-                type="button"
-                class="btn-panier"
-                id="modalPanier"
-            >
-                🛒 Ajouter au panier
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-{% endif %}
-
-
-<!-- =================================================
-     LISTE DES PRODUITS POUR ADMIN / VENDEUR
-     ================================================= -->
-
-{% if role == "admin" or role == "vendeur" %}
-
-<div class="card">
-
-    <h3>📋 Liste des produits</h3>
-
-    <div class="table-container">
-
-        <table>
-
-            <thead>
-
-                <tr>
-
-                    <th>ID</th>
-                    <th>Image</th>
-                    <th>Produit</th>
-                    <th>Catégorie</th>
-                    <th>Prix</th>
-                    <th>Stock</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-
-                </tr>
-
-            </thead>
-
-
-            <tbody>
-
-                {% for produit in produits %}
-
-                <tr>
-
-
-                    <!-- ID -->
-
-                    <td>
-
-                        <strong>
-                            #{{ produit.id_produit }}
-                        </strong>
-
-                    </td>
-
-
-                    <!-- IMAGE -->
-
-                    <td>
-
-                        {% if produit.image %}
-
-                        <img
-                            src="{{ url_for('static', filename='images/' ~ produit.image) }}"
-                            alt="{{ produit.designation }}"
-                            class="image-produit"
-                        >
-
-                        {% else %}
-
-                        <div class="image-placeholder">
-                            📦
+    <!-- Fenêtre de modification : le champ vidéo n'est volontairement pas ajouté au formulaire
+         tant que la route serveur et le modèle API ne confirment pas sa prise en charge. -->
+    <div id="modalModificationProduit" class="modal-modification" onclick="fermerModificationSiExterieur(event)">
+        <div class="modal-modification-contenu" onclick="event.stopPropagation()">
+            <button type="button" class="modal-modification-fermer" onclick="fermerModificationProduit()" aria-label="Fermer">×</button>
+            <h2>✏️ Modifier le produit</h2>
+            <form id="formModificationProduit" method="POST" enctype="multipart/form-data">
+                <input type="hidden" id="imageActuelleModification" name="image_actuelle">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="modificationDesignation">Nom du produit</label>
+                        <input type="text" id="modificationDesignation" name="designation" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modificationPrix">Prix unitaire (FCFA)</label>
+                        <input type="number" id="modificationPrix" name="prix_unitaire" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modificationCategorie">Catégorie</label>
+                        <input type="text" id="modificationCategorie" name="categorie">
+                    </div>
+                    <div class="form-group">
+                        <label for="modificationStock">Stock disponible</label>
+                        <input type="number" id="modificationStock" name="stock" min="0" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="modificationImage">Nouvelle image du produit</label>
+                        <input type="file" id="modificationImage" name="image" accept="image/png,image/jpeg,image/webp">
+                        <span class="form-help">Laissez vide pour conserver l'image actuelle.</span>
+                        <div class="image-modification-container">
+                            <img id="imageModificationPreview" class="image-modification-preview" src="" alt="Aperçu du produit" style="display:none">
+                            <div class="image-modification-info">
+                                <strong>Image actuelle / nouvel aperçu</strong>
+                                <small id="nomImageModification">Aucune image enregistrée</small>
+                            </div>
                         </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="modificationDescription">Description</label>
+                        <textarea id="modificationDescription" name="description" placeholder="Décrivez le produit..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Visibilité du produit</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="modificationActif" name="actif" value="1">
+                            <label for="modificationActif">Produit en ligne</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-modification-actions">
+                    <button type="button" class="btn-annuler-modification" onclick="fermerModificationProduit()">Annuler</button>
+                    <button type="submit" class="btn-enregistrer-modification">💾 Enregistrer les modifications</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
-                        {% endif %}
+    {% if role == "client" %}
+    <div class="panier-barre">
+        <a href="{{ url_for('panier') }}" class="btn-ouvrir-panier">🛒 Mon panier <span id="nombrePanier">{{ nombre_articles_panier }}</span></a>
+        <a href="{{ url_for('mes_commandes') }}" class="btn-mes-commandes">📦 Mes commandes</a>
+    </div>
+    {% endif %}
 
-                    </td>
+    <div class="card {% if role == 'client' %}recherche-client{% endif %}">
+        <h3>{% if role == "client" %}🔎 Trouver un produit{% else %}🔎 Rechercher un produit{% endif %}</h3>
+        <form method="GET" action="{{ url_for('produits') }}" onsubmit="return false;">
+            <div class="recherche-produits">
+                <div class="champ-recherche-produit">
+                    <span class="icone-recherche">🔎</span>
+                    <input type="text" id="rechercheProduit" placeholder="Rechercher un produit..." autocomplete="off">
+                </div>
+                <div class="filtre-categorie-produit">
+                    <select id="filtreCategorie" class="select-categorie">
+                        <option value="">Toutes les catégories</option>
+                        {% for categorie in categories_produits %}
+                        <option value="{{ categorie }}">{{ categorie }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
 
-
-                    <!-- PRODUIT -->
-
-                    <td>
-
-                        <strong>
-                            {{ produit.designation }}
-                        </strong>
-
-                        {% if produit.description %}
-
-                        <br>
-
-                        <small>
-                            {{ produit.description }}
-                        </small>
-
-                        {% endif %}
-
-                    </td>
-
-
-                    <!-- CATÉGORIE -->
-
-                    <td>
-                        {{ produit.categorie or "Non définie" }}
-                    </td>
-
-
-                    <!-- PRIX -->
-
-                    <td class="prix">
-
-                        {{ "%.2f"|format(produit.prix_unitaire) }}
-                        FCFA
-
-                    </td>
-
-
-                    <!-- STOCK -->
-
-                    <td>
-
-                        {% if produit.stock <= 5 %}
-
-                        <span class="stock stock-faible">
-                            {{ produit.stock }}
-                        </span>
-
+    {% if role == "client" %}
+    <div class="card catalogue-client">
+        <div class="titre-page">
+            <h2>🛍️ Nos produits</h2>
+            <strong id="compteurCatalogue">{{ produits|selectattr("actif")|list|length }} produit(s)</strong>
+        </div>
+        <div class="produits-grid" id="grilleProduits">
+            {% for produit in produits %}
+                {% if produit.actif %}
+                {% set media = produit.image|string if produit.image else '' %}
+                {% set media_url = media if media.startswith('http://') or media.startswith('https://') or media.startswith('data:') else (url_for('static', filename='images/' ~ media.lstrip('/')) if media else '') %}
+                {% set video = produit.video|string if produit.video is defined and produit.video else '' %}
+                {% set video_url = video if video.startswith('http://') or video.startswith('https://') or video.startswith('data:') else (url_for('static', filename='videos/' ~ video.lstrip('/')) if video else '') %}
+                <article class="produit-card" data-id="{{ produit.id_produit }}">
+                    <div class="produit-image-container">
+                        {% if media_url %}
+                        <img src="{{ media_url }}" alt="{{ produit.designation }}" class="produit-image" loading="lazy" onclick="voirProduit(this)" onerror="gererImageIndisponible(this)">
+                        {% elif video_url %}
+                        <video class="produit-video" src="{{ video_url }}" muted playsinline preload="metadata" controls></video>
                         {% else %}
-
-                        <span class="stock stock-normal">
-                            {{ produit.stock }}
-                        </span>
-
+                        <div class="produit-image-placeholder">📦</div>
                         {% endif %}
-
-                    </td>
-
-
-                    <!-- STATUT -->
-
-                    <td>
-
-                        {% if produit.actif %}
-
-                        <span class="statut en-ligne">
-                            ● En ligne
-                        </span>
-
+                    </div>
+                    <div class="produit-informations">
+                        <h3 class="produit-nom" onclick="voirProduitDepuisNom(this)">{{ produit.designation }}</h3>
+                        <p class="produit-categorie">🏷️ {{ produit.categorie or "Non catégorisé" }}</p>
+                        <p class="produit-description">{{ produit.description or "Aucune description disponible." }}</p>
+                        <p class="produit-prix">{{ "%.2f"|format(produit.prix_unitaire|float) }} FCFA</p>
+                        {% if produit.stock > 0 %}
+                        <p class="disponibilite disponible">🟢 Disponible</p>
+                        <button type="button" class="btn-panier" data-id="{{ produit.id_produit }}" onclick="ajouterAuPanier(this.dataset.id)">🛒 Ajouter au panier</button>
                         {% else %}
-
-                        <span class="statut hors-ligne">
-                            ● Hors ligne
-                        </span>
-
+                        <p class="disponibilite rupture">🔴 Rupture de stock</p>
+                        <button type="button" class="btn-panier indisponible" disabled>Rupture de stock</button>
                         {% endif %}
+                    </div>
+                </article>
+                {% endif %}
+            {% else %}
+                <div class="aucun">Aucun produit disponible actuellement.</div>
+            {% endfor %}
+            {% if produits|selectattr("actif")|list|length == 0 %}
+                <div class="aucun">Aucun produit disponible actuellement.</div>
+            {% endif %}
+        </div>
+        <div id="messageAucunProduitFiltre" class="aucun" style="display:none;grid-column:1/-1">Aucun produit ne correspond à votre recherche ou à la catégorie sélectionnée.</div>
+    </div>
+    {% endif %}
 
-                    </td>
+    {% if role == "client" %}
+    <div id="modalProduit" class="modal-produit" onclick="fermerProduitSiExterieur(event)">
+        <div class="modal-contenu" onclick="event.stopPropagation()">
+            <button type="button" class="modal-fermer" onclick="fermerProduit()" aria-label="Fermer">×</button>
+            <div class="modal-image-container" id="modalMediaContainer">
+                <img id="modalImage" src="" alt="Image du produit" class="modal-image">
+                <video id="modalVideo" class="modal-video" controls playsinline style="display:none"></video>
+            </div>
+            <div class="modal-informations">
+                <h2 id="modalNom"></h2>
+                <p class="modal-categorie">🏷️ <span id="modalCategorie"></span></p>
+                <p id="modalPrix" class="modal-prix"></p>
+                <p id="modalDescription" class="modal-description"></p>
+                <p id="modalDisponibilite" class="disponibilite"></p>
+                <button type="button" class="btn-panier" id="modalPanier">🛒 Ajouter au panier</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-
-                    <!-- ACTIONS -->
-
-                    <td>
-
-                        <div class="actions">
-
-
-                            <!-- MODIFIER -->
-
-                            <button
-                                type="button"
-                                class="btn-modifier"
+    {% if role == "admin" or role == "vendeur" %}
+    <div class="card">
+        <h3>📋 Liste des produits</h3>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>ID</th><th>Image / média</th><th>Produit</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for produit in produits %}
+                    {% set media = produit.image|string if produit.image else '' %}
+                    {% set media_url = media if media.startswith('http://') or media.startswith('https://') or media.startswith('data:') else (url_for('static', filename='images/' ~ media.lstrip('/')) if media else '') %}
+                    <tr>
+                        <td><strong>#{{ produit.id_produit }}</strong></td>
+                        <td>
+                            {% if media_url %}
+                            <img src="{{ media_url }}" alt="{{ produit.designation }}" class="image-produit" loading="lazy" onerror="gererImageIndisponible(this)">
+                            {% else %}
+                            <div class="image-placeholder">📦</div>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ produit.designation }}</strong>{% if produit.description %}<br><small>{{ produit.description }}</small>{% endif %}</td>
+                        <td>{{ produit.categorie or "Non définie" }}</td>
+                        <td class="prix">{{ "%.2f"|format(produit.prix_unitaire|float) }} FCFA</td>
+                        <td>{% if produit.stock <= 5 %}<span class="stock stock-faible">{{ produit.stock }}</span>{% else %}<span class="stock stock-normal">{{ produit.stock }}</span>{% endif %}</td>
+                        <td>{% if produit.actif %}<span class="statut en-ligne">● En ligne</span>{% else %}<span class="statut hors-ligne">● Hors ligne</span>{% endif %}</td>
+                        <td><div class="actions">
+                            <button type="button" class="btn-modifier"
                                 data-id="{{ produit.id_produit }}"
                                 data-designation="{{ produit.designation }}"
                                 data-prix="{{ produit.prix_unitaire }}"
@@ -2141,1383 +333,259 @@ Produits - Gestion de Boutique
                                 data-stock="{{ produit.stock }}"
                                 data-categorie="{{ produit.categorie or '' }}"
                                 data-actif="{{ '1' if produit.actif else '0' }}"
-                                onclick="ouvrirModificationProduit(this)"
-                            >
-                                ✏️ Modifier
-                            </button>
-
-
-                            <!-- SUPPRIMER -->
-
-                            <form
-                                method="POST"
-                                action="{{ url_for(
-                                    'supprimer_produit',
-                                    id_produit=produit.id_produit
-                                ) }}"
-                            >
-
-                                <button
-                                    type="submit"
-                                    class="btn-supprimer"
-                                    onclick="
-                                        return confirm(
-                                            'Voulez-vous vraiment supprimer ce produit ?'
-                                        )
-                                    "
-                                >
-                                    🗑️ Supprimer
-                                </button>
-
+                                onclick="ouvrirModificationProduit(this)">✏️ Modifier</button>
+                            <form method="POST" action="{{ url_for('supprimer_produit', id_produit=produit.id_produit) }}" onsubmit="return confirm('Voulez-vous vraiment supprimer ce produit ?')">
+                                <button type="submit" class="btn-supprimer">🗑️ Supprimer</button>
                             </form>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
+                        </div></td>
+                    </tr>
                 {% else %}
-
-                <tr>
-
-                    <td
-                        colspan="8"
-                        class="aucun"
-                    >
-                        Aucun produit trouvé.
-                    </td>
-
-                </tr>
-
+                    <tr><td colspan="8" class="aucun">Aucun produit trouvé.</td></tr>
                 {% endfor %}
-
-            </tbody>
-
-        </table>
-
+                </tbody>
+            </table>
+        </div>
     </div>
-
+    {% endif %}
 </div>
-
-{% endif %}
-
-
-</div>
-
-<!-- =====================================================
-     JAVASCRIPT
-     ===================================================== -->
-
 
 <script>
+"use strict";
 
-
-/* =========================================================
-   OUVRIR LE MODAL DEPUIS L'IMAGE
-   ========================================================= */
-
-function voirProduit(element) {
-
-    const carte =
-        element.closest(".produit-card");
-
-    if (!carte) {
-        return;
-    }
-
-    afficherProduitDansModal(
-        carte,
-        element
-    );
+/* Normalise les textes pour rendre la recherche insensible aux accents et à la casse. */
+function normaliserTexte(texte) {
+    return String(texte ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+/* Cache une image cassée et affiche un emplacement de remplacement sans casser le reste du script. */
+function gererImageIndisponible(image) {
+    if (!image) return;
+    const parent = image.parentElement;
+    image.style.display = "none";
+    if (parent && !parent.querySelector(".image-erreur-placeholder")) {
+        const placeholder = document.createElement("div");
+        placeholder.className = "image-erreur-placeholder produit-image-placeholder";
+        placeholder.textContent = "📦";
+        parent.appendChild(placeholder);
+    }
+}
 
-/* =========================================================
-   OUVRIR LE MODAL DEPUIS LE NOM
-   ========================================================= */
+/* Affiche les détails du produit dans la fenêtre modale. */
+function voirProduit(element) {
+    const carte = element?.closest(".produit-card");
+    if (carte) afficherProduitDansModal(carte);
+}
 
 function voirProduitDepuisNom(element) {
-
-    const carte =
-        element.closest(".produit-card");
-
-    if (!carte) {
-        return;
-    }
-
-    const image =
-        carte.querySelector(".produit-image");
-
-    afficherProduitDansModal(
-        carte,
-        image
-    );
+    const carte = element?.closest(".produit-card");
+    if (carte) afficherProduitDansModal(carte);
 }
 
+function afficherProduitDansModal(carte) {
+    const texte = (selecteur, defaut = "") => carte.querySelector(selecteur)?.textContent.trim() || defaut;
+    const imageCarte = carte.querySelector(".produit-image");
+    const videoCarte = carte.querySelector(".produit-video");
+    const modalImage = document.getElementById("modalImage");
+    const modalVideo = document.getElementById("modalVideo");
 
-/* =========================================================
-   AFFICHER LE PRODUIT DANS LE MODAL
-   ========================================================= */
+    document.getElementById("modalNom").textContent = texte(".produit-nom");
+    document.getElementById("modalCategorie").textContent = texte(".produit-categorie", "Non catégorisé").replace("🏷️", "").trim();
+    document.getElementById("modalPrix").textContent = texte(".produit-prix");
+    document.getElementById("modalDescription").textContent = texte(".produit-description", "Aucune description disponible.");
+    const disponibiliteCarte = carte.querySelector(".disponibilite");
+    const disponibiliteModal = document.getElementById("modalDisponibilite");
+    disponibiliteModal.textContent = disponibiliteCarte?.textContent.trim() || "";
+    disponibiliteModal.className = disponibiliteCarte?.className || "disponibilite";
 
-function afficherProduitDansModal(
-    carte,
-    imageElement
-) {
+    modalImage.style.display = "none";
+    modalImage.removeAttribute("src");
+    modalVideo.pause();
+    modalVideo.style.display = "none";
+    modalVideo.removeAttribute("src");
 
-    const nomElement =
-        carte.querySelector(".produit-nom");
-
-    const categorieElement =
-        carte.querySelector(".produit-categorie");
-
-    const prixElement =
-        carte.querySelector(".produit-prix");
-
-    const descriptionElement =
-        carte.querySelector(".produit-description");
-
-    const disponibiliteElement =
-        carte.querySelector(".disponibilite");
-
-    const boutonPanier =
-        carte.querySelector(
-            ".btn-panier:not([disabled])"
-        );
-
-
-    const nom =
-        nomElement
-            ? nomElement.textContent.trim()
-            : "";
-
-
-    /*
-     * On retire l'emoji 🏷️ de la catégorie
-     * pour obtenir uniquement le texte.
-     */
-
-    let categorie =
-        categorieElement
-            ? categorieElement.textContent.trim()
-            : "Non catégorisé";
-
-
-    categorie =
-        categorie
-            .replace("🏷️", "")
-            .trim();
-
-
-    if (!categorie) {
-        categorie = "Non catégorisé";
+    if (imageCarte && imageCarte.src && imageCarte.style.display !== "none") {
+        modalImage.src = imageCarte.src;
+        modalImage.style.display = "block";
+    } else if (videoCarte && videoCarte.src) {
+        modalVideo.src = videoCarte.src;
+        modalVideo.style.display = "block";
     }
 
-
-    const prix =
-        prixElement
-            ? prixElement.textContent.trim()
-            : "";
-
-
-    const description =
-        descriptionElement
-            ? descriptionElement.textContent.trim()
-            : "Aucune description disponible.";
-
-
-    const disponibilite =
-        disponibiliteElement
-            ? disponibiliteElement.textContent.trim()
-            : "";
-
-
-    /* ---------------------------------------------------------
-       NOM
-       --------------------------------------------------------- */
-
-    const modalNom =
-        document.getElementById("modalNom");
-
-    if (modalNom) {
-        modalNom.textContent = nom;
-    }
-
-
-    /* ---------------------------------------------------------
-       CATÉGORIE
-       --------------------------------------------------------- */
-
-    const modalCategorie =
-        document.getElementById("modalCategorie");
-
-    if (modalCategorie) {
-        modalCategorie.textContent =
-            categorie;
-    }
-
-
-    /* ---------------------------------------------------------
-       PRIX
-       --------------------------------------------------------- */
-
-    const modalPrix =
-        document.getElementById("modalPrix");
-
-    if (modalPrix) {
-        modalPrix.textContent = prix;
-    }
-
-
-    /* ---------------------------------------------------------
-       DESCRIPTION
-       --------------------------------------------------------- */
-
-    const modalDescription =
-        document.getElementById(
-            "modalDescription"
-        );
-
-    if (modalDescription) {
-        modalDescription.textContent =
-            description;
-    }
-
-
-    /* ---------------------------------------------------------
-       DISPONIBILITÉ
-       --------------------------------------------------------- */
-
-    const modalDisponibilite =
-        document.getElementById(
-            "modalDisponibilite"
-        );
-
-    if (modalDisponibilite) {
-
-        modalDisponibilite.textContent =
-            disponibilite;
-
-        modalDisponibilite.className =
-            disponibiliteElement
-                ? disponibiliteElement.className
-                : "disponibilite";
-    }
-
-
-    /* ---------------------------------------------------------
-       IMAGE
-       --------------------------------------------------------- */
-
-    const modalImage =
-        document.getElementById(
-            "modalImage"
-        );
-
-    if (modalImage) {
-
-        if (imageElement) {
-
-            modalImage.src =
-                imageElement.src;
-
-            modalImage.style.display =
-                "block";
-
-        } else {
-
-            modalImage.src = "";
-
-            modalImage.style.display =
-                "none";
-        }
-    }
-
-
-    /* ---------------------------------------------------------
-       BOUTON PANIER DU MODAL
-       --------------------------------------------------------- */
-
-    const modalPanier =
-        document.getElementById(
-            "modalPanier"
-        );
-
-
-    if (!modalPanier) {
-        return;
-    }
-
-
-    if (boutonPanier) {
-
-        modalPanier.disabled =
-            false;
-
-        modalPanier.classList.remove(
-            "indisponible"
-        );
-
-        modalPanier.textContent =
-            "🛒 Ajouter au panier";
-
-
-        const idProduit =
-            boutonPanier.dataset.id;
-
-
-        modalPanier.onclick =
-            function() {
-
-                ajouterAuPanier(
-                    idProduit
-                );
-
-            };
-
-
+    const boutonCarte = carte.querySelector(".btn-panier:not([disabled])");
+    const boutonModal = document.getElementById("modalPanier");
+    if (boutonCarte) {
+        boutonModal.disabled = false;
+        boutonModal.classList.remove("indisponible");
+        boutonModal.textContent = "🛒 Ajouter au panier";
+        boutonModal.onclick = () => ajouterAuPanier(boutonCarte.dataset.id);
     } else {
-
-        modalPanier.disabled =
-            true;
-
-        modalPanier.classList.add(
-            "indisponible"
-        );
-
-        modalPanier.textContent =
-            "Rupture de stock";
-
-        modalPanier.onclick = null;
+        boutonModal.disabled = true;
+        boutonModal.classList.add("indisponible");
+        boutonModal.textContent = "Rupture de stock";
+        boutonModal.onclick = null;
     }
 
-
-    /* ---------------------------------------------------------
-       AFFICHER LE MODAL
-       --------------------------------------------------------- */
-
-    const modalProduit =
-        document.getElementById(
-            "modalProduit"
-        );
-
-    if (modalProduit) {
-
-        modalProduit.style.display =
-            "flex";
-
-        document.body.style.overflow =
-            "hidden";
-    }
+    document.getElementById("modalProduit").style.display = "flex";
+    document.body.style.overflow = "hidden";
 }
-
-
-/* =========================================================
-   FERMER LE MODAL
-   ========================================================= */
 
 function fermerProduit() {
-
-    const modal =
-        document.getElementById(
-            "modalProduit"
-        );
-
-    if (modal) {
-
-        modal.style.display =
-            "none";
-    }
-
-    document.body.style.overflow =
-        "";
+    const modal = document.getElementById("modalProduit");
+    if (modal) modal.style.display = "none";
+    const video = document.getElementById("modalVideo");
+    if (video) video.pause();
+    document.body.style.overflow = "";
 }
-
-
-/* =========================================================
-   FERMER EN CLIQUANT À L'EXTÉRIEUR
-   ========================================================= */
 
 function fermerProduitSiExterieur(event) {
-
-    const modal =
-        document.getElementById(
-            "modalProduit"
-        );
-
-    if (
-        modal &&
-        event.target === modal
-    ) {
-
-        fermerProduit();
-    }
+    if (event.target === document.getElementById("modalProduit")) fermerProduit();
 }
 
-
-/* =========================================================
-   FERMER AVEC LA TOUCHE ÉCHAP
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    function(event) {
-
-        if (
-            event.key === "Escape"
-        ) {
-
-            const modal =
-                document.getElementById(
-                    "modalProduit"
-                );
-
-            if (
-                modal &&
-                modal.style.display !== "none"
-            ) {
-
-                fermerProduit();
-            }
-        }
-    }
-);
-
-
-/* =========================================================
-   MODIFICATION PRODUIT
-   ========================================================= */
-
-function ouvrirModificationProduit(
-    bouton
-) {
-
-
-    /* -----------------------------------------------------
-       RÉCUPÉRATION DES INFORMATIONS
-       ----------------------------------------------------- */
-
-    const idProduit =
-        bouton.dataset.id;
-
-    const designation =
-        bouton.dataset.designation;
-
-    const prix =
-        bouton.dataset.prix;
-
-    const description =
-        bouton.dataset.description;
-
-    const image =
-        bouton.dataset.image;
-
-    const stock =
-        bouton.dataset.stock;
-
-    const categorie =
-        bouton.dataset.categorie;
-
-    const actif =
-        bouton.dataset.actif;
-
-
-    /* -----------------------------------------------------
-       FORMULAIRE
-       ----------------------------------------------------- */
-
-    const formulaire =
-        document.getElementById(
-            "formModificationProduit"
-        );
-
-    if (!formulaire) {
+/* Prépare le formulaire de modification. Le nom d'image n'est plus réinitialisé par erreur. */
+function ouvrirModificationProduit(bouton) {
+    const donnees = bouton.dataset;
+    const formulaire = document.getElementById("formModificationProduit");
+    const modal = document.getElementById("modalModificationProduit");
+    if (!formulaire || !modal) {
+        console.error("Formulaire ou fenêtre de modification introuvable.");
         return;
     }
 
+    formulaire.action = `/produits/modifier/${encodeURIComponent(donnees.id || "")}`;
+    document.getElementById("modificationDesignation").value = donnees.designation || "";
+    document.getElementById("modificationPrix").value = donnees.prix || "";
+    document.getElementById("modificationDescription").value = donnees.description || "";
+    document.getElementById("modificationStock").value = donnees.stock || "0";
+    document.getElementById("modificationCategorie").value = donnees.categorie || "";
+    document.getElementById("modificationActif").checked = donnees.actif === "1";
 
-    /* -----------------------------------------------------
-       URL DE MODIFICATION
-       ----------------------------------------------------- */
+    const image = donnees.image || "";
+    document.getElementById("imageActuelleModification").value = image;
+    const champFichier = document.getElementById("modificationImage");
+    if (champFichier) champFichier.value = "";
 
-    formulaire.action =
-        `/produits/modifier/${idProduit}`;
-
-
-    /* -----------------------------------------------------
-       REMPLIR LES CHAMPS
-       ----------------------------------------------------- */
-
-    const champDesignation =
-        document.getElementById(
-            "modificationDesignation"
-        );
-
-    if (champDesignation) {
-        champDesignation.value =
-            designation;
+    const preview = document.getElementById("imageModificationPreview");
+    const nomImage = document.getElementById("nomImageModification");
+    if (image.trim()) {
+        const urlImage = /^(https?:\/\/|data:)/i.test(image)
+            ? image
+            : `/static/images/${image.replace(/^\/+/, "")}`;
+        preview.onerror = () => { preview.style.display = "none"; };
+        preview.onload = () => { preview.style.display = "block"; };
+        preview.src = urlImage;
+        preview.style.display = "block";
+        nomImage.textContent = image;
+    } else {
+        preview.removeAttribute("src");
+        preview.style.display = "none";
+        nomImage.textContent = "Aucune image enregistrée";
     }
 
-
-    const champPrix =
-        document.getElementById(
-            "modificationPrix"
-        );
-
-    if (champPrix) {
-        champPrix.value =
-            prix;
-    }
-
-
-    const champDescription =
-        document.getElementById(
-            "modificationDescription"
-        );
-
-    if (champDescription) {
-        champDescription.value =
-            description;
-    }
-
-
-    const champStock =
-        document.getElementById(
-            "modificationStock"
-        );
-
-    if (champStock) {
-        champStock.value =
-            stock;
-    }
-
-
-    const champCategorie =
-        document.getElementById(
-            "modificationCategorie"
-        );
-
-    if (champCategorie) {
-        champCategorie.value =
-            categorie;
-    }
-
-
-    /* -----------------------------------------------------
-       STATUT
-       ----------------------------------------------------- */
-
-    const champActif =
-        document.getElementById(
-            "modificationActif"
-        );
-
-    if (champActif) {
-
-        champActif.checked =
-            actif === "1";
-    }
-
-
-    /* -----------------------------------------------------
-       IMAGE ACTUELLE
-       ----------------------------------------------------- */
-
-    const champImageActuelle =
-        document.getElementById(
-            "imageActuelleModification"
-        );
-
-    if (champImageActuelle) {
-
-        champImageActuelle.value =
-            image;
-    }
-
-
-    const preview =
-        document.getElementById(
-            "imageModificationPreview"
-        );
-
-    const nomImage =
-        document.getElementById(
-            "nomImageModification"
-        );
-
-
-    
-        if (image) {
-
-            if (preview) {
-
-                // URL Cloudinary : conserver l'adresse complète.
-                // Image locale : utiliser le dossier static/images.
-                const urlImage =
-                    /^(https?:\/\/|data:)/i.test(image)
-                        ? image
-                        : `/static/images/${image.replace(/^\/+/, "")}`;
-
-                preview.src = urlImage;
-
-                preview.style.display = "block";
-            }
-
-            if (nomImage) {
-                nomImage.textContent = image;
-            }
-
-        } else {
-
-            if (preview) {
-                preview.src = "";
-                preview.style.display = "none";
-            }
-        }
-
-
-        if (nomImage) {
-
-            nomImage.textContent =
-                "Aucune image";
-        }
-    }
-
-
-    /* -----------------------------------------------------
-       RÉINITIALISER LE FICHIER
-       ----------------------------------------------------- */
-
-    const champFichier =
-        document.getElementById(
-            "modificationImage"
-        );
-
-    if (champFichier) {
-
-        champFichier.value = "";
-    }
-
-
-    /* -----------------------------------------------------
-       AFFICHER LE MODAL
-       ----------------------------------------------------- */
-
-    const modal =
-        document.getElementById(
-            "modalModificationProduit"
-        );
-
-    if (modal) {
-
-        modal.style.display =
-            "flex";
-
-        document.body.style.overflow =
-            "hidden";
-    }
-
-
-
-/* =========================================================
-   AJOUTER AU PANIER
-   ========================================================= */
-
-function ajouterAuPanier(
-    idProduit
-) {
-
-    fetch(
-        `/panier/ajouter/${idProduit}`,
-        {
-            method: "POST",
-
-            headers: {
-                "X-Requested-With":
-                    "XMLHttpRequest"
-            }
-        }
-    )
-    .then(
-        response =>
-            response.json()
-    )
-    .then(
-        data => {
-
-            /*
-             * On vérifie success plutôt que
-             * nombre_articles.
-             *
-             * Cela permet notamment de gérer
-             * correctement un compteur à 0.
-             */
-
-            if (
-                data.success === false
-                ||
-                data.success === undefined
-                &&
-                !data.nombre_articles
-            ) {
-
-                alert(
-                    data.message ||
-                    "Impossible d'ajouter le produit."
-                );
-
-                return;
-            }
-
-
-            /* ---------------------------------------------
-               MISE À JOUR DU COMPTEUR
-               --------------------------------------------- */
-
-            const compteur =
-                document.getElementById(
-                    "nombrePanier"
-                );
-
-            if (compteur) {
-
-                compteur.textContent =
-                    data.nombre_articles
-                    ?? 0;
-            }
-
-
-            alert(
-                data.message ||
-                "Produit ajouté au panier."
-            );
-        }
-    )
-    .catch(
-        error => {
-
-            console.error(
-                "Erreur lors de l'ajout au panier :",
-                error
-            );
-
-            alert(
-                "Une erreur est survenue lors de l'ajout au panier."
-            );
-        }
-    );
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
 }
-
-
-/* =========================================================
-   APERÇU DE LA NOUVELLE IMAGE
-   ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
-
-        const champImage =
-            document.getElementById(
-                "modificationImage"
-            );
-
-
-        if (!champImage) {
-            return;
-        }
-
-
-        champImage.addEventListener(
-            "change",
-            function(event) {
-
-                const fichier =
-                    event.target.files[0];
-
-
-                const preview =
-                    document.getElementById(
-                        "imageModificationPreview"
-                    );
-
-
-                const nomImage =
-                    document.getElementById(
-                        "nomImageModification"
-                    );
-
-
-                if (!fichier) {
-                    return;
-                }
-
-
-                /* -------------------------------------------------
-                   FORMATS AUTORISÉS
-                   ------------------------------------------------- */
-
-                const formatsAutorises = [
-                    "image/jpeg",
-                    "image/png",
-                    "image/webp"
-                ];
-
-
-                if (
-                    !formatsAutorises.includes(
-                        fichier.type
-                    )
-                ) {
-
-                    alert(
-                        "Format d'image non autorisé.\n\n" +
-                        "Formats acceptés : JPG, JPEG, PNG et WEBP."
-                    );
-
-                    event.target.value =
-                        "";
-
-                    return;
-                }
-
-
-                /* -------------------------------------------------
-                   APERÇU
-                   ------------------------------------------------- */
-
-                const url =
-                    URL.createObjectURL(
-                        fichier
-                    );
-
-
-                if (preview) {
-
-                    preview.src =
-                        url;
-
-                    preview.style.display =
-                        "block";
-                }
-
-
-                if (nomImage) {
-
-                    nomImage.textContent =
-                        fichier.name;
-                }
-            }
-        );
-    }
-);
-
-
-/* =========================================================
-   FERMER LA FENÊTRE DE MODIFICATION
-   ========================================================= */
 
 function fermerModificationProduit() {
-
-    const modal =
-        document.getElementById(
-            "modalModificationProduit"
-        );
-
-    if (modal) {
-
-        modal.style.display =
-            "none";
-    }
-
-    document.body.style.overflow =
-        "";
+    const modal = document.getElementById("modalModificationProduit");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "";
 }
 
-
-/* =========================================================
-   FERMER LA MODIFICATION EN CLIQUANT À L'EXTÉRIEUR
-   ========================================================= */
-
-function fermerModificationSiExterieur(
-    event
-) {
-
-    const modal =
-        document.getElementById(
-            "modalModificationProduit"
-        );
-
-    if (
-        modal &&
-        event.target === modal
-    ) {
-
-        fermerModificationProduit();
-    }
+function fermerModificationSiExterieur(event) {
+    if (event.target === document.getElementById("modalModificationProduit")) fermerModificationProduit();
 }
 
-
-/* =========================================================
-   NORMALISER UN TEXTE
-   =========================================================
-   
-   Cette fonction permet de comparer correctement :
-
-   "Informatique"
-   "INFORMATIQUE"
-   "informatique"
-
-   et également :
-
-   "Électronique"
-   "electronique"
-
-   ========================================================= */
-
-function normaliserTexte(
-    texte
-) {
-
-    if (
-        texte === null ||
-        texte === undefined
-    ) {
-
-        return "";
-    }
-
-
-    return String(texte)
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        )
-        .toLowerCase()
-        .trim();
-}
-
-
-/* =========================================================
-   RECHERCHE + FILTRE PAR CATÉGORIE
-   ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
-
-
-        /* -----------------------------------------------------
-           ÉLÉMENTS
-           ----------------------------------------------------- */
-
-        const champRecherche =
-            document.getElementById(
-                "rechercheProduit"
-            );
-
-
-        const filtreCategorie =
-            document.getElementById(
-                "filtreCategorie"
-            );
-
-
-        const catalogue =
-            document.querySelector(
-                ".produits-grid"
-            );
-
-
-        /*
-         * S'il n'y a pas de catalogue client,
-         * on ne fait rien.
-         */
-
-        if (!catalogue) {
-            return;
-        }
-
-
-        /* -----------------------------------------------------
-           CARTES PRODUITS
-           ----------------------------------------------------- */
-
-        const cartesProduits =
-            catalogue.querySelectorAll(
-                ".produit-card"
-            );
-
-
-        /* -----------------------------------------------------
-           MESSAGE "AUCUN PRODUIT"
-           ----------------------------------------------------- */
-
-        let messageAucunProduit =
-            document.getElementById(
-                "messageAucunProduitFiltre"
-            );
-
-
-        /* =====================================================
-           FONCTION DE FILTRAGE
-           ===================================================== */
-
-        function filtrerProduits() {
-
-
-            /* -------------------------------------------------
-               RECHERCHE
-               ------------------------------------------------- */
-
-            const recherche =
-                champRecherche
-                    ? normaliserTexte(
-                        champRecherche.value
-                    )
-                    : "";
-
-
-            /* -------------------------------------------------
-               CATÉGORIE SÉLECTIONNÉE
-               ------------------------------------------------- */
-
-            const categorieSelectionnee =
-                filtreCategorie
-                    ? normaliserTexte(
-                        filtreCategorie.value
-                    )
-                    : "";
-
-
-            let nombreProduitsVisibles =
-                0;
-
-
-            /* =================================================
-               PARCOURIR LES CARTES
-               ================================================= */
-
-            cartesProduits.forEach(
-                function(carte) {
-
-
-                    /* -----------------------------------------
-                       NOM
-                       ----------------------------------------- */
-
-                    const nomElement =
-                        carte.querySelector(
-                            ".produit-nom"
-                        );
-
-
-                    const nomProduit =
-                        nomElement
-                            ? normaliserTexte(
-                                nomElement.textContent
-                            )
-                            : "";
-
-
-                    /* -----------------------------------------
-                       CATÉGORIE
-                       ----------------------------------------- */
-
-                    const categorieElement =
-                        carte.querySelector(
-                            ".produit-categorie"
-                        );
-
-
-                    let categorieProduit =
-                        categorieElement
-                            ? categorieElement.textContent
-                            : "";
-
-
-                    /*
-                     * Suppression de l'emoji.
-                     */
-
-                    categorieProduit =
-                        categorieProduit
-                            .replace("🏷️", "")
-                            .trim();
-
-
-                    categorieProduit =
-                        normaliserTexte(
-                            categorieProduit
-                        );
-
-
-                    /*
-                     * Si aucune catégorie :
-                     * "non catégorisé"
-                     */
-
-                    if (
-                        !categorieProduit
-                    ) {
-
-                        categorieProduit =
-                            "non categorise";
-                    }
-
-
-                    /* -----------------------------------------
-                       DESCRIPTION
-                       ----------------------------------------- */
-
-                    const descriptionElement =
-                        carte.querySelector(
-                            ".produit-description"
-                        );
-
-
-                    const descriptionProduit =
-                        descriptionElement
-                            ? normaliserTexte(
-                                descriptionElement.textContent
-                            )
-                            : "";
-
-
-                    /* =================================================
-                       RECHERCHE
-                       =================================================
-
-                       La recherche porte maintenant sur :
-
-                       - le nom
-                       - la catégorie
-                       - la description
-
-                       Exemple :
-
-                       recherche = "ordinateur"
-
-                       trouvera :
-
-                       "Ordinateur HP"
-                       même si le mot apparaît dans
-                       la description.
-                       */
-
-                    const correspondRecherche =
-                        !recherche
-                        ||
-                        nomProduit.includes(
-                            recherche
-                        )
-                        ||
-                        categorieProduit.includes(
-                            recherche
-                        )
-                        ||
-                        descriptionProduit.includes(
-                            recherche
-                        );
-
-
-                    /* =================================================
-                       FILTRE CATÉGORIE
-                       ================================================= */
-
-                    const correspondCategorie =
-                        !categorieSelectionnee
-                        ||
-                        categorieProduit ===
-                            categorieSelectionnee;
-
-
-                    /* =================================================
-                       AFFICHAGE
-                       ================================================= */
-
-                    if (
-                        correspondRecherche
-                        &&
-                        correspondCategorie
-                    ) {
-
-                        carte.style.display =
-                            "";
-
-                        nombreProduitsVisibles++;
-
-                    } else {
-
-                        carte.style.display =
-                            "none";
-                    }
-
-                }
-            );
-
-
-            /* =================================================
-               MESSAGE SI AUCUN PRODUIT
-               ================================================= */
-
-            if (
-                nombreProduitsVisibles === 0
-                &&
-                cartesProduits.length > 0
-            ) {
-
-
-                /* -------------------------------------------------
-                   CRÉATION DU MESSAGE
-                   ------------------------------------------------- */
-
-                if (
-                    !messageAucunProduit
-                ) {
-
-                    messageAucunProduit =
-                        document.createElement(
-                            "div"
-                        );
-
-
-                    messageAucunProduit.id =
-                        "messageAucunProduitFiltre";
-
-
-                    messageAucunProduit.innerHTML =
-                        `
-                        <div
-                            style="
-                                text-align:center;
-                                padding:50px 20px;
-                                color:#777;
-                                width:100%;
-                                grid-column:1 / -1;
-                            "
-                        >
-
-                            <div
-                                style="
-                                    font-size:50px;
-                                    margin-bottom:15px;
-                                "
-                            >
-                                🔎
-                            </div>
-
-                            <h3
-                                style="
-                                    margin-bottom:10px;
-                                    color:#174b35;
-                                "
-                            >
-                                Aucun produit trouvé
-                            </h3>
-
-                            <p>
-                                Aucun produit ne correspond
-                                à votre recherche ou à la
-                                catégorie sélectionnée.
-                            </p>
-
-                        </div>
-                        `;
-
-
-                    catalogue.appendChild(
-                        messageAucunProduit
-                    );
-
-
-                } else {
-
-                    messageAucunProduit.style.display =
-                        "block";
-                }
-
-
-            } else {
-
-
-                /* -------------------------------------------------
-                   MASQUER LE MESSAGE
-                   ------------------------------------------------- */
-
-                if (
-                    messageAucunProduit
-                ) {
-
-                    messageAucunProduit.style.display =
-                        "none";
-                }
+/* Aperçu du fichier choisi; libère l'ancienne URL temporaire pour éviter les fuites mémoire. */
+document.addEventListener("DOMContentLoaded", () => {
+    const champImage = document.getElementById("modificationImage");
+    const preview = document.getElementById("imageModificationPreview");
+    const nomImage = document.getElementById("nomImageModification");
+    let ancienneUrlApercu = null;
+
+    if (champImage) {
+        champImage.addEventListener("change", () => {
+            const fichier = champImage.files?.[0];
+            if (!fichier) return;
+            const formatsAutorises = ["image/jpeg", "image/png", "image/webp"];
+            if (!formatsAutorises.includes(fichier.type)) {
+                alert("Format non autorisé. Choisissez une image JPG, PNG ou WEBP.");
+                champImage.value = "";
+                return;
             }
-
-
-            /* =================================================
-               MISE À JOUR DU NOMBRE DE PRODUITS
-               ================================================= */
-
-            const compteurCatalogue =
-                document.querySelector(
-                    ".catalogue-client .titre-page strong"
-                );
-
-
-            if (compteurCatalogue) {
-
-                compteurCatalogue.textContent =
-                    `${nombreProduitsVisibles} produit(s)`;
-            }
-
-        }
-
-
-        /* =====================================================
-           ÉVÉNEMENT : RECHERCHE EN DIRECT
-           ===================================================== */
-
-        if (
-            champRecherche
-        ) {
-
-            champRecherche.addEventListener(
-                "input",
-                filtrerProduits
-            );
-        }
-
-
-        /* =====================================================
-           ÉVÉNEMENT : CHANGEMENT DE CATÉGORIE
-           ===================================================== */
-
-        if (
-            filtreCategorie
-        ) {
-
-            filtreCategorie.addEventListener(
-                "change",
-                filtrerProduits
-            );
-        }
-
-
-        /* =====================================================
-           FILTRAGE INITIAL
-           ===================================================== */
-
-        filtrerProduits();
-
+            if (ancienneUrlApercu) URL.revokeObjectURL(ancienneUrlApercu);
+            ancienneUrlApercu = URL.createObjectURL(fichier);
+            preview.src = ancienneUrlApercu;
+            preview.style.display = "block";
+            nomImage.textContent = fichier.name;
+        });
     }
-);
 
+    const modalProduit = document.getElementById("modalProduit");
+    const modalModification = document.getElementById("modalModificationProduit");
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        if (modalModification && modalModification.style.display === "flex") fermerModificationProduit();
+        else if (modalProduit && modalProduit.style.display === "flex") fermerProduit();
+    });
 
+    /* Recherche et catégorie : le filtre est appliqué uniquement au catalogue client s'il existe. */
+    const champRecherche = document.getElementById("rechercheProduit");
+    const filtreCategorie = document.getElementById("filtreCategorie");
+    const catalogue = document.getElementById("grilleProduits");
+    if (!catalogue) return;
+
+    const cartes = Array.from(catalogue.querySelectorAll(".produit-card"));
+    const messageAucun = document.getElementById("messageAucunProduitFiltre");
+    const compteur = document.getElementById("compteurCatalogue");
+
+    function filtrerProduits() {
+        const recherche = normaliserTexte(champRecherche?.value || "");
+        const categorieChoisie = normaliserTexte(filtreCategorie?.value || "");
+        let visibles = 0;
+
+        cartes.forEach(carte => {
+            const nom = normaliserTexte(carte.querySelector(".produit-nom")?.textContent || "");
+            const categorie = normaliserTexte((carte.querySelector(".produit-categorie")?.textContent || "").replace("🏷️", "")) || "non categorise";
+            const description = normaliserTexte(carte.querySelector(".produit-description")?.textContent || "");
+            const correspondRecherche = !recherche || nom.includes(recherche) || categorie.includes(recherche) || description.includes(recherche);
+            const correspondCategorie = !categorieChoisie || categorie === categorieChoisie;
+            const afficher = correspondRecherche && correspondCategorie;
+            carte.style.display = afficher ? "" : "none";
+            if (afficher) visibles++;
+        });
+
+        if (messageAucun) messageAucun.style.display = cartes.length > 0 && visibles === 0 ? "block" : "none";
+        if (compteur) compteur.textContent = `${visibles} produit(s)`;
+    }
+
+    champRecherche?.addEventListener("input", filtrerProduits);
+    filtreCategorie?.addEventListener("change", filtrerProduits);
+    filtrerProduits();
+});
+
+/* Ajout au panier avec vérification de la réponse HTTP et du format JSON. */
+async function ajouterAuPanier(idProduit) {
+    try {
+        const response = await fetch(`/panier/ajouter/${encodeURIComponent(idProduit)}`, {
+            method: "POST",
+            headers: {"X-Requested-With": "XMLHttpRequest"}
+        });
+        let data;
+        try {
+            data = await response.json();
+        } catch (_) {
+            throw new Error("Le serveur a renvoyé une réponse inattendue.");
+        }
+        if (!response.ok || data.success === false) {
+            throw new Error(data.message || "Impossible d'ajouter le produit au panier.");
+        }
+        const compteur = document.getElementById("nombrePanier");
+        if (compteur && data.nombre_articles !== undefined) compteur.textContent = data.nombre_articles;
+        alert(data.message || "Produit ajouté au panier.");
+    } catch (erreur) {
+        console.error("Erreur lors de l'ajout au panier :", erreur);
+        alert(erreur.message || "Une erreur est survenue lors de l'ajout au panier.");
+    }
+}
 </script>
-
-
-
-
 {% endblock %}
