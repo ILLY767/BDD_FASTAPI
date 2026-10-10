@@ -146,6 +146,14 @@ def configurer_cloudinary():
 
 CLOUDINARY_ACTIF = configurer_cloudinary()
 
+app.logger.warning(
+    "Diagnostic Cloudinary : actif=%s, cloud_name=%s, api_key=%s, api_secret=%s",
+    CLOUDINARY_ACTIF,
+    bool(os.getenv("CLOUDINARY_CLOUD_NAME")),
+    bool(os.getenv("CLOUDINARY_API_KEY")),
+    bool(os.getenv("CLOUDINARY_API_SECRET")),
+)
+
 
 # =========================================================
 # DOSSIERS DES MÉDIAS
