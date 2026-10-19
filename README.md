@@ -715,22 +715,7 @@ Cette documentation constitue une présentation de l'architecture et du processu
 
 # Documentation technique — Application de gestion de boutique
 
-## 1. Présentation du projet
 
-Cette application web permet de gérer une boutique en ligne proposant des produits et des services. Elle dispose d'une interface destinée aux utilisateurs et d'une API chargée de traiter les opérations métier et les échanges avec la base de données.
-
-L'application permet notamment de :
-
-- consulter les produits et les services disponibles ;
-- créer un compte et se connecter ;
-- gérer un panier contenant des produits et des services ;
-- créer et consulter des commandes ;
-- gérer les clients, les produits et les services ;
-- suivre les commandes et modifier leur statut ;
-- communiquer au sujet d'une commande par messages texte ou vocaux ;
-- recevoir et consulter des notifications ;
-- administrer les photos et les publicités vidéo de la page d'accueil ;
-- enregistrer les informations relatives aux paiements.
 
 Le système distingue trois rôles principaux : **administrateur, vendeur et client**.
 
