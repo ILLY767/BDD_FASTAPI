@@ -96,19 +96,23 @@ app.config.update(
 # d'un service Render gratuit.
 # =========================================================
 
-API_URL = os.getenv(
-    "API_URL",
-    "http://127.0.0.1:8000"
+# Adresse de l'API FastAPI
+API_URL = (
+    os.getenv("API_URL")
+    or (
+        "https://bdd-fastapi.onrender.com"
+        if os.getenv("RENDER")
+        else "http://127.0.0.1:8000"
+    )
 ).rstrip("/")
 
-API_PUBLIC_URL = os.getenv(
-    "API_PUBLIC_URL",
-    API_URL
+# Adresse publique de l'API, notamment pour les médias
+API_PUBLIC_URL = (
+    os.getenv("API_PUBLIC_URL") or API_URL
 ).rstrip("/")
 
-API_TIMEOUT = int(
-    os.getenv("API_TIMEOUT", "60")
-)
+# Délai d'attente par défaut, en secondes
+API_TIMEOUT = int(os.getenv("API_TIMEOUT", "90"))
 
 
 # =========================================================
@@ -518,9 +522,18 @@ def api_headers():
 
 
 def appel_api(methode, url, authentifie=True, **kwargs):
+    """
+    Effectue une requête vers FastAPI.
 
-    # Délai unique, assez long pour un démarrage à froid.
-    kwargs["timeout"] = API_TIMEOUT
+    - Respecte le délai d'attente demandé par la route.
+    - Utilise API_TIMEOUT si aucun délai n'est précisé.
+    - Ajoute le JWT pour les requêtes authentifiées.
+    - Gère l'expiration du jeton de session.
+    """
+
+    # Respecter le timeout donné par l'appelant.
+    # Utiliser API_TIMEOUT uniquement s'il est absent.
+    kwargs.setdefault("timeout", API_TIMEOUT)
 
     en_tetes = dict(kwargs.pop("headers", None) or {})
 
@@ -534,8 +547,7 @@ def appel_api(methode, url, authentifie=True, **kwargs):
         **kwargs
     )
 
-    # Jeton JWT expiré ou invalide (l'API envoie alors
-    # l'en-tête WWW-Authenticate).
+    # Jeton JWT expiré ou invalide.
     if (
         authentifie
         and reponse.status_code == 401
@@ -553,7 +565,6 @@ def api_get(url, **kwargs):
 
 
 def api_post(url, donnees=None, **kwargs):
-
     if donnees is not None and "json" not in kwargs:
         kwargs["json"] = donnees
 
@@ -561,7 +572,6 @@ def api_post(url, donnees=None, **kwargs):
 
 
 def api_put(url, donnees=None, **kwargs):
-
     if donnees is not None and "json" not in kwargs:
         kwargs["json"] = donnees
 
@@ -573,11 +583,21 @@ def api_delete(url, **kwargs):
 
 
 def api_public_get(url, **kwargs):
-    return appel_api("GET", url, authentifie=False, **kwargs)
+    return appel_api(
+        "GET",
+        url,
+        authentifie=False,
+        **kwargs
+    )
 
 
 def api_public_post(url, **kwargs):
-    return appel_api("POST", url, authentifie=False, **kwargs)
+    return appel_api(
+        "POST",
+        url,
+        authentifie=False,
+        **kwargs
+    )
 
 
 def valeur_actuelle(chemin, cle_id, identifiant, champ):
@@ -676,72 +696,35 @@ def sante():
     return jsonify({"statut": "ok"}), 200
 
 
+
 # =========================================================
 # PAGE D'ACCUEIL
 # =========================================================
 
+
 @app.route("/")
 def accueil():
-
-    # =====================================================
-    # VARIABLES PAR DÉFAUT
-    # =====================================================
-
     photos = []
     videos = []
     produits = []
 
-    # =====================================================
-    # RÉCUPÉRER LE CONTENU DE LA PAGE D'ACCUEIL
-    # DEPUIS FASTAPI
-    #
-    # Cet endpoint public récupère :
-    # - les photos actives
-    # - les publicités vidéo actives
-    # - les 10 produits les plus récents
-    # =====================================================
-
     try:
-
         reponse = api_public_get(
-            f"{API_URL}/accueil/contenu",
-            timeout=5
+            "/accueil/contenu",
+            timeout=90
         )
 
         if reponse.status_code == 200:
-
             contenu = reponse.json()
+            photos = contenu.get("photos", [])
+            videos = contenu.get("publicites", [])
+            produits = contenu.get("produits", [])
 
-            photos = contenu.get(
-                "photos",
-                []
-            )
-
-            videos = contenu.get(
-                "publicites",
-                []
-            )
-
-            produits = contenu.get(
-                "produits",
-                []
-            )
-
-    except requests.RequestException:
-
-        # -------------------------------------------------
-        # Si FastAPI n'est pas disponible,
-        # la page d'accueil reste accessible.
-        # -------------------------------------------------
-
-        photos = []
-        videos = []
-        produits = []
-
-
-    # =====================================================
-    # AFFICHER LA PAGE D'ACCUEIL
-    # =====================================================
+    except requests.RequestException as erreur:
+        app.logger.warning(
+            "Impossible de charger le contenu de l'accueil : %s",
+            erreur
+        )
 
     enrichir_photos_accueil(photos)
     enrichir_publicites(videos)
@@ -753,6 +736,7 @@ def accueil():
         videos=videos,
         produits=produits
     )
+
 
 # =========================================================
 # CONNEXION
