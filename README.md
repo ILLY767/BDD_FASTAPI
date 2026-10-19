@@ -709,3 +709,802 @@ FastAPI assure le traitement des opérations métier, Flask gère l'interface ut
 L'un des principaux enseignements du projet est que le développement d'une application ne s'arrête pas à la programmation de ses fonctionnalités. Il faut également organiser le code, gérer les connexions, adapter l'environnement de production, sécuriser la configuration et tester les communications entre les différents services.
 
 Cette documentation constitue une présentation de l'architecture et du processus de réalisation de la boutique. Les commandes, noms de variables et détails de configuration doivent rester cohérents avec les versions effectivement présentes dans le dépôt.
+
+
+
+
+# Documentation technique — Application de gestion de boutique
+
+## 1. Présentation du projet
+
+Cette application web permet de gérer une boutique en ligne proposant des produits et des services. Elle dispose d'une interface destinée aux utilisateurs et d'une API chargée de traiter les opérations métier et les échanges avec la base de données.
+
+L'application permet notamment de :
+
+- consulter les produits et les services disponibles ;
+- créer un compte et se connecter ;
+- gérer un panier contenant des produits et des services ;
+- créer et consulter des commandes ;
+- gérer les clients, les produits et les services ;
+- suivre les commandes et modifier leur statut ;
+- communiquer au sujet d'une commande par messages texte ou vocaux ;
+- recevoir et consulter des notifications ;
+- administrer les photos et les publicités vidéo de la page d'accueil ;
+- enregistrer les informations relatives aux paiements.
+
+Le système distingue trois rôles principaux : **administrateur, vendeur et client**.
+
+## 2. Architecture générale
+
+L'application repose sur trois composants principaux :
+
+1. **Flask** : interface web utilisée par les utilisateurs.
+2. **FastAPI** : API qui expose les opérations métier.
+3. **SQLAlchemy et la base de données** : couche de persistance des informations.
+
+Les médias peuvent être stockés sur Cloudinary en production. En environnement local, l'application prévoit également un stockage dans les dossiers statiques de l'interface.
+
+### 2.1. Schéma de fonctionnement
+
+```text
+                 UTILISATEUR
+                      |
+                      v
+              Navigateur web
+                      |
+                      v
+          +------------------------+
+          | Interface Flask        |
+          | Projet_Boutique/app.py |
+          +------------------------+
+             |                  |
+             |                  +--------------------+
+             |                                       |
+             v                                       v
+      Sessions Flask                         Templates HTML
+      et panier en session                   et fichiers statiques
+             |
+             | Requêtes HTTP
+             | avec authentification
+             v
+          +------------------------+
+          | API FastAPI            |
+          | API/main.py            |
+          +------------------------+
+                      |
+                      v
+          +------------------------+
+          | Couche de données      |
+          | SQLAlchemy             |
+          +------------------------+
+                      |
+                      v
+               Base de données
+
+          Médias : Cloudinary en production
+                   ou fichiers locaux en développement
+```
+
+Ce schéma présente les responsabilités générales. Le détail des requêtes SQL, de la gestion des transactions et des dépendances de l'API doit être confirmé dans le code correspondant.
+
+### 2.2. Rôle de Flask
+
+Flask constitue la partie visible de l'application.
+
+Il reçoit les requêtes du navigateur, vérifie certaines conditions d'accès, récupère les données nécessaires auprès de FastAPI et affiche les pages HTML.
+
+Il prend notamment en charge :
+
+- les formulaires de connexion et de création de compte ;
+- l'affichage du catalogue ;
+- les opérations sur le panier ;
+- l'affichage des commandes ;
+- les formulaires de gestion ;
+- les sessions utilisateurs ;
+- l'envoi de messages ;
+- la transmission des fichiers multimédias.
+
+Le fichier principal de cette partie est :
+
+`Projet_Boutique/app.py`
+
+### 2.3. Rôle de FastAPI
+
+FastAPI constitue la couche API de l'application.
+
+L'interface Flask lui adresse des requêtes HTTP pour effectuer les opérations sur les données. Les routes Flask ne constituent donc pas nécessairement les opérations finales de la base de données : elles délèguent une grande partie du traitement à l'API.
+
+Les fonctionnalités sollicitées par Flask comprennent notamment :
+
+- l'authentification et la gestion des utilisateurs ;
+- la gestion des clients ;
+- la consultation et la modification des produits ;
+- la gestion des services ;
+- la création et la consultation des commandes ;
+- la gestion des lignes de commande ;
+- les messages et les notifications ;
+- les statistiques du tableau de bord ;
+- la gestion des photos et des publicités de la page d'accueil.
+
+Le fichier principal de l'API est :
+
+`API/main.py`
+
+### 2.4. Rôle de SQLAlchemy
+
+SQLAlchemy permet de représenter les tables de la base de données sous forme de classes Python.
+
+Chaque modèle définit notamment :
+
+- le nom de la table ;
+- ses colonnes ;
+- les types de données ;
+- les clés primaires ;
+- les clés étrangères ;
+- certaines contraintes ;
+- les valeurs par défaut.
+
+Les modèles transmis dans le projet couvrent les utilisateurs, les clients, les produits, les services, les commandes, les paiements, les messages, les notifications et les contenus multimédias de la page d'accueil.
+
+Le fichier contenant ces modèles doit être identifié dans l'arborescence du projet pour préciser son chemin exact.
+
+---
+
+## 3. Les rôles et les droits d'accès
+
+L'application distingue trois catégories d'utilisateurs.
+
+| Fonctionnalité | Administrateur | Vendeur | Client |
+|---|---|---|---|
+| Consulter les produits | Oui | Oui | Oui |
+| Consulter les services | Oui | Oui | Oui |
+| Ajouter et modifier les produits | Oui | Oui | Non |
+| Ajouter et modifier les services | Oui | Oui | Non |
+| Gérer les clients | Oui | Oui | Non |
+| Gérer les commandes de la boutique | Oui | Oui | Non |
+| Consulter ses commandes | Selon les routes autorisées | Selon les routes autorisées | Oui |
+| Utiliser le panier client | Non prévu par les routes client du panier | Non prévu par les routes client du panier | Oui |
+| Gérer les utilisateurs | Oui | Non | Non |
+| Administrer les photos et publicités d'accueil | Oui | Non | Non |
+| Consulter les statistiques du tableau de bord | Oui | Oui | Accès limité |
+
+**Important :** ce tableau résume les restrictions observées dans les routes Flask. L'API doit également vérifier les droits d'accès pour empêcher un utilisateur de contourner l'interface en appelant directement ses endpoints.
+
+Les restrictions ne sont pas nécessairement identiques pour toutes les routes. Certaines opérations contrôlent le rôle dans Flask, tandis que d'autres reposent aussi sur les vérifications de FastAPI.
+
+---
+
+## 4. Authentification et gestion des sessions
+
+### 4.1. Connexion
+
+Lorsqu'un utilisateur se connecte :
+
+1. Il ouvre la page de connexion.
+2. Il soumet son adresse électronique et son mot de passe.
+3. Flask transmet les identifiants à l'API, via la route `/login`.
+4. Si l'authentification réussit, Flask récupère les informations du compte et le jeton d'accès.
+5. Flask enregistre notamment dans sa session l'identifiant de l'utilisateur, son nom, son adresse électronique, son rôle et son jeton d'accès.
+6. L'utilisateur est redirigé vers son espace de navigation.
+
+Le jeton permet à Flask de s'authentifier auprès des routes protégées de l'API.
+
+### 4.2. Appels authentifiés à l'API
+
+Les fonctions utilitaires de `app.py` centralisent les appels HTTP.
+
+Elles permettent notamment de :
+
+- construire les URL de l'API ;
+- transmettre le jeton d'accès dans l'en-tête d'autorisation ;
+- gérer les délais d'attente ;
+- effectuer des requêtes GET, POST, PUT et DELETE ;
+- traiter les réponses d'erreur ;
+- détecter certains cas d'expiration de session.
+
+Lorsqu'une réponse indique une session expirée selon les conditions prévues par le code, Flask efface les informations de session concernées et redirige l'utilisateur vers la connexion.
+
+### 4.3. Création de compte et profil
+
+La route `/creer-compte` permet à un nouvel utilisateur de soumettre un formulaire d'inscription. Flask vérifie notamment la confirmation du mot de passe avant de transmettre les informations à l'API.
+
+La route `/mon-compte` permet de consulter les informations du compte. D'autres routes permettent de modifier le profil et le mot de passe.
+
+La création de comptes avec attribution de rôles est également disponible dans l'espace d'administration.
+
+### 4.4. Sécurité de la session
+
+Le code configure une clé secrète et des paramètres de cookies, notamment pour distinguer le contexte de production.
+
+Les valeurs sensibles, telles que la clé secrète et les paramètres de connexion, doivent être fournies par des variables d'environnement plutôt que d'être inscrites en dur dans le code.
+
+---
+
+## 5. Fonctionnement du catalogue
+
+### 5.1. Produits
+
+Un produit est un article vendu par la boutique.
+
+Il possède notamment :
+
+- un identifiant ;
+- une désignation ;
+- un prix unitaire ;
+- une description ;
+- une image éventuelle ;
+- un stock ;
+- une catégorie ;
+- un indicateur d'activation.
+
+La route `/produits` récupère les produits auprès de l'API, prépare les données nécessaires à l'affichage et transmet la liste au template `produits.html`.
+
+Les administrateurs et les vendeurs peuvent ajouter, modifier et supprimer les produits. Les clients peuvent consulter le catalogue.
+
+Lors de la modification d'un produit, l'application peut conserver l'image existante si aucune nouvelle image n'est fournie. Lorsqu'une nouvelle image remplace l'ancienne, le code prévoit le nettoyage du média précédent après une modification réussie.
+
+### 5.2. Services
+
+Un service correspond à une prestation proposée par la boutique, par exemple une installation ou une intervention technique.
+
+Contrairement à un produit, le modèle `Service` ne comporte pas de champ de stock.
+
+Un service possède notamment :
+
+- un nom ;
+- un prix ;
+- une description ;
+- une catégorie ;
+- une image éventuelle ;
+- une vidéo éventuelle ;
+- un état actif ou inactif.
+
+Les services sont affichés à partir des données récupérées auprès de l'API. Les administrateurs et les vendeurs peuvent gérer leur création, leur modification et leur suppression.
+
+Une route permet également de modifier l'état actif d'un service.
+
+Un service inactif ne doit pas être considéré comme disponible pour une nouvelle commande. L'interface vérifie notamment l'état des services lors de certaines opérations du panier ; la validation définitive doit également être assurée par l'API.
+
+---
+
+## 6. Fonctionnement du panier
+
+### 6.1. Stockage du panier
+
+Le panier est conservé dans la session Flask.
+
+Deux clés sont utilisées :
+
+- `panier` : quantités des produits ;
+- `panier_services` : quantités des services.
+
+Le panier n'est donc pas, d'après le code Flask fourni, une table dédiée de la base de données.
+
+Cette organisation permet de conserver le panier dans la session de l'utilisateur pendant sa navigation.
+
+### 6.2. Ajout d'un produit
+
+Lorsqu'un client ajoute un produit :
+
+1. Flask vérifie que l'utilisateur possède le rôle client.
+2. L'application récupère les informations du produit auprès de l'API.
+3. Elle vérifie que le produit existe, qu'il est actif et que son stock permet l'ajout.
+4. La quantité est actualisée dans la session.
+5. Flask renvoie une réponse JSON permettant notamment de mettre à jour le compteur du panier.
+
+Les quantités peuvent ensuite être augmentées, diminuées ou supprimées.
+
+### 6.3. Ajout d'un service
+
+L'ajout d'un service suit un principe similaire, mais sans contrôle de stock.
+
+Flask vérifie l'existence du service et son état actif avant d'actualiser `panier_services`.
+
+### 6.4. Calcul du total
+
+Lors de l'affichage du panier, Flask récupère les produits et les services depuis l'API. Il prépare les lignes du panier, calcule les sous-totaux et le montant total, puis ajuste certaines quantités si nécessaire, notamment en fonction du stock disponible pour les produits.
+
+Les données du panier ne doivent pas être considérées comme une source de vérité pour les prix ou les droits : au moment de créer une commande, l'API doit valider les références, les quantités, les prix et la disponibilité.
+
+---
+
+## 7. Cycle de vie d'une commande
+
+### 7.1. Création d'une commande à partir du panier
+
+Le parcours général est le suivant :
+
+```text
+Client
+  |
+  v
+Ajout de produits et/ou de services
+  |
+  v
+Panier conservé dans la session Flask
+  |
+  v
+Soumission du panier
+  |
+  v
+Flask transmet les lignes à FastAPI
+  |
+  v
+L'API traite la création de la commande
+  |
+  v
+La commande et ses lignes sont enregistrées
+  |
+  v
+Flask affiche la confirmation
+```
+
+Les modèles de données prévoient une table `COMMANDE` et deux tables de liaison :
+
+- `COMMANDE_has_PRODUIT` ;
+- `COMMANDE_has_SERVICE`.
+
+Une commande peut ainsi contenir des produits, des services ou les deux.
+
+### 7.2. Prix enregistré au moment de la commande
+
+Les tables de liaison comportent un champ `prix_unitaire`.
+
+Ce choix permet de conserver le prix appliqué lors de la commande, indépendamment des modifications ultérieures du catalogue.
+
+Par exemple, si un service coûte 15 000 FCFA au moment de la commande puis passe à 20 000 FCFA, la ligne de commande peut conserver le prix initial de 15 000 FCFA.
+
+Le calcul et l'enregistrement effectifs de ce prix doivent être réalisés par le traitement métier qui crée la commande.
+
+### 7.3. Gestion des commandes par les administrateurs et les vendeurs
+
+Les routes Flask permettent notamment de :
+
+- consulter les commandes ;
+- créer une commande ;
+- afficher le détail d'une commande ;
+- modifier son statut ;
+- ajouter ou modifier des produits dans une commande ;
+- supprimer des lignes ;
+- modifier certaines informations de commande ;
+- supprimer une commande.
+
+La page de détail peut récupérer les produits de la commande, les clients et les messages associés.
+
+### 7.4. Espace client
+
+La route `/mes-commandes` récupère les commandes du client auprès de l'API.
+
+Pour chaque commande, Flask récupère également le nombre de messages non lus associés, afin de préparer leur affichage.
+
+Une route permet de demander l'annulation d'une commande. Les conditions d'annulation et la vérification de propriété doivent être contrôlées par l'API.
+
+---
+
+## 8. Paiements et confirmation
+
+L'interface prévoit une page de paiement et un formulaire permettant de sélectionner une méthode parmi :
+
+- livraison ;
+- Wave ;
+- Orange Money ;
+- carte bancaire.
+
+La route `/confirmer-paiement` transmet le panier à l'API, avec la méthode choisie, via `/commandes/depuis-panier`.
+
+Lorsque la réponse est considérée comme réussie et contient un identifiant de commande, Flask vide le panier, enregistre les informations de confirmation dans la session et redirige l'utilisateur vers la page de confirmation.
+
+Le code prévoit donc un **parcours de commande associé à un choix de méthode de paiement**.
+
+Toutefois, le code Flask transmis ne démontre pas à lui seul l'existence d'une intégration effective aux prestataires Wave, Orange Money ou à un réseau de cartes bancaires. Il ne faut pas confondre la sélection d'une méthode et l'enregistrement d'un paiement avec la réalisation d'une transaction externe.
+
+Le modèle `Paiement` prévoit les champs suivants :
+
+- identifiant du paiement ;
+- identifiant de la commande ;
+- identifiant de l'utilisateur ;
+- montant ;
+- méthode ;
+- statut ;
+- référence ;
+- date du paiement.
+
+Il faudra examiner les endpoints FastAPI associés pour établir précisément comment les paiements sont créés, validés et mis à jour.
+
+### Deux parcours à distinguer
+
+L'application contient deux routes de soumission du panier :
+
+1. `/confirmer-paiement` : transmet également une méthode de paiement et redirige vers la confirmation de commande.
+2. `/panier/commander` : transmet les lignes du panier, vide la session après succès et redirige vers une page de succès de commande.
+
+Ces deux parcours ne doivent pas être présentés comme identiques. Leurs différences de traitement doivent être prises en compte lors de l'évolution de l'application.
+
+---
+
+## 9. Messagerie associée aux commandes
+
+L'application prévoit une messagerie permettant aux utilisateurs autorisés de communiquer au sujet d'une commande.
+
+Les fonctionnalités exposées par Flask comprennent :
+
+- la consultation des messages d'une commande ;
+- l'envoi de messages texte ;
+- l'envoi de messages vocaux ;
+- le marquage de messages comme lus ;
+- la suppression de messages ;
+- la consultation des conversations ;
+- le comptage des messages non lus.
+
+### 9.1. Structure d'un message
+
+Le modèle `MessageCommande` contient notamment :
+
+| Champ | Signification |
+|---|---|
+| `id_message` | Identifiant du message |
+| `COMMANDE_id_commande` | Commande concernée |
+| `UTILISATEUR_id_utilisateur` | Expéditeur |
+| `UTILISATEUR_destinataire_id` | Destinataire |
+| `message` | Contenu textuel |
+| `date_message` | Date et heure |
+| `lu` | État de lecture |
+| `audio_url` | URL éventuelle du fichier audio |
+
+Le contenu textuel est nullable, ce qui permet de représenter un message vocal sans texte.
+
+Le champ `lu` est un booléen : `False` correspond à un message non lu et `True` à un message marqué comme lu.
+
+### 9.2. Envoi d'un message texte
+
+Flask reçoit le contenu du formulaire et le transmet à l'API avec l'identifiant de la commande.
+
+L'API doit déterminer le destinataire approprié et vérifier que l'expéditeur est autorisé à participer à cette conversation.
+
+### 9.3. Envoi d'un message vocal
+
+La route dédiée reçoit un fichier envoyé par le navigateur et le transmet à l'API en multipart.
+
+L'URL du fichier audio est ensuite représentée par le champ `audio_url` du modèle. Le mécanisme exact de stockage du fichier vocal doit être confirmé dans le code de l'API et dans sa configuration de stockage.
+
+### 9.4. Lecture et suppression
+
+Des routes permettent de marquer un message comme lu ou de le supprimer.
+
+Les vérifications d'autorisation doivent être effectuées côté serveur. Le simple fait de connaître un identifiant de message ou de commande ne doit pas permettre d'accéder aux messages d'un autre utilisateur.
+
+---
+
+## 10. Notifications
+
+Le modèle `Notification` permet d'associer une notification à un utilisateur.
+
+Les champs principaux sont :
+
+- `id_notification` ;
+- `UTILISATEUR_id_utilisateur` ;
+- `titre` ;
+- `message` ;
+- `type_notification` ;
+- `lien` ;
+- `lu` ;
+- `date_notification`.
+
+Flask expose des routes permettant notamment de :
+
+- récupérer le nombre de notifications et les notifications disponibles ;
+- marquer une notification comme lue ;
+- marquer toutes les notifications comme lues.
+
+La route de consultation renvoie une réponse JSON. En cas d'erreur, le code prévoit un résultat de repli avec un compteur nul et une liste vide.
+
+Le modèle définit la structure des notifications, mais les événements qui les créent doivent être recherchés dans le code de l'API.
+
+---
+
+## 11. Gestion de la page d'accueil
+
+La page d'accueil peut afficher des photos et des publicités vidéo.
+
+Deux modèles sont prévus :
+
+- `PhotoAccueil` ;
+- `Publicite`.
+
+Ils possèdent notamment un identifiant, un nom de fichier, un ordre d'affichage, un état actif et une date d'ajout. La publicité dispose également d'un titre facultatif.
+
+La route publique `/` récupère le contenu d'accueil auprès de l'API, prépare les URL des médias et affiche le template `accueil.html`.
+
+L'administration de ces contenus est accessible par `/gestion-accueil`, réservée à l'administrateur dans le code Flask transmis.
+
+Les opérations disponibles comprennent :
+
+- l'ajout d'une photo ;
+- la suppression d'une photo ;
+- l'ajout d'une publicité vidéo ;
+- la suppression d'une publicité vidéo.
+
+Lors d'un ajout, Flask valide l'extension du fichier, effectue le téléversement du média puis transmet les informations correspondantes à l'API. Si l'enregistrement échoue, le code prévoit un nettoyage du média nouvellement téléversé.
+
+---
+
+## 12. Stockage des images, vidéos et fichiers audio
+
+### 12.1. Cloudinary
+
+L'application prévoit Cloudinary pour le stockage des médias en production.
+
+La configuration accepte notamment les variables d'environnement suivantes :
+
+- `CLOUDINARY_URL` ;
+- `CLOUDINARY_CLOUD_NAME` ;
+- `CLOUDINARY_API_KEY` ;
+- `CLOUDINARY_API_SECRET` ;
+- `CLOUDINARY_ACTIF`.
+
+Le code construit des dossiers distincts selon le type de média, par exemple :
+
+- `boutique/produits` ;
+- `boutique/services_images` ;
+- `boutique/services_videos` ;
+- `boutique/accueil_photos` ;
+- `boutique/accueil_videos`.
+
+Les vidéos peuvent être envoyées par blocs avec la méthode d'upload adaptée.
+
+En production, le code prévoit de refuser certains téléversements si Cloudinary n'est pas correctement activé, plutôt que de s'appuyer sur un stockage local potentiellement éphémère.
+
+### 12.2. Stockage local
+
+En développement, l'application peut enregistrer les médias dans des dossiers locaux sous `static/`.
+
+Les chemins prévus par le code Flask comprennent notamment :
+
+- les images des produits ;
+- les images et vidéos des services ;
+- les photos de la page d'accueil ;
+- les publicités vidéo.
+
+Les noms exacts des sous-dossiers doivent être vérifiés dans l'arborescence réelle, car le chemin logique de stockage et le chemin utilisé par un template ne sont pas nécessairement identiques.
+
+### 12.3. Résolution des URL
+
+La fonction `media_url` permet de préparer les URL des médias pour les templates.
+
+Les URL complètes peuvent être conservées telles quelles, tandis que les noms de fichiers locaux peuvent être transformés en URL de ressources statiques.
+
+Les fonctions d'enrichissement préparent notamment les champs d'URL utilisés pour les images des produits, les médias des services et les contenus de la page d'accueil.
+
+---
+
+## 13. Tableau de bord et administration
+
+L'application comporte deux routes de tableau de bord dans le code transmis :
+
+- `/tableau-de-bord`, qui affiche `tableau_de_bord.html` ;
+- `/dashboard`, qui affiche `dashboard.html`.
+
+Ces routes récupèrent des statistiques depuis l'API pour les administrateurs et les vendeurs. La première prévoit un affichage avec des statistiques vides pour les clients.
+
+La route `/utilisateurs` est réservée à l'administrateur et permet de consulter les utilisateurs.
+
+La route `/utilisateurs/creer` permet également à l'administrateur de créer un compte et de sélectionner un rôle parmi les rôles prévus.
+
+Ces deux routes de tableau de bord doivent être conservées ou unifiées en connaissance de cause : leur coexistence peut correspondre à des pages différentes, mais elle mérite d'être documentée et vérifiée.
+
+---
+
+## 14. Principales routes Flask
+
+Le tableau suivant résume les routes observées dans `Projet_Boutique/app.py`. Les méthodes HTTP sont indiquées lorsqu'elles sont établies par le code transmis.
+
+| Route | Méthode | Fonction |
+|---|---|---|
+| `/` | GET | Afficher la page d'accueil |
+| `/sante` | GET | Vérifier la disponibilité de l'interface |
+| `/login` | GET, POST | Afficher le formulaire et connecter un utilisateur |
+| `/logout` | GET | Déconnecter l'utilisateur |
+| `/creer-compte` | GET, POST | Créer un compte |
+| `/mon-compte` | GET | Afficher le profil |
+| `/mon-compte/modifier` | POST | Modifier le profil |
+| `/mon-compte/mot-de-passe` | POST | Modifier le mot de passe |
+| `/tableau-de-bord` | GET | Afficher un tableau de bord |
+| `/dashboard` | GET | Afficher l'autre page de tableau de bord |
+| `/utilisateurs` | GET | Consulter les utilisateurs |
+| `/utilisateurs/creer` | GET, POST | Créer un utilisateur depuis l'administration |
+| `/clients` | GET, POST | Consulter et ajouter des clients |
+| `/produits` | GET, POST | Consulter et ajouter des produits |
+| `/produits/modifier/<id_produit>` | POST | Modifier un produit |
+| `/produits/supprimer/<id_produit>` | POST | Supprimer un produit |
+| `/services` | GET | Consulter les services |
+| `/services/ajouter` | POST | Ajouter un service |
+| `/services/modifier/<id_service>` | POST | Modifier un service |
+| `/services/supprimer/<id_service>` | POST | Supprimer un service |
+| `/panier` | GET | Afficher le panier |
+| `/panier/ajouter/<id_produit>` | POST | Ajouter un produit au panier |
+| `/panier/services/ajouter/<id_service>` | POST | Ajouter un service au panier |
+| `/panier/modifier/<id_produit>` | POST | Modifier une quantité de produit |
+| `/panier/supprimer/<id_produit>` | POST | Supprimer un produit du panier |
+| `/panier/services/modifier/<id_service>` | POST | Modifier une quantité de service |
+| `/panier/services/supprimer/<id_service>` | POST | Supprimer un service du panier |
+| `/panier/vider` | POST | Vider le panier |
+| `/paiement` | GET | Afficher le formulaire de paiement |
+| `/confirmer-paiement` | POST | Transmettre le panier et la méthode choisie |
+| `/confirmation-commande` | GET | Afficher la confirmation |
+| `/panier/commander` | POST | Créer une commande à partir du panier |
+| `/commande/succes/<id_commande>` | GET | Afficher le succès de commande |
+| `/commandes` | GET | Consulter les commandes de la boutique |
+| `/commandes/ajouter` | POST | Ajouter une commande |
+| `/commandes/<id_commande>` | GET | Afficher le détail d'une commande |
+| `/commandes/<id_commande>/statut` | POST | Modifier le statut |
+| `/mes-commandes` | GET | Consulter les commandes du client |
+| `/mes-commandes/<id_commande>/annuler` | DELETE | Demander l'annulation d'une commande |
+| `/commandes/<id_commande>/messages` | GET, POST | Consulter ou envoyer des messages selon la méthode |
+| `/commandes/<id_commande>/messages/envoyer` | POST | Envoyer un message texte |
+| `/commandes/<id_commande>/messages/vocal` | POST | Envoyer un message vocal |
+| `/messages/<id_message>/lu` | PUT | Marquer un message comme lu |
+| `/messages/<id_message>` | DELETE | Supprimer un message |
+| `/mes-messages` | GET | Consulter les conversations |
+| `/messages/non-lus/count` | GET | Récupérer le compteur de messages non lus |
+| `/notifications` | GET | Récupérer les notifications |
+| `/notifications/<id_notification>/lue` | PUT | Marquer une notification comme lue |
+| `/notifications/toutes/lues` | PUT | Marquer toutes les notifications comme lues |
+| `/gestion-accueil` | GET | Administrer le contenu de la page d'accueil |
+| `/gestion-accueil/photo/ajouter` | POST | Ajouter une photo |
+| `/gestion-accueil/photo/<id_photo>/supprimer` | POST | Supprimer une photo |
+| `/gestion-accueil/publicite/ajouter` | POST | Ajouter une publicité vidéo |
+| `/gestion-accueil/publicite/<id_publicite>/supprimer` | POST | Supprimer une publicité vidéo |
+
+Les routes de modification des clients et des lignes de commande sont également présentes. Pour obtenir un inventaire exhaustif, il faut compléter ce tableau à partir de l'ensemble du fichier et des routes de l'API.
+
+---
+
+## 15. Modèle de données
+
+Les modèles SQLAlchemy transmis définissent les principales tables suivantes.
+
+| Table | Rôle |
+|---|---|
+| `UTILISATEUR` | Comptes, coordonnées et rôles |
+| `CLIENT` | Informations propres au client et lien éventuel avec un utilisateur |
+| `PRODUIT` | Catalogue de produits |
+| `SERVICE` | Catalogue de services |
+| `COMMANDE` | Informations générales sur les commandes |
+| `COMMANDE_has_PRODUIT` | Produits, quantités et prix par commande |
+| `COMMANDE_has_SERVICE` | Services, quantités et prix par commande |
+| `PAIEMENT` | Informations relatives aux paiements |
+| `MESSAGE_COMMANDE` | Messages texte et vocaux liés aux commandes |
+| `NOTIFICATION` | Notifications destinées aux utilisateurs |
+| `PHOTO_ACCUEIL` | Photos de la page d'accueil |
+| `PUBLICITE` | Publicités vidéo |
+
+### 15.1. Relations principales
+
+- Un client peut être associé à un compte utilisateur via `CLIENT.id_utilisateur`.
+- Une commande référence un client via `COMMANDE.CLIENT_id_client`.
+- Les tables `COMMANDE_has_PRODUIT` et `COMMANDE_has_SERVICE` relient une commande à ses articles.
+- Un paiement référence une commande et un utilisateur.
+- Un message référence une commande, un expéditeur et un destinataire.
+- Une notification référence un utilisateur.
+
+Les deux tables de liaison utilisent une clé primaire composée des identifiants de la commande et du produit ou du service. Cette structure permet de distinguer les différentes lignes d'une commande.
+
+Les modèles transmis utilisent des clés étrangères SQLAlchemy, mais ne déclarent pas explicitement de relations ORM avec `relationship()`. Les données associées peuvent donc être récupérées par des requêtes et des jointures définies ailleurs dans le code.
+
+---
+
+## 16. Configuration et lancement
+
+### 16.1. Configuration de l'interface Flask
+
+Le code Flask utilise notamment les variables d'environnement suivantes :
+
+| Variable | Fonction |
+|---|---|
+| `API_URL` | Adresse principale de l'API |
+| `API_PUBLIC_URL` | Adresse de l'API exposée aux pages ou aux clients |
+| `API_TIMEOUT` | Délai d'attente des requêtes vers l'API |
+| `SECRET_KEY` | Clé secrète de Flask |
+| `FLASK_SECRET_KEY` | Autre variable prévue pour la clé secrète |
+| `MAX_UPLOAD_MB` | Limite de taille des fichiers téléversés |
+| `CLOUDINARY_URL` | URL de configuration Cloudinary |
+| `CLOUDINARY_CLOUD_NAME` | Nom du cloud |
+| `CLOUDINARY_API_KEY` | Clé API Cloudinary |
+| `CLOUDINARY_API_SECRET` | Secret API Cloudinary |
+| `CLOUDINARY_ACTIF` | Activation de Cloudinary selon la configuration |
+
+En environnement local, l'API est configurée par défaut sur `http://127.0.0.1:8000`, et l'interface Flask utilise le port `5000` par défaut.
+
+Ces valeurs par défaut ne doivent pas être reprises en production si les services sont hébergés à des adresses différentes.
+
+### 16.2. Lancement local
+
+Le projet utilise deux processus distincts.
+
+**Terminal 1 — API FastAPI**
+
+Depuis le dossier `BDD_FASTAPI`, activer l'environnement Python approprié, installer les dépendances de l'API si nécessaire, puis lancer le serveur selon la commande prévue par le projet. Par exemple, si le module expose bien `app` :
+
+```powershell
+cd API
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**Terminal 2 — interface Flask**
+
+```powershell
+cd Projet_Boutique
+python app.py
+```
+
+L'interface est alors normalement accessible sur :
+
+`http://127.0.0.1:5000`
+
+L'API est normalement accessible sur :
+
+`http://127.0.0.1:8000`
+
+Ces commandes supposent que les dépendances sont installées, que les variables d'environnement sont correctement définies et que la configuration de la base de données est fonctionnelle.
+
+### 16.3. Déploiement
+
+Le projet dispose de services hébergés sur Render. L'interface Flask peut être lancée avec Gunicorn, tandis que l'API fonctionne comme un service distinct.
+
+Les paramètres de production doivent notamment inclure :
+
+- les URL publiques des services ;
+- la configuration de la base de données ;
+- les clés et secrets nécessaires ;
+- les paramètres de stockage des médias ;
+- les dépendances Python appropriées.
+
+Les secrets ne doivent pas être intégrés au README ni au dépôt Git.
+
+---
+
+## 17. Gestion des erreurs et limites de configuration
+
+Le code Flask prévoit plusieurs mécanismes de gestion des erreurs :
+
+- traitement de l'expiration de session ;
+- gestion des erreurs de requêtes HTTP vers l'API ;
+- prise en charge de la limite de taille des fichiers ;
+- affichage de messages d'erreur et de confirmation ;
+- nettoyage de certains médias en cas d'échec d'enregistrement.
+
+Le bon fonctionnement de l'interface dépend toutefois de la disponibilité de l'API. Une page qui attend une réponse de l'API peut donc être lente si celle-ci ne répond pas dans le délai prévu.
+
+Le stockage local des fichiers ne doit pas être considéré comme persistant dans un environnement de déploiement où le système de fichiers est éphémère. Le stockage distant doit être correctement configuré pour conserver les médias après redémarrage ou redéploiement.
+
+Enfin, les opérations critiques — autorisations, prix, stock, création de commande et paiement — doivent être validées côté serveur et non uniquement par les formulaires Flask.
+
+---
+
+## 18. Points de vigilance pour la maintenance
+
+Lorsqu'un développeur intervient sur le projet, il doit vérifier les points suivants.
+
+1. **API et interface :** une modification de contrat API peut nécessiter une adaptation dans Flask.
+2. **Authentification :** les routes sensibles doivent contrôler les rôles et les droits sur les ressources.
+3. **Commandes :** la validation du stock, des prix et des quantités doit être cohérente au moment de l'enregistrement.
+4. **Paiements :** le choix d'une méthode ne suffit pas à confirmer qu'un paiement externe a été réalisé.
+5. **Médias :** le téléversement, la génération d'URL et la suppression doivent fonctionner avec le stockage effectivement utilisé.
+6. **Messagerie :** les droits de lecture, de suppression et de marquage comme lu doivent être vérifiés côté API.
+7. **Routes du tableau de bord :** les deux parcours `/dashboard` et `/tableau-de-bord` doivent être documentés et leur utilité clarifiée.
+8. **Base de données :** toute évolution des modèles doit être coordonnée avec le schéma réellement déployé et les éventuelles migrations.
+9. **Données sensibles :** les mots de passe doivent être stockés sous forme de hachages sécurisés et les secrets conservés dans des variables d'environnement.
+10. **Tests :** les changements doivent être vérifiés sur les parcours client, vendeur et administrateur.
+
+---
+
+## 19. Conclusion
+
+L'application repose sur une séparation des responsabilités entre l'interface Flask, l'API FastAPI et la couche de données SQLAlchemy.
+
+Flask gère principalement les interactions avec le navigateur, les sessions, les formulaires et l'affichage des pages. FastAPI expose les opérations métier auxquelles l'interface fait appel. SQLAlchemy définit les modèles de données qui structurent les informations persistantes de la boutique.
+
+Cette architecture permet de faire évoluer séparément l'interface et les traitements métier, à condition de conserver des contrats API cohérents et de vérifier les autorisations, la cohérence des données et la gestion des erreurs à chaque niveau.
+
+Ce document constitue une présentation technique du fonctionnement déduit des fichiers transmis. Pour une documentation entièrement exhaustive, il doit être complété par l'arborescence exacte des templates et des fichiers statiques, ainsi que par l'examen des endpoints FastAPI, de la configuration de la base de données et du mécanisme de migration ou de création des tables.
+
