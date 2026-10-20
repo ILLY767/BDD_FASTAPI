@@ -3678,21 +3678,31 @@ def modifier_statut_commande(
     }
 
 
+
 # =========================================================
 # OUTILS CLOUDINARY
 # =========================================================
 
 def televerser_vers_cloudinary(fichier, dossier, type_ressource):
-    """Envoie un fichier reçu par FastAPI vers Cloudinary avec limite de taille."""
+    """Envoie un fichier vers Cloudinary et journalise l'erreur réelle."""
 
-    limites = {"image": 10 * 1024 * 1024, "video": 100 * 1024 * 1024, "raw": 20 * 1024 * 1024}
+    limites = {
+        "image": 10 * 1024 * 1024,
+        "video": 100 * 1024 * 1024,
+        "raw": 20 * 1024 * 1024,
+    }
+
     limite = limites.get(type_ressource, 20 * 1024 * 1024)
+
     contenu = fichier.file.read(limite + 1)
 
     if len(contenu) > limite:
         raise HTTPException(
             status_code=413,
-            detail=f"Fichier trop volumineux. Limite : {limite // (1024 * 1024)} Mo.",
+            detail=(
+                f"Fichier trop volumineux. "
+                f"Limite : {limite // (1024 * 1024)} Mo."
+            ),
         )
 
     if not contenu:
@@ -3707,18 +3717,33 @@ def televerser_vers_cloudinary(fichier, dossier, type_ressource):
             resource_type=type_ressource,
             folder=dossier,
             public_id=uuid.uuid4().hex,
-            overwrite=False
+            overwrite=False,
         )
+
         return resultat
 
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as erreur:
+        # Journaliser la cause réelle sans afficher les identifiants.
+        app.logger.exception(
+            "Échec Cloudinary : type=%s, dossier=%s, "
+            "taille=%s octets, erreur=%s",
+            type_ressource,
+            dossier,
+            len(contenu),
+            str(erreur),
+        )
+
         raise HTTPException(
             status_code=502,
-            detail="Impossible de téléverser le fichier vers Cloudinary."
-        )
+            detail=(
+                "Échec du téléversement vers Cloudinary. "
+                "Consultez les logs de l'API pour le diagnostic."
+            ),
+        ) from erreur
+
 
 
 def supprimer_media_cloudinary(url, type_ressource):
