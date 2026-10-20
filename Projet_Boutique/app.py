@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+import time
 from datetime import date
 
 import requests
@@ -737,31 +738,54 @@ def sante():
 # =========================================================
 
 
+
+# =========================================================
+# PAGE D'ACCUEIL
+# =========================================================
+
 @app.route("/")
 def accueil():
     photos = []
     videos = []
     produits = []
 
+    # Déclenche le réveil de l'API en arrière-plan.
     reveiller_api_en_arriere_plan()
 
-    try:
-        reponse = api_public_get(
-            "/accueil/contenu",
-            timeout=90
-        )
+    # Réessaie de récupérer le contenu pendant le démarrage.
+    for tentative in range(5):
+        try:
+            reponse = api_public_get(
+                "/accueil/contenu",
+                timeout=15
+            )
 
-        if reponse.status_code == 200:
-            contenu = reponse.json()
-            photos = contenu.get("photos", [])
-            videos = contenu.get("publicites", [])
-            produits = contenu.get("produits", [])
+            if reponse.status_code == 200:
+                contenu = reponse.json()
 
-    except requests.RequestException as erreur:
-        app.logger.warning(
-            "Impossible de charger le contenu de l'accueil : %s",
-            erreur
-        )
+                photos = contenu.get("photos", [])
+                videos = contenu.get("publicites", [])
+                produits = contenu.get("produits", [])
+
+                break
+
+            app.logger.warning(
+                "Accueil API : HTTP %s (tentative %s/5)",
+                reponse.status_code,
+                tentative + 1
+            )
+
+        except requests.RequestException as erreur:
+            app.logger.warning(
+                "API indisponible pour l'accueil "
+                "(tentative %s/5) : %s",
+                tentative + 1,
+                erreur
+            )
+
+        # Attend avant la prochaine tentative.
+        if tentative < 4:
+            time.sleep(3)
 
     enrichir_photos_accueil(photos)
     enrichir_publicites(videos)
@@ -773,6 +797,7 @@ def accueil():
         videos=videos,
         produits=produits
     )
+
 
 
 # =========================================================
