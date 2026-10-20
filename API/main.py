@@ -3679,6 +3679,7 @@ def modifier_statut_commande(
 
 
 
+
 # =========================================================
 # OUTILS CLOUDINARY
 # =========================================================
@@ -3694,24 +3695,26 @@ def televerser_vers_cloudinary(fichier, dossier, type_ressource):
 
     limite = limites.get(type_ressource, 20 * 1024 * 1024)
 
-    contenu = fichier.file.read(limite + 1)
-
-    if len(contenu) > limite:
-        raise HTTPException(
-            status_code=413,
-            detail=(
-                f"Fichier trop volumineux. "
-                f"Limite : {limite // (1024 * 1024)} Mo."
-            ),
-        )
-
-    if not contenu:
-        raise HTTPException(
-            status_code=400,
-            detail="Le fichier envoyé est vide."
-        )
-
     try:
+        # Revenir au début du fichier avant de le lire.
+        fichier.file.seek(0)
+        contenu = fichier.file.read(limite + 1)
+
+        if not contenu:
+            raise HTTPException(
+                status_code=400,
+                detail="Le fichier envoyé est vide."
+            )
+
+        if len(contenu) > limite:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"Fichier trop volumineux. "
+                    f"Limite : {limite // (1024 * 1024)} Mo."
+                ),
+            )
+
         resultat = cloudinary.uploader.upload(
             contenu,
             resource_type=type_ressource,
@@ -3726,15 +3729,12 @@ def televerser_vers_cloudinary(fichier, dossier, type_ressource):
         raise
 
     except Exception as erreur:
-        # Journaliser la véritable erreur Cloudinary.
         import logging
 
         logging.exception(
-            "Échec Cloudinary : type=%s, dossier=%s, "
-            "taille=%s octets, erreur=%s",
+            "Échec Cloudinary : type=%s, dossier=%s, erreur=%s",
             type_ressource,
             dossier,
-            len(contenu),
             str(erreur),
         )
 
@@ -3745,6 +3745,7 @@ def televerser_vers_cloudinary(fichier, dossier, type_ressource):
                 "Consultez les logs de l'API pour le diagnostic."
             ),
         ) from erreur
+
 
 
 
