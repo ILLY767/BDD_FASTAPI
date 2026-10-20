@@ -797,27 +797,23 @@ Messagerie - Commande #{{ id_commande }}
 
 
                     <!-- =================================
-                         AUDIO
-                         ================================= -->
+                        AUDIO
+                        ================================= -->
 
+                    
                     {% if message.audio_url %}
-
                         <audio
                             class="audio-message"
                             controls
                             preload="metadata"
+                            src="{{ message.audio_url }}"
+                            onloadedmetadata="console.log('AUDIO OK :', this.duration, 'secondes')"
+                            onerror="console.error('ERREUR AUDIO :', this.error, this.currentSrc)"
                         >
-
-                            <source
-                                src="{{ API_URL }}{{ message.audio_url }}"
-                            >
-
-                            Votre navigateur ne supporte pas
-                            la lecture audio.
-
+                            Votre navigateur ne supporte pas la lecture audio.
                         </audio>
-
                     {% endif %}
+
 
 
                     <!-- =================================
