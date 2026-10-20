@@ -4,6 +4,8 @@ import uuid
 from datetime import date
 
 import requests
+import threading
+
 
 from flask import (
     Flask,
@@ -621,6 +623,39 @@ def valeur_actuelle(chemin, cle_id, identifiant, champ):
 
 
 # =========================================================
+# RÉVEIL AUTOMATIQUE DE L'API EN ARRIÈRE-PLAN
+# =========================================================
+
+def reveiller_api_en_arriere_plan():
+    """
+    Envoie une requête à FastAPI sans bloquer l'affichage
+    de la boutique Flask.
+    """
+    def effectuer_requete():
+        try:
+            reponse = requests.get(
+                API_URL,
+                timeout=(10, 90)
+            )
+            app.logger.info(
+                "Réveil API : HTTP %s",
+                reponse.status_code
+            )
+        except requests.RequestException as erreur:
+            app.logger.warning(
+                "Réveil de l'API en arrière-plan impossible : %s",
+                erreur
+            )
+
+    thread = threading.Thread(
+        target=effectuer_requete,
+        daemon=True
+    )
+    thread.start()
+
+
+
+# =========================================================
 # GESTION DES ERREURS GLOBALES
 # =========================================================
 
@@ -707,6 +742,8 @@ def accueil():
     photos = []
     videos = []
     produits = []
+
+    reveiller_api_en_arriere_plan()
 
     try:
         reponse = api_public_get(
