@@ -3726,8 +3726,10 @@ def televerser_vers_cloudinary(fichier, dossier, type_ressource):
         raise
 
     except Exception as erreur:
-        # Journaliser la cause réelle sans afficher les identifiants.
-        app.logger.exception(
+        # Journaliser la véritable erreur Cloudinary.
+        import logging
+
+        logging.exception(
             "Échec Cloudinary : type=%s, dossier=%s, "
             "taille=%s octets, erreur=%s",
             type_ressource,
