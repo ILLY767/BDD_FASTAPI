@@ -2955,9 +2955,8 @@ def creer_commande_depuis_panier(
         statut="en_attente",
     )
 
-    if panier.latitude is not None:
+    if panier.latitude is not None and panier.longitude is not None:
         client.latitude = panier.latitude
-    if panier.longitude is not None:
         client.longitude = panier.longitude
 
     try:

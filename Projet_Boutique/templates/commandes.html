@@ -126,6 +126,21 @@ Commandes - Gestion de Boutique
         text-decoration: none;
     }
 
+    .btn-position {
+        display: inline-block;
+        margin-left: 6px;
+        background: #0f766e;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+    }
+
+    .position-indisponible {
+        color: #64748b;
+        font-size: 13px;
+    }
+
 
     .aucun {
         text-align: center;
@@ -259,6 +274,8 @@ Commandes - Gestion de Boutique
 
                     <th>Date</th>
 
+                    <th>Position GPS</th>
+
                     <th>Actions</th>
 
                 </tr>
@@ -304,6 +321,14 @@ Commandes - Gestion de Boutique
                         {{ commande.date_commande }}
                     </td>
 
+                    <td>
+                        {% if commande.get('latitude') is not none and commande.get('longitude') is not none %}
+                            <span>📍 Enregistrée</span>
+                        {% else %}
+                            <span class="position-indisponible">Non capturée</span>
+                        {% endif %}
+                    </td>
+
 
                     <td>
 
@@ -319,6 +344,19 @@ Commandes - Gestion de Boutique
 
                         </a>
 
+                        {% if commande.get('latitude') is not none and commande.get('longitude') is not none %}
+                            <a
+                                href="{{ url_for(
+                                    'detail_commande',
+                                    id_commande=commande['id_commande'],
+                                    _anchor='position-commande'
+                                ) }}"
+                                class="btn-position"
+                            >
+                                📍 Position
+                            </a>
+                        {% endif %}
+
                     </td>
 
 
@@ -330,7 +368,7 @@ Commandes - Gestion de Boutique
                 <tr>
 
                     <td
-                        colspan="4"
+                        colspan="5"
                         class="aucun"
                     >
 

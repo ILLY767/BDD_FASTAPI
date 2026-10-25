@@ -7,6 +7,15 @@ Commande #{{ commande.id_commande }}
 
 {% block content %}
 
+{% if commande.get('latitude') is not none and commande.get('longitude') is not none %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+{% endif %}
+
 <style>
 
     /* =========================================================
@@ -49,6 +58,27 @@ Commande #{{ commande.id_commande }}
     .card h4 {
 
         margin-top: 0;
+    }
+
+    #position-commande-map {
+        width: 100%;
+        height: 380px;
+        border-radius: 12px;
+        border: 1px solid #dbe2ea;
+        z-index: 1;
+    }
+
+    .position-coordonnees {
+        color: #475569;
+        font-size: 14px;
+        margin: 0 0 14px;
+    }
+
+    .lien-carte-externe {
+        display: inline-block;
+        margin-top: 14px;
+        color: #0f766e;
+        font-weight: 600;
     }
 
 
@@ -900,6 +930,39 @@ Commande #{{ commande.id_commande }}
     </div>
 
 
+    <div class="card" id="position-commande">
+        <h3>📍 Position enregistrée pour cette commande</h3>
+
+        {% if commande.get('latitude') is not none and commande.get('longitude') is not none %}
+            <p class="position-coordonnees">
+                Cette position est l’instantané GPS associé à la commande #{{ commande.id_commande }} :
+                {{ "%.6f"|format(commande.get('latitude')|float) }},
+                {{ "%.6f"|format(commande.get('longitude')|float) }}.
+            </p>
+
+            <div
+                id="position-commande-map"
+                role="region"
+                aria-label="Carte indiquant la position GPS enregistrée pour la commande #{{ commande.id_commande }}"
+            ></div>
+
+            <a
+                class="lien-carte-externe"
+                href="https://www.openstreetmap.org/?mlat={{ commande.get('latitude')|float }}&amp;mlon={{ commande.get('longitude')|float }}#map=16/{{ commande.get('latitude')|float }}/{{ commande.get('longitude')|float }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Ouvrir cette position dans OpenStreetMap ↗
+            </a>
+        {% else %}
+            <p class="position-coordonnees">
+                Aucune position GPS n’a été enregistrée avec cette commande.
+                Le client a pu refuser l’accès à sa position ou son navigateur ne pas la fournir.
+            </p>
+        {% endif %}
+    </div>
+
+
     <!-- =========================================================
          MODIFIER LA COMMANDE
          ========================================================= -->
@@ -1575,5 +1638,33 @@ Commande #{{ commande.id_commande }}
 
 
 </div>
+
+{% if commande.get('latitude') is not none and commande.get('longitude') is not none %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+    const commandePosition = [
+        {{ commande.get('latitude')|float }},
+        {{ commande.get('longitude')|float }}
+    ];
+    const carteCommande = L.map("position-commande-map").setView(
+        commandePosition,
+        16
+    );
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(carteCommande);
+
+    L.marker(commandePosition)
+        .addTo(carteCommande)
+        .bindPopup("Position enregistrée pour la commande #{{ commande.id_commande }}")
+        .openPopup();
+</script>
+{% endif %}
 
 {% endblock %}

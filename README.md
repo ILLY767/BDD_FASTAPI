@@ -1379,7 +1379,7 @@ Les modèles transmis utilisent des clés étrangères SQLAlchemy, mais ne décl
 
 ### 15.2. Géolocalisation des clients
 
-Lorsqu'un client confirme une commande, le navigateur peut transmettre sa position GPS avec son autorisation. La position est enregistrée sur la commande et mise à jour comme dernière position connue sur sa fiche `CLIENT`. Si l'accès GPS est refusé ou indisponible, la commande peut être créée sans coordonnées.
+Lorsqu'un client confirme une commande, le navigateur peut transmettre sa position GPS avec son autorisation. Chaque commande conserve son propre instantané de coordonnées ; la fiche `CLIENT` conserve la dernière position GPS reçue et n'est remplacée que lorsqu'une nouvelle commande fournit une position complète. Si l'accès GPS est refusé ou indisponible, la commande peut être créée sans coordonnées et la dernière position connue du client reste inchangée. Les administrateurs et vendeurs peuvent consulter la carte de la position propre à chaque commande depuis sa fiche ou la liste des commandes.
 
 Les administrateurs et vendeurs peuvent utiliser `/clients/proches` depuis la gestion des clients. La recherche accepte latitude, longitude et rayon en kilomètres, calcule les distances sur le serveur avec la formule de Haversine, puis trie les résultats par proximité. Le tableau affiche aussi le nombre de commandes et le total calculé à partir des lignes historiques de produits et services. La route est protégée par le rôle admin/vendeur.
 
