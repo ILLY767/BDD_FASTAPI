@@ -771,6 +771,66 @@ Mon compte - Gestion de Boutique
 
                         </div>
 
+                        <div class="champ">
+
+                            <label for="latitude">
+                                Latitude
+                            </label>
+
+                            <input
+                                type="number"
+                                id="latitude"
+                                name="latitude"
+                                step="any"
+                                value="{{ compte.latitude if compte.latitude is not none else '' }}"
+                                placeholder="14.7167"
+                            >
+
+                        </div>
+
+                        <div class="champ">
+
+                            <label for="longitude">
+                                Longitude
+                            </label>
+
+                            <input
+                                type="number"
+                                id="longitude"
+                                name="longitude"
+                                step="any"
+                                value="{{ compte.longitude if compte.longitude is not none else '' }}"
+                                placeholder="-17.4677"
+                            >
+
+                        </div>
+
+                        <div class="champ full">
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+
+                                <label for="gps-trigger">
+                                    Localisation
+                                </label>
+
+                                <button
+                                    type="button"
+                                    id="gps-trigger"
+                                    class="btn-principal"
+                                    onclick="obtenirPositionGps()"
+                                    style="padding:10px 15px; font-size:13px; border-radius:10px;"
+                                >
+                                    📍 Utiliser ma position GPS
+                                </button>
+
+                            </div>
+
+                            <span class="aide-champ">
+                                La position est mise à jour automatiquement lors de la confirmation d'une commande.
+                            </span>
+
+                        </div>
+
 
                     </div>
 
@@ -992,6 +1052,36 @@ Mon compte - Gestion de Boutique
 
             bouton.textContent = "👁️";
         }
+    }
+
+    function obtenirPositionGps() {
+        if (!navigator.geolocation) {
+            alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const latitude = document.getElementById("latitude");
+                const longitude = document.getElementById("longitude");
+
+                if (latitude) {
+                    latitude.value = position.coords.latitude.toFixed(6);
+                }
+
+                if (longitude) {
+                    longitude.value = position.coords.longitude.toFixed(6);
+                }
+            },
+            function () {
+                alert("Impossible d'obtenir votre position GPS. Vous pouvez renseigner manuellement les coordonnées.");
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 60000
+            }
+        );
     }
 
 </script>

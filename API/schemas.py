@@ -1,5 +1,11 @@
 from datetime import date, datetime
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ConfigDict,
+    field_validator,
+    model_validator,
+)
 
 
 # =========================================================
@@ -21,6 +27,14 @@ class ClientCreate(BaseModel):
     date_naissance: date | None = None
     email: str = Field(..., min_length=3, max_length=255)
     telephone: str = Field(..., min_length=1, max_length=30)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
     @field_validator("nom", "prenom", "email", "telephone")
     @classmethod
@@ -69,12 +83,28 @@ class CommandeCreate(BaseModel):
     CLIENT_id_client: int = Field(..., gt=0)
     date_commande: date
     statut: str = "en_attente"
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
 
 class CommandeUpdate(BaseModel):
     CLIENT_id_client: int = Field(..., gt=0)
     date_commande: date
     statut: str = Field(..., min_length=1)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
 
 # =========================================================
@@ -122,6 +152,14 @@ class UtilisateurClientCreate(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     telephone: str = Field(..., min_length=1, max_length=30)
     mot_de_passe: str = Field(..., min_length=8)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
     @field_validator("nom", "prenom", "email", "telephone")
     @classmethod
@@ -155,6 +193,14 @@ class CommandeDepuisPanierCreate(BaseModel):
     lignes: list[LigneProduitPanier] = Field(default_factory=list)
     services: list[LigneServicePanier] = Field(default_factory=list)
     methode_paiement: str = Field(default="livraison", min_length=1, max_length=50)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
     @field_validator("methode_paiement")
     @classmethod

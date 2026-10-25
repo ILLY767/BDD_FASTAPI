@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 import time
+import math
 from datetime import date
 
 import requests
@@ -227,6 +228,34 @@ def extension_autorisee(
     )
 
     return extension in extensions_autorisees
+
+
+def coordonnees_du_formulaire(formulaire):
+    """Valide une paire de coordonnées facultatives d'un formulaire."""
+    latitude = (formulaire.get("latitude") or "").strip()
+    longitude = (formulaire.get("longitude") or "").strip()
+
+    if not latitude and not longitude:
+        return {"latitude": None, "longitude": None}, None
+
+    if not latitude or not longitude:
+        return None, "Renseignez la latitude et la longitude ensemble."
+
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except ValueError:
+        return None, "La latitude et la longitude doivent être numériques."
+
+    if (
+        not math.isfinite(latitude)
+        or not -90 <= latitude <= 90
+        or not math.isfinite(longitude)
+        or not -180 <= longitude <= 180
+    ):
+        return None, "Les coordonnées GPS sont hors limites."
+
+    return {"latitude": latitude, "longitude": longitude}, None
 
 
 # =========================================================
@@ -1041,6 +1070,8 @@ def creer_compte():
     date_naissance = request.form.get("date_naissance")
     email = request.form["email"]
     telephone = request.form["telephone"]
+    latitude = (request.form.get("latitude") or "").strip()
+    longitude = (request.form.get("longitude") or "").strip()
     mot_de_passe = request.form["mot_de_passe"]
     confirmation = request.form["confirmation"]
 
@@ -1059,16 +1090,30 @@ def creer_compte():
     # ENVOI DES INFORMATIONS À FASTAPI
     # =========================================================
 
+    payload = {
+        "nom": nom,
+        "prenom": prenom,
+        "date_naissance": date_naissance if date_naissance else None,
+        "email": email,
+        "telephone": telephone,
+        "mot_de_passe": mot_de_passe
+    }
+
+    if latitude:
+        try:
+            payload["latitude"] = float(latitude)
+        except ValueError:
+            pass
+
+    if longitude:
+        try:
+            payload["longitude"] = float(longitude)
+        except ValueError:
+            pass
+
     reponse = api_public_post(
         f"{API_URL}/utilisateurs",
-        json={
-            "nom": nom,
-            "prenom": prenom,
-            "date_naissance": date_naissance if date_naissance else None,
-            "email": email,
-            "telephone": telephone,
-            "mot_de_passe": mot_de_passe
-        }
+        json=payload
     )
 
     # =========================================================
@@ -1217,6 +1262,14 @@ def modifier_mon_compte():
             )
         )
 
+    coordonnees, erreur_coordonnees = coordonnees_du_formulaire(
+        request.form
+    )
+    if erreur_coordonnees:
+        return redirect(
+            url_for("mon_compte", erreur=erreur_coordonnees)
+        )
+
     # -----------------------------------------------------
     # Préparation des données pour FastAPI
     # -----------------------------------------------------
@@ -1232,6 +1285,8 @@ def modifier_mon_compte():
             else None
         )
     }
+
+    donnees.update(coordonnees)
 
     # -----------------------------------------------------
     # Appel de l'API
@@ -1445,16 +1500,24 @@ def clients():
         date_naissance = request.form["date_naissance"]
         email = request.form["email"]
         telephone = request.form["telephone"]
+        coordonnees, erreur_coordonnees = coordonnees_du_formulaire(
+            request.form
+        )
+        if erreur_coordonnees:
+            return erreur_coordonnees, 400
+
+        payload = {
+            "nom": nom,
+            "prenom": prenom,
+            "date_naissance": date_naissance or None,
+            "email": email,
+            "telephone": telephone,
+            **coordonnees,
+        }
 
         reponse = api_post(
             f"{API_URL}/clients",
-            json={
-                "nom": nom,
-                "prenom": prenom,
-                "date_naissance": date_naissance or None,
-                "email": email,
-                "telephone": telephone
-            }
+            json=payload
         )
 
         if reponse.status_code not in [200, 201]:
@@ -1482,17 +1545,13 @@ def clients():
         )
 
     liste_clients = reponse.json()
-
-    # -----------------------------------------------------
-    # RECHERCHE
-    # -----------------------------------------------------
-
     recherche = request.args.get("recherche", "")
+    latitude_recherche = (request.args.get("latitude") or "").strip()
+    longitude_recherche = (request.args.get("longitude") or "").strip()
+    rayon_km = request.args.get("rayon_km", "5")
 
     if recherche:
-
         recherche = recherche.lower()
-
         liste_clients = [
             client
             for client in liste_clients
@@ -1506,7 +1565,133 @@ def clients():
     return render_template(
         "clients.html",
         clients=liste_clients,
-        recherche=recherche
+        recherche=recherche,
+        latitude_recherche=latitude_recherche,
+        longitude_recherche=longitude_recherche,
+        rayon_km=rayon_km
+    )
+
+
+@app.route("/clients/proches", methods=["GET"])
+def clients_proches():
+    """Affiche les clients proches avec leurs indicateurs commerciaux."""
+    if not role_autorise("admin", "vendeur"):
+        return (
+            "Accès refusé : vous n'avez pas l'autorisation "
+            "d'accéder à cette page.",
+            403
+        )
+
+    latitude = (request.args.get("latitude") or "").strip()
+    longitude = (request.args.get("longitude") or "").strip()
+    rayon_saisi = (request.args.get("rayon_km") or "5").strip()
+    recherche = (request.args.get("recherche") or "").strip()
+    erreur_geo = None
+    clients_proches = []
+    rayon_km = rayon_saisi
+
+    if not latitude or not longitude:
+        erreur_geo = "Renseignez les deux coordonnées ou utilisez le bouton GPS."
+    else:
+        try:
+            latitude_valeur = float(latitude)
+            longitude_valeur = float(longitude)
+            rayon_valeur = float(rayon_saisi)
+        except ValueError:
+            erreur_geo = "Les coordonnées et le rayon doivent être numériques."
+        else:
+            if (
+                not math.isfinite(latitude_valeur)
+                or not -90 <= latitude_valeur <= 90
+                or not math.isfinite(longitude_valeur)
+                or not -180 <= longitude_valeur <= 180
+            ):
+                erreur_geo = "Les coordonnées GPS sont hors limites."
+            elif (
+                not math.isfinite(rayon_valeur)
+                or rayon_valeur <= 0
+                or rayon_valeur > 20038
+            ):
+                erreur_geo = "Le rayon doit être supérieur à 0 et inférieur ou égal à 20 038 km."
+            else:
+                rayon_km = rayon_valeur
+                try:
+                    reponse = api_get(
+                        "/clients/proches",
+                        params={
+                            "latitude": latitude_valeur,
+                            "longitude": longitude_valeur,
+                            "rayon_km": rayon_valeur,
+                        }
+                    )
+                except requests.RequestException as erreur:
+                    app.logger.exception(
+                        "API indisponible pendant la recherche de clients proches."
+                    )
+                    erreur_geo = "Impossible de contacter le serveur. Réessayez."
+                else:
+                    if reponse.status_code != 200:
+                        try:
+                            erreur_geo = reponse.json().get(
+                                "detail",
+                                "La recherche géographique a échoué."
+                            )
+                        except ValueError:
+                            erreur_geo = "La recherche géographique a échoué."
+                    else:
+                        clients_proches = reponse.json()
+
+    if recherche:
+        recherche_minuscule = recherche.lower()
+        clients_proches = [
+            client
+            for client in clients_proches
+            if recherche_minuscule in str(client["id_client"])
+            or recherche_minuscule in (client.get("nom") or "").lower()
+            or recherche_minuscule in (client.get("prenom") or "").lower()
+            or recherche_minuscule in (client.get("email") or "").lower()
+            or recherche_minuscule in (client.get("telephone") or "").lower()
+        ]
+
+    recherche_geo_effectuee = bool(latitude and longitude and not erreur_geo)
+    if recherche_geo_effectuee:
+        latitude_centre = math.radians(float(latitude))
+        longitude_centre = math.radians(float(longitude))
+        echelle_carte = 175 / float(rayon_km)
+
+        for client in clients_proches:
+            delta_longitude = (
+                math.radians(float(client["longitude"]))
+                - longitude_centre
+            )
+            delta_latitude = (
+                math.radians(float(client["latitude"]))
+                - latitude_centre
+            )
+            distance_x_km = (
+                6371.0
+                * math.cos(latitude_centre)
+                * delta_longitude
+            )
+            distance_y_km = 6371.0 * delta_latitude
+            client["position_carte_x"] = round(
+                200 + distance_x_km * echelle_carte,
+                2
+            )
+            client["position_carte_y"] = round(
+                200 - distance_y_km * echelle_carte,
+                2
+            )
+
+    return render_template(
+        "clients.html",
+        clients=clients_proches,
+        recherche=recherche,
+        latitude_recherche=latitude,
+        longitude_recherche=longitude,
+        rayon_km=rayon_km,
+        erreur_geo=erreur_geo,
+        recherche_geo_effectuee=recherche_geo_effectuee,
     )
 
 
@@ -1532,16 +1717,24 @@ def modifier_client(id_client):
     date_naissance = request.form["date_naissance"]
     email = request.form["email"]
     telephone = request.form["telephone"]
+    coordonnees, erreur_coordonnees = coordonnees_du_formulaire(
+        request.form
+    )
+    if erreur_coordonnees:
+        return erreur_coordonnees, 400
+
+    payload = {
+        "nom": nom,
+        "prenom": prenom,
+        "date_naissance": date_naissance or None,
+        "email": email,
+        "telephone": telephone
+    }
+    payload.update(coordonnees)
 
     reponse = api_put(
         f"{API_URL}/clients/{id_client}",
-        json={
-            "nom": nom,
-            "prenom": prenom,
-            "date_naissance": date_naissance or None,
-            "email": email,
-            "telephone": telephone
-        }
+        json=payload
     )
 
     if reponse.status_code != 200:
@@ -3523,6 +3716,9 @@ def confirmer_paiement():
         "methode_paiement"
     )
 
+    latitude = (request.form.get("latitude") or "").strip()
+    longitude = (request.form.get("longitude") or "").strip()
+
 
     # =========================================================
     # ✅ MODES DE PAIEMENT AUTORISÉS
@@ -3615,6 +3811,18 @@ def confirmer_paiement():
         "methode_paiement": methode_paiement
 
     }
+
+    if latitude:
+        try:
+            donnees_commande["latitude"] = float(latitude)
+        except ValueError:
+            pass
+
+    if longitude:
+        try:
+            donnees_commande["longitude"] = float(longitude)
+        except ValueError:
+            pass
 
 
     # =========================================================

@@ -1298,6 +1298,7 @@ Le tableau suivant résume les routes observées dans `Projet_Boutique/app.py`. 
 | `/utilisateurs` | GET | Consulter les utilisateurs |
 | `/utilisateurs/creer` | GET, POST | Créer un utilisateur depuis l'administration |
 | `/clients` | GET, POST | Consulter et ajouter des clients |
+| `/clients/proches` | GET | Rechercher les clients géolocalisés dans un rayon, avec distance, commandes et total des achats |
 | `/produits` | GET, POST | Consulter et ajouter des produits |
 | `/produits/modifier/<id_produit>` | POST | Modifier un produit |
 | `/produits/supprimer/<id_produit>` | POST | Supprimer un produit |
@@ -1375,6 +1376,14 @@ Les modèles SQLAlchemy transmis définissent les principales tables suivantes.
 Les deux tables de liaison utilisent une clé primaire composée des identifiants de la commande et du produit ou du service. Cette structure permet de distinguer les différentes lignes d'une commande.
 
 Les modèles transmis utilisent des clés étrangères SQLAlchemy, mais ne déclarent pas explicitement de relations ORM avec `relationship()`. Les données associées peuvent donc être récupérées par des requêtes et des jointures définies ailleurs dans le code.
+
+### 15.2. Géolocalisation des clients
+
+Lorsqu'un client confirme une commande, le navigateur peut transmettre sa position GPS avec son autorisation. La position est enregistrée sur la commande et mise à jour comme dernière position connue sur sa fiche `CLIENT`. Si l'accès GPS est refusé ou indisponible, la commande peut être créée sans coordonnées.
+
+Les administrateurs et vendeurs peuvent utiliser `/clients/proches` depuis la gestion des clients. La recherche accepte latitude, longitude et rayon en kilomètres, calcule les distances sur le serveur avec la formule de Haversine, puis trie les résultats par proximité. Le tableau affiche aussi le nombre de commandes et le total calculé à partir des lignes historiques de produits et services. La route est protégée par le rôle admin/vendeur.
+
+Les colonnes `latitude` et `longitude` des tables `CLIENT` et `COMMANDE` doivent exister dans PostgreSQL avant le déploiement du code ; le script fourni est `API/migration_geo.sql`.
 
 ---
 
@@ -1492,4 +1501,3 @@ Flask gère principalement les interactions avec le navigateur, les sessions, le
 Cette architecture permet de faire évoluer séparément l'interface et les traitements métier, à condition de conserver des contrats API cohérents et de vérifier les autorisations, la cohérence des données et la gestion des erreurs à chaque niveau.
 
 Ce document constitue une présentation technique du fonctionnement déduit des fichiers transmis. Pour une documentation entièrement exhaustive, il doit être complété par l'arborescence exacte des templates et des fichiers statiques, ainsi que par l'examen des endpoints FastAPI, de la configuration de la base de données et du mécanisme de migration ou de création des tables.
-

@@ -63,6 +63,16 @@ class Client(Base):
         nullable=False
     )
 
+    latitude = Column(
+        Float,
+        nullable=True
+    )
+
+    longitude = Column(
+        Float,
+        nullable=True
+    )
+
     # -----------------------------------------------------
     # Lien avec le compte utilisateur
     # -----------------------------------------------------
@@ -148,6 +158,16 @@ class Commande(Base):
     CLIENT_id_client = Column(
         Integer,
         ForeignKey("CLIENT.id_client")
+    )
+
+    latitude = Column(
+        Float,
+        nullable=True
+    )
+
+    longitude = Column(
+        Float,
+        nullable=True
     )
 
     statut = Column(

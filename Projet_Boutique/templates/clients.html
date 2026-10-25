@@ -190,6 +190,71 @@ Clients - Gestion de Boutique
         color: #777;
     }
 
+    .geo-message {
+        margin-bottom: 18px;
+        padding: 13px 16px;
+        border-radius: 8px;
+        background: #fff3cd;
+        color: #664d03;
+    }
+
+    .geo-resume {
+        margin: 15px 0 0;
+        color: #475569;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .geo-plot {
+        display: block;
+        width: min(100%, 520px);
+        margin: 0 auto;
+    }
+
+    .geo-legend {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 18px;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .geo-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .legend-point,
+    .legend-centre {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+    }
+
+    .legend-point {
+        background: #2563eb;
+    }
+
+    .legend-centre {
+        background: #dc2626;
+    }
+
+    @media (max-width: 900px) {
+        .geo-form {
+            grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .geo-form {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
 </style>
 
 
@@ -294,6 +359,32 @@ Clients - Gestion de Boutique
 
                 </div>
 
+                <div class="form-group">
+
+                    <label>Latitude</label>
+
+                    <input
+                        type="number"
+                        name="latitude"
+                        step="any"
+                        placeholder="14.7167"
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>Longitude</label>
+
+                    <input
+                        type="number"
+                        name="longitude"
+                        step="any"
+                        placeholder="-17.4677"
+                    >
+
+                </div>
+
 
             </div>
 
@@ -316,50 +407,140 @@ Clients - Gestion de Boutique
 
 
     <!-- =================================================
-         RECHERCHE
+         RECHERCHE PAR POSITION ET TEXTE
          ================================================= -->
 
     <div class="card">
 
-        <h3>🔎 Rechercher un client</h3>
-
+        <h3>📍 Rechercher les clients proches</h3>
 
         <form
             method="GET"
-            action="{{ url_for('clients') }}"
+            action="{{ url_for('clients_proches') }}"
+            class="geo-form"
+            style="display:grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap:12px; align-items:end;"
         >
 
-            <div class="recherche">
+            <div class="form-group">
+                <label>Latitude</label>
+                <input
+                    type="number"
+                    step="any"
+                    min="-90"
+                    max="90"
+                    id="recherche_latitude"
+                    name="latitude"
+                    value="{{ latitude_recherche or '' }}"
+                    placeholder="14.7167"
+                    required
+                >
+            </div>
 
+            <div class="form-group">
+                <label>Longitude</label>
+                <input
+                    type="number"
+                    step="any"
+                    min="-180"
+                    max="180"
+                    id="recherche_longitude"
+                    name="longitude"
+                    value="{{ longitude_recherche or '' }}"
+                    placeholder="-17.4677"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Rayon (km)</label>
+                <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="20038"
+                    name="rayon_km"
+                    value="{{ rayon_km if rayon_km is not none else 5 }}"
+                    placeholder="5"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Recherche</label>
                 <input
                     type="text"
                     name="recherche"
                     value="{{ recherche }}"
-                    placeholder="Nom, prénom, email, téléphone ou ID..."
+                    placeholder="Nom, email..."
                 >
+            </div>
 
-
-                <button
-                    type="submit"
-                    class="btn-rechercher"
-                >
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+                <button type="button" class="btn-rechercher" id="gps-recherche" onclick="obtenirPositionRecherche()">
+                    📍 GPS
+                </button>
+                <button type="submit" class="btn-rechercher">
                     🔎 Rechercher
                 </button>
-
-
-                <a
-                    href="{{ url_for('clients') }}"
-                    class="btn-tous"
-                >
-                    Tous les clients
-                </a>
-
+                <a href="{{ url_for('clients') }}" class="btn-tous">Tous</a>
             </div>
 
         </form>
 
+        <p id="gps-message" class="geo-resume" role="status" aria-live="polite"></p>
+
+        {% if erreur_geo %}
+            <div class="geo-message" role="alert">{{ erreur_geo }}</div>
+        {% elif recherche_geo_effectuee %}
+            <p class="geo-resume">
+                {{ clients|length }} client(s) dans un rayon de
+                {{ rayon_km }} km autour du point sélectionné, triés par distance.
+            </p>
+        {% endif %}
+
     </div>
 
+
+    {% if recherche_geo_effectuee %}
+    <div class="card">
+        <h3>🗺️ Vue schématique du rayon</h3>
+        <svg
+            class="geo-plot"
+            viewBox="0 0 400 400"
+            role="img"
+            aria-label="Point de recherche et clients situés dans le rayon"
+        >
+            <circle cx="200" cy="200" r="175" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"></circle>
+            <line x1="25" y1="200" x2="375" y2="200" stroke="#cbd5e1" stroke-width="1"></line>
+            <line x1="200" y1="25" x2="200" y2="375" stroke="#cbd5e1" stroke-width="1"></line>
+            <text x="200" y="17" text-anchor="middle" font-size="12" fill="#475569">
+                Rayon : {{ rayon_km }} km
+            </text>
+            {% for client in clients %}
+                <circle
+                    cx="{{ client.position_carte_x }}"
+                    cy="{{ client.position_carte_y }}"
+                    r="6"
+                    fill="#2563eb"
+                    stroke="white"
+                    stroke-width="2"
+                >
+                    <title>{{ client.prenom }} {{ client.nom }} — {{ client.distance_km }} km</title>
+                </circle>
+            {% endfor %}
+            <circle cx="200" cy="200" r="8" fill="#dc2626" stroke="white" stroke-width="2">
+                <title>Point de recherche</title>
+            </circle>
+        </svg>
+        <div class="geo-legend">
+            <span><i class="legend-centre"></i> Point de recherche</span>
+            <span><i class="legend-point"></i> Client ({{ clients|length }})</span>
+        </div>
+        <p class="geo-resume">
+            Représentation schématique centrée sur le point recherché ; les distances exactes figurent dans la liste.
+        </p>
+    </div>
+    {% endif %}
 
     <!-- =================================================
          LISTE DES CLIENTS
@@ -367,9 +548,15 @@ Clients - Gestion de Boutique
 
     <div class="card">
 
-        <h3>📋 Liste des clients</h3>
+        <h3>
+            {% if recherche_geo_effectuee %}
+                📍 Clients les plus proches
+            {% else %}
+                📋 Liste des clients
+            {% endif %}
+        </h3>
 
-
+        <div class="table-responsive">
         <table>
 
             <thead>
@@ -382,6 +569,10 @@ Clients - Gestion de Boutique
                     <th>Date de naissance</th>
                     <th>Email</th>
                     <th>Téléphone</th>
+                    <th>Coordonnées</th>
+                    <th>Distance</th>
+                    <th>Commandes</th>
+                    <th>Total achats</th>
                     <th>Actions</th>
 
                 </tr>
@@ -428,6 +619,33 @@ Clients - Gestion de Boutique
                         {{ client.telephone }}
                     </td>
 
+                    <td>
+                        {% if client.latitude is not none and client.longitude is not none %}
+                            {{ client.latitude }} / {{ client.longitude }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if client.distance_km is defined %}
+                            {{ client.distance_km }} km
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {{ client.nombre_commandes if client.nombre_commandes is defined else "—" }}
+                    </td>
+
+                    <td>
+                        {% if client.total_achats is defined %}
+                            {{ "{:,.0f}".format(client.total_achats).replace(",", " ") }} FCFA
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
 
                     <td>
 
@@ -474,6 +692,17 @@ Clients - Gestion de Boutique
                                     value="{{ client.telephone }}"
                                 >
 
+                                <input
+                                    type="hidden"
+                                    name="latitude"
+                                    value="{{ client.latitude if client.latitude is not none else '' }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="longitude"
+                                    value="{{ client.longitude if client.longitude is not none else '' }}"
+                                >
 
                                 <button
                                     type="submit"
@@ -524,10 +753,14 @@ Clients - Gestion de Boutique
                 <tr>
 
                     <td
-                        colspan="7"
+                        colspan="11"
                         class="aucun"
                     >
-                        Aucun client trouvé.
+                        {% if recherche_geo_effectuee %}
+                            Aucun client avec une position connue dans ce rayon.
+                        {% else %}
+                            Aucun client trouvé.
+                        {% endif %}
                     </td>
 
                 </tr>
@@ -538,6 +771,7 @@ Clients - Gestion de Boutique
             </tbody>
 
         </table>
+        </div>
 
     </div>
 
@@ -630,6 +864,27 @@ function modifierClient(bouton) {
         return false;
     }
 
+    const latitude = formulaire.querySelector('input[name="latitude"]').value;
+    const longitude = formulaire.querySelector('input[name="longitude"]').value;
+
+    let nouvelleLatitude = prompt(
+        "Latitude :",
+        latitude
+    );
+
+    if (nouvelleLatitude === null) {
+        return false;
+    }
+
+    let nouvelleLongitude = prompt(
+        "Longitude :",
+        longitude
+    );
+
+    if (nouvelleLongitude === null) {
+        return false;
+    }
+
 
     formulaire.querySelector(
         'input[name="nom"]'
@@ -655,9 +910,56 @@ function modifierClient(bouton) {
         'input[name="telephone"]'
     ).value = nouveauTelephone;
 
+    formulaire.querySelector(
+        'input[name="latitude"]'
+    ).value = nouvelleLatitude;
+
+    formulaire.querySelector(
+        'input[name="longitude"]'
+    ).value = nouvelleLongitude;
+
 
     return true;
 
+}
+
+function obtenirPositionRecherche() {
+    const latitude = document.getElementById("recherche_latitude");
+    const longitude = document.getElementById("recherche_longitude");
+    const bouton = document.getElementById("gps-recherche");
+    const message = document.getElementById("gps-message");
+
+    if (!navigator.geolocation) {
+        message.textContent = "La géolocalisation n'est pas supportée par ce navigateur. Saisissez les coordonnées manuellement.";
+        return;
+    }
+
+    bouton.disabled = true;
+    message.textContent = "Récupération de votre position…";
+
+    navigator.geolocation.getCurrentPosition(
+        function (position) {
+            latitude.value = position.coords.latitude.toFixed(6);
+            longitude.value = position.coords.longitude.toFixed(6);
+            bouton.disabled = false;
+            message.textContent = "Position récupérée. Vérifiez le rayon puis cliquez sur Rechercher.";
+        },
+        function (erreur) {
+            bouton.disabled = false;
+            if (erreur.code === 1) {
+                message.textContent = "Accès à la position refusé. Saisissez les coordonnées manuellement.";
+            } else if (erreur.code === 3) {
+                message.textContent = "La récupération GPS a expiré. Réessayez ou saisissez les coordonnées manuellement.";
+            } else {
+                message.textContent = "Position indisponible. Saisissez les coordonnées manuellement.";
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 60000
+        }
+    );
 }
 
 </script>

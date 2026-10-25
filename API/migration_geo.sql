@@ -1,0 +1,17 @@
+BEGIN;
+
+ALTER TABLE IF EXISTS "CLIENT"
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+ALTER TABLE IF EXISTS "COMMANDE"
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+CREATE INDEX IF NOT EXISTS idx_client_latitude_longitude
+    ON "CLIENT" (latitude, longitude);
+
+CREATE INDEX IF NOT EXISTS idx_commande_latitude_longitude
+    ON "COMMANDE" (latitude, longitude);
+
+COMMIT;

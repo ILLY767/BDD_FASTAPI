@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.staticfiles import StaticFiles
 from urllib.parse import urlparse
 
 from sqlalchemy import func
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 
 import cloudinary
@@ -15,6 +15,7 @@ import cloudinary.uploader
 
 import os
 import uuid
+import math
 
 from sqlalchemy.orm import Session
 
@@ -113,6 +114,14 @@ class MonCompteUpdate(BaseModel):
     telephone: str | None = None
 
     date_naissance: date | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def verifier_paire_coordonnees(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("La latitude et la longitude doivent être renseignées ensemble.")
+        return self
 
 
 class MotDePasseUpdate(BaseModel):
@@ -264,10 +273,121 @@ def lire_clients(
             "prenom": client.prenom,
             "date_naissance": client.date_naissance,
             "email": client.email,
-            "telephone": client.telephone
+            "telephone": client.telephone,
+            "latitude": client.latitude,
+            "longitude": client.longitude
         })
 
     return resultats
+
+
+@app.get("/clients/proches")
+def lire_clients_proches(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    rayon_km: float = Query(..., gt=0, le=20038),
+    utilisateur=Depends(role_autorise("admin", "vendeur")),
+    db: Session = Depends(get_db)
+):
+    """Liste les clients dans le rayon indiqué, triés par proximité."""
+    if not math.isfinite(latitude) or not math.isfinite(longitude):
+        raise HTTPException(status_code=422, detail="Coordonnées GPS invalides.")
+    if not math.isfinite(rayon_km):
+        raise HTTPException(status_code=422, detail="Le rayon doit être un nombre fini.")
+
+    clients = db.query(Client).filter(
+        Client.latitude.isnot(None),
+        Client.longitude.isnot(None)
+    ).all()
+
+    nombre_commandes = dict(
+        db.query(
+            Commande.CLIENT_id_client,
+            func.count(Commande.id_commande)
+        )
+        .group_by(Commande.CLIENT_id_client)
+        .all()
+    )
+
+    totaux_produits = dict(
+        db.query(
+            Commande.CLIENT_id_client,
+            func.sum(
+                CommandeHasProduit.quantite
+                * CommandeHasProduit.prix_unitaire
+            )
+        )
+        .join(
+            Commande,
+            Commande.id_commande
+            == CommandeHasProduit.COMMANDE_id_commande
+        )
+        .group_by(Commande.CLIENT_id_client)
+        .all()
+    )
+
+    totaux_services = dict(
+        db.query(
+            Commande.CLIENT_id_client,
+            func.sum(
+                CommandeHasService.quantite
+                * CommandeHasService.prix_unitaire
+            )
+        )
+        .join(
+            Commande,
+            Commande.id_commande
+            == CommandeHasService.COMMANDE_id_commande
+        )
+        .group_by(Commande.CLIENT_id_client)
+        .all()
+    )
+
+    resultat = []
+    latitude_ref = math.radians(latitude)
+    longitude_ref = math.radians(longitude)
+    rayon_terre_km = 6371.0
+
+    for client in clients:
+        latitude_client = float(client.latitude)
+        longitude_client = float(client.longitude)
+        delta_latitude = math.radians(latitude_client) - latitude_ref
+        delta_longitude = math.radians(longitude_client) - longitude_ref
+        haversine = (
+            math.sin(delta_latitude / 2) ** 2
+            + math.cos(latitude_ref)
+            * math.cos(math.radians(latitude_client))
+            * math.sin(delta_longitude / 2) ** 2
+        )
+        distance = 2 * rayon_terre_km * math.asin(
+            min(1.0, math.sqrt(haversine))
+        )
+
+        if distance > rayon_km:
+            continue
+
+        id_client = client.id_client
+        total_achats = float(
+            totaux_produits.get(id_client) or 0
+        ) + float(
+            totaux_services.get(id_client) or 0
+        )
+        resultat.append({
+            "id_client": id_client,
+            "nom": client.nom,
+            "prenom": client.prenom,
+            "date_naissance": client.date_naissance,
+            "email": client.email,
+            "telephone": client.telephone,
+            "latitude": latitude_client,
+            "longitude": longitude_client,
+            "distance_km": round(distance, 2),
+            "nombre_commandes": nombre_commandes.get(id_client, 0),
+            "total_achats": round(total_achats, 2),
+        })
+
+    resultat.sort(key=lambda client: client["distance_km"])
+    return resultat
 
 
 # =========================================================
@@ -288,7 +408,9 @@ def ajouter_client(
         prenom=client.prenom,
         date_naissance=client.date_naissance,
         email=client.email,
-        telephone=client.telephone
+        telephone=client.telephone,
+        latitude=client.latitude,
+        longitude=client.longitude
     )
 
     db.add(nouveau_client)
@@ -329,6 +451,8 @@ def modifier_client(
     client_existant.date_naissance = client.date_naissance
     client_existant.email = client.email
     client_existant.telephone = client.telephone
+    client_existant.latitude = client.latitude
+    client_existant.longitude = client.longitude
 
     db.commit()
 
@@ -2070,6 +2194,8 @@ def creer_utilisateur(
         date_naissance=utilisateur.date_naissance,
         email=utilisateur.email,
         telephone=utilisateur.telephone,
+        latitude=utilisateur.latitude,
+        longitude=utilisateur.longitude,
         id_utilisateur=nouvel_utilisateur.id_utilisateur
     )
 
@@ -2301,7 +2427,17 @@ def obtenir_mon_compte(
                 if client
                 and client.date_naissance
                 else None
-            )
+            ),
+
+        "latitude":
+            client.latitude
+            if client
+            else None,
+
+        "longitude":
+            client.longitude
+            if client
+            else None
     }
 
 
@@ -2427,6 +2563,18 @@ def modifier_mon_compte(
             donnees.date_naissance
         )
 
+        client.latitude = (
+            donnees.latitude
+            if donnees.latitude is not None
+            else None
+        )
+
+        client.longitude = (
+            donnees.longitude
+            if donnees.longitude is not None
+            else None
+        )
+
 
     # -----------------------------------------------------
     # Enregistrer les modifications
@@ -2494,7 +2642,17 @@ def modifier_mon_compte(
                 if client
                 and client.date_naissance
                 else None
-            )
+            ),
+
+        "latitude":
+            client.latitude
+            if client
+            else None,
+
+        "longitude":
+            client.longitude
+            if client
+            else None
     }
 
 
@@ -2792,8 +2950,15 @@ def creer_commande_depuis_panier(
     nouvelle_commande = Commande(
         date_commande=date.today(),
         CLIENT_id_client=client.id_client,
+        latitude=panier.latitude,
+        longitude=panier.longitude,
         statut="en_attente",
     )
+
+    if panier.latitude is not None:
+        client.latitude = panier.latitude
+    if panier.longitude is not None:
+        client.longitude = panier.longitude
 
     try:
         db.add(nouvelle_commande)
@@ -2880,6 +3045,8 @@ def creer_commande_depuis_panier(
         "methode_paiement": nouveau_paiement.methode,
         "statut_paiement": nouveau_paiement.statut,
         "reference_paiement": nouveau_paiement.reference,
+        "latitude": nouvelle_commande.latitude,
+        "longitude": nouvelle_commande.longitude,
     }
 
 

@@ -638,6 +638,20 @@ Paiement - Gestion de Boutique
                 </div>
 
 
+                <input
+                    type="hidden"
+                    id="latitude"
+                    name="latitude"
+                    value=""
+                >
+
+                <input
+                    type="hidden"
+                    id="longitude"
+                    name="longitude"
+                    value=""
+                >
+
                 <button
                     type="submit"
                     class="btn-payer"
@@ -730,5 +744,42 @@ Paiement - Gestion de Boutique
     </div>
 
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const formulaire = document.querySelector("form[action='{{ url_for('confirmer_paiement') }}']");
+
+        if (!formulaire) {
+            return;
+        }
+
+        const latitudeInput = document.getElementById("latitude");
+        const longitudeInput = document.getElementById("longitude");
+
+        formulaire.addEventListener("submit", function (evenement) {
+            if (!navigator.geolocation) {
+                return;
+            }
+
+            evenement.preventDefault();
+
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    latitudeInput.value = position.coords.latitude;
+                    longitudeInput.value = position.coords.longitude;
+                    formulaire.submit();
+                },
+                function () {
+                    formulaire.submit();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 60000
+                }
+            );
+        });
+    });
+</script>
 
 {% endblock %}
