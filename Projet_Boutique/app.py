@@ -1654,34 +1654,6 @@ def clients_proches():
         ]
 
     recherche_geo_effectuee = bool(latitude and longitude and not erreur_geo)
-    if recherche_geo_effectuee:
-        latitude_centre = math.radians(float(latitude))
-        longitude_centre = math.radians(float(longitude))
-        echelle_carte = 175 / float(rayon_km)
-
-        for client in clients_proches:
-            delta_longitude = (
-                math.radians(float(client["longitude"]))
-                - longitude_centre
-            )
-            delta_latitude = (
-                math.radians(float(client["latitude"]))
-                - latitude_centre
-            )
-            distance_x_km = (
-                6371.0
-                * math.cos(latitude_centre)
-                * delta_longitude
-            )
-            distance_y_km = 6371.0 * delta_latitude
-            client["position_carte_x"] = round(
-                200 + distance_x_km * echelle_carte,
-                2
-            )
-            client["position_carte_y"] = round(
-                200 - distance_y_km * echelle_carte,
-                2
-            )
 
     return render_template(
         "clients.html",

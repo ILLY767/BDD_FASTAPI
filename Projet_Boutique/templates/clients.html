@@ -10,6 +10,13 @@ Clients - Gestion de Boutique
 
 {% block content %}
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+
 <style>
 
     .clients-container {
@@ -207,40 +214,130 @@ Clients - Gestion de Boutique
         overflow-x: auto;
     }
 
-    .geo-plot {
-        display: block;
-        width: min(100%, 520px);
-        margin: 0 auto;
+    .map-card {
+        overflow: hidden;
+        padding: 0;
     }
 
-    .geo-legend {
+    .map-card-header {
         display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 18px;
-        color: #475569;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 22px 25px;
+    }
+
+    .map-card-header h3 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 19px;
+    }
+
+    .map-card-header p {
+        margin-top: 6px;
+        color: #64748b;
         font-size: 13px;
     }
 
-    .geo-legend span {
+    .map-count {
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .leaflet-map {
+        width: 100%;
+        height: 520px;
+        background: #e2e8f0;
+        z-index: 0;
+    }
+
+    .map-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 25px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .map-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+    }
+
+    .map-legend span {
         display: inline-flex;
         align-items: center;
         gap: 7px;
     }
 
-    .legend-point,
-    .legend-centre {
-        width: 11px;
-        height: 11px;
+    .map-dot {
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
     }
 
-    .legend-point {
+    .map-dot-center {
+        background: #dc2626;
+    }
+
+    .map-dot-client {
         background: #2563eb;
     }
 
-    .legend-centre {
+    .client-map-marker {
+        display: flex;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #fff;
+        border-radius: 50% 50% 50% 0;
+        background: #2563eb;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .35);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        transform: rotate(-45deg);
+    }
+
+    .client-map-marker span {
+        transform: rotate(45deg);
+    }
+
+    .search-map-marker {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #fff;
+        border-radius: 50%;
         background: #dc2626;
+        box-shadow: 0 2px 9px rgba(15, 23, 42, .45);
+    }
+
+    .map-popup-title {
+        margin-bottom: 6px;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .map-popup-detail {
+        color: #475569;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    .map-error {
+        display: none;
+        padding: 18px 25px;
+        background: #fff7ed;
+        color: #9a3412;
     }
 
     @media (max-width: 900px) {
@@ -252,6 +349,16 @@ Clients - Gestion de Boutique
     @media (max-width: 560px) {
         .geo-form {
             grid-template-columns: 1fr !important;
+        }
+
+        .leaflet-map {
+            height: 380px;
+        }
+
+        .map-card-header,
+        .map-footer {
+            align-items: flex-start;
+            flex-direction: column;
         }
     }
 
@@ -502,44 +609,35 @@ Clients - Gestion de Boutique
 
 
     {% if recherche_geo_effectuee %}
-    <div class="card">
-        <h3>🗺️ Vue schématique du rayon</h3>
-        <svg
-            class="geo-plot"
-            viewBox="0 0 400 400"
-            role="img"
-            aria-label="Point de recherche et clients situés dans le rayon"
-        >
-            <circle cx="200" cy="200" r="175" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"></circle>
-            <line x1="25" y1="200" x2="375" y2="200" stroke="#cbd5e1" stroke-width="1"></line>
-            <line x1="200" y1="25" x2="200" y2="375" stroke="#cbd5e1" stroke-width="1"></line>
-            <text x="200" y="17" text-anchor="middle" font-size="12" fill="#475569">
-                Rayon : {{ rayon_km }} km
-            </text>
-            {% for client in clients %}
-                <circle
-                    cx="{{ client.position_carte_x }}"
-                    cy="{{ client.position_carte_y }}"
-                    r="6"
-                    fill="#2563eb"
-                    stroke="white"
-                    stroke-width="2"
-                >
-                    <title>{{ client.prenom }} {{ client.nom }} — {{ client.distance_km }} km</title>
-                </circle>
-            {% endfor %}
-            <circle cx="200" cy="200" r="8" fill="#dc2626" stroke="white" stroke-width="2">
-                <title>Point de recherche</title>
-            </circle>
-        </svg>
-        <div class="geo-legend">
-            <span><i class="legend-centre"></i> Point de recherche</span>
-            <span><i class="legend-point"></i> Client ({{ clients|length }})</span>
+    <section class="card map-card" aria-labelledby="geo-map-title">
+        <header class="map-card-header">
+            <div>
+                <h3 id="geo-map-title">Carte des clients à proximité</h3>
+                <p>
+                    Rayon de {{ rayon_km }} km autour de
+                    {{ latitude_recherche }}, {{ longitude_recherche }}
+                </p>
+            </div>
+            <span class="map-count">{{ clients|length }} client(s)</span>
+        </header>
+        <div
+            id="clients-nearby-map"
+            class="leaflet-map"
+            role="region"
+            aria-label="Carte interactive des clients proches"
+        ></div>
+        <div id="clients-map-error" class="map-error" role="alert">
+            La carte n'a pas pu être chargée. Vérifiez votre connexion Internet puis actualisez la page.
         </div>
-        <p class="geo-resume">
-            Représentation schématique centrée sur le point recherché ; les distances exactes figurent dans la liste.
-        </p>
-    </div>
+        <footer class="map-footer">
+            <div class="map-legend">
+                <span><i class="map-dot map-dot-center"></i> Point de recherche</span>
+                <span><i class="map-dot map-dot-client"></i> Client</span>
+                <span>Le cercle représente le rayon sélectionné</span>
+            </div>
+            <span>Carte © OpenStreetMap</span>
+        </footer>
+    </section>
     {% endif %}
 
     <!-- =================================================
@@ -963,6 +1061,110 @@ function obtenirPositionRecherche() {
 }
 
 </script>
+
+{% if recherche_geo_effectuee %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+    (function initialiserCarteClientsProches() {
+        const conteneur = document.getElementById("clients-nearby-map");
+        const erreurCarte = document.getElementById("clients-map-error");
+
+        if (!conteneur) {
+            return;
+        }
+
+        if (typeof L === "undefined") {
+            erreurCarte.style.display = "block";
+            return;
+        }
+
+        const centre = [
+            Number({{ latitude_recherche|tojson }}),
+            Number({{ longitude_recherche|tojson }})
+        ];
+        const rayonMetres = Number({{ rayon_km|tojson }}) * 1000;
+        const clients = {{ clients|tojson }};
+        const carte = L.map(conteneur, {
+            scrollWheelZoom: false,
+            zoomControl: true
+        });
+        carte.setView(centre, 12);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener noreferrer\">OpenStreetMap</a> contributors"
+        }).addTo(carte).on("tileerror", function () {
+            erreurCarte.style.display = "block";
+        });
+
+        const cercleRayon = L.circle(centre, {
+            radius: rayonMetres,
+            color: "#2563eb",
+            weight: 2,
+            opacity: 0.9,
+            fillColor: "#3b82f6",
+            fillOpacity: 0.12
+        }).addTo(carte);
+
+        const iconeCentre = L.divIcon({
+            className: "",
+            html: '<div class="search-map-marker"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        L.marker(centre, { icon: iconeCentre })
+            .addTo(carte)
+            .bindPopup("Point de recherche");
+
+        clients.forEach(function (client, index) {
+            const iconeClient = L.divIcon({
+                className: "",
+                html: '<div class="client-map-marker"><span>' + (index + 1) + '</span></div>',
+                iconSize: [30, 36],
+                iconAnchor: [15, 30]
+            });
+            const contenuPopup = document.createElement("div");
+            const titre = document.createElement("div");
+            const details = document.createElement("div");
+
+            titre.className = "map-popup-title";
+            titre.textContent = (client.prenom || "") + " " + (client.nom || "");
+            details.className = "map-popup-detail";
+            details.textContent =
+                "Distance : " + client.distance_km + " km"
+                + " · Commandes : " + client.nombre_commandes
+                + " · Achats : "
+                + new Intl.NumberFormat("fr-FR").format(client.total_achats)
+                + " FCFA";
+            contenuPopup.append(titre, details);
+
+            L.marker([Number(client.latitude), Number(client.longitude)], {
+                icon: iconeClient
+            })
+                .addTo(carte)
+                .bindPopup(contenuPopup);
+        });
+
+        if (rayonMetres >= 1000000) {
+            carte.setView(centre, 3);
+        } else {
+            carte.fitBounds(cercleRayon.getBounds(), {
+                padding: [36, 36],
+                maxZoom: 15
+            });
+        }
+
+        window.setTimeout(function () {
+            carte.invalidateSize();
+        }, 0);
+    })();
+</script>
+{% endif %}
 
 
 {% endblock %}
