@@ -5453,6 +5453,42 @@ def statistiques_dashboard(
         for periode in periodes
     ]
 
+    produits_par_categorie = (
+        db.query(
+            func.coalesce(
+                func.nullif(func.trim(Produit.categorie), ""),
+                "Sans catégorie"
+            ).label("categorie"),
+            func.sum(CommandeHasProduit.quantite).label("quantite")
+        )
+        .join(
+            CommandeHasProduit,
+            CommandeHasProduit.PRODUIT_id_produit
+            == Produit.id_produit
+        )
+        .join(
+            Commande,
+            Commande.id_commande
+            == CommandeHasProduit.COMMANDE_id_commande
+        )
+        .filter(
+            Commande.date_commande >= date_debut,
+            Commande.date_commande <= date_fin,
+            func.lower(Commande.statut) != "annulee"
+        )
+        .group_by("categorie")
+        .order_by(func.sum(CommandeHasProduit.quantite).desc())
+        .all()
+    )
+
+    liste_produits_par_categorie = [
+        {
+            "categorie": categorie,
+            "quantite": int(quantite or 0)
+        }
+        for categorie, quantite in produits_par_categorie
+    ]
+
     # =====================================================
     # 8. DERNIERES COMMANDES
     # =====================================================
@@ -5545,7 +5581,8 @@ def statistiques_dashboard(
         "dernieres_commandes": liste_commandes,
         "granularite": granularite,
         "libelle_periode": libelle_periode,
-        "evolution": evolution
+        "evolution": evolution,
+        "produits_par_categorie": liste_produits_par_categorie
     }
 
 

@@ -88,7 +88,19 @@ body {
 }
 
 .logo-icon {
-    font-size: 27px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #2563eb, #1746b5);
+    color: white;
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.22);
+}
+
+.logo-icon svg {
+    width: 22px;
+    height: 22px;
 }
 
 .nav-right {
@@ -106,15 +118,19 @@ body {
 }
 
 .logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     text-decoration: none;
 
-    background: #fee2e2;
+    background: #fff3f1;
 
-    color: #dc2626;
+    color: #b94a48;
 
-    padding: 9px 16px;
+    padding: 9px 13px;
 
-    border-radius: 8px;
+    border: 1px solid #f6e2df;
+    border-radius: 10px;
 
     font-size: 14px;
 
@@ -123,8 +139,14 @@ body {
     transition: 0.2s;
 }
 
+.logout svg {
+    width: 17px;
+    height: 17px;
+}
+
 .logout:hover {
-    background: #fecaca;
+    background: #ffe8e4;
+    border-color: #efcfca;
 }
 
 
@@ -411,23 +433,49 @@ body {
    ========================================================= */
 
 .management-container {
-    padding: 45px 0 60px;
+    max-width: 1420px;
+    padding: 42px 0 64px;
 }
 
 .management-header {
-    margin-bottom: 30px;
+    position: relative;
+    margin-bottom: 28px;
+    padding: 28px 32px;
+    overflow: hidden;
+    border: 1px solid #e3eaf5;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 90% 15%, rgba(116, 161, 255, 0.16), transparent 28%),
+        linear-gradient(120deg, #ffffff 0%, #f7faff 100%);
+    box-shadow: 0 10px 28px rgba(32, 55, 96, 0.045);
 }
 
 .management-header h1 {
-    font-size: 32px;
-
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 8px;
+    color: #17243b;
+    font-size: 29px;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.management-header h1 svg {
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+    border: 1px solid #dce7ff;
+    border-radius: 11px;
+    background: #edf3ff;
+    color: #3269db;
 }
 
 .management-header p {
-    color: #6b7280;
-
-    line-height: 1.6;
+    max-width: 720px;
+    color: #69778d;
+    line-height: 1.65;
+    font-size: 14px;
 }
 
 
@@ -447,57 +495,105 @@ body {
 }
 
 .stat-card {
-    background: white;
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    padding: 20px 21px 22px;
+    border: 1px solid #e7ebf2;
+    border-radius: 17px;
+    background: linear-gradient(145deg, #ffffff, #fcfdff);
+    box-shadow: 0 5px 16px rgba(35, 54, 86, 0.035);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
 
-    border: 1px solid #e5e7eb;
-
-    border-radius: 16px;
-
-    padding: 20px;
-
-    box-shadow:
-        0 4px 12px rgba(
-            0,
-            0,
-            0,
-            0.03
-        );
-
-    transition: 0.2s;
+.stat-card::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 0 0 0 64px;
+    background: var(--stat-soft, #edf3ff);
+    content: "";
+    opacity: 0.75;
 }
 
 .stat-card:hover {
     transform: translateY(-3px);
-
-    box-shadow:
-        0 10px 20px rgba(
-            0,
-            0,
-            0,
-            0.07
-        );
+    border-color: #d7e2f4;
+    box-shadow: 0 13px 28px rgba(35, 54, 86, 0.09);
 }
 
 .stat-icon {
-    font-size: 27px;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    margin-bottom: 17px;
+    border: 1px solid var(--stat-border, #dce7ff);
+    border-radius: 13px;
+    background: var(--stat-soft, #edf3ff);
+    color: var(--stat-color, #3973e6);
+    font-size: 21px;
+}
 
-    margin-bottom: 10px;
+.stat-card:nth-child(1) {
+    --stat-color: #3973e6;
+    --stat-soft: #edf3ff;
+    --stat-border: #dce7ff;
+}
+
+.stat-card:nth-child(2) {
+    --stat-color: #8060d6;
+    --stat-soft: #f2efff;
+    --stat-border: #e5ddff;
+}
+
+.stat-card:nth-child(3) {
+    --stat-color: #168d79;
+    --stat-soft: #e9f8f4;
+    --stat-border: #d3f0e8;
+}
+
+.stat-card:nth-child(4) {
+    --stat-color: #dc8a28;
+    --stat-soft: #fff5e8;
+    --stat-border: #f7e7cf;
+}
+
+.stat-card:nth-child(5) {
+    --stat-color: #2b9c68;
+    --stat-soft: #eaf8f0;
+    --stat-border: #d3efdf;
+}
+
+.stat-icon svg {
+    width: 22px;
+    height: 22px;
 }
 
 .stat-label {
-    font-size: 13px;
-
-    color: #6b7280;
-
-    margin-bottom: 5px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 7px;
+    color: #778398;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
 }
 
 .stat-value {
-    font-size: 25px;
-
-    font-weight: 750;
-
-    color: #111827;
+    position: relative;
+    z-index: 1;
+    color: #1b2940;
+    font-size: clamp(22px, 2vw, 29px);
+    font-weight: 760;
+    letter-spacing: -0.04em;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
 }
 
 .stat-ca {
@@ -505,7 +601,7 @@ body {
 }
 
 .stat-ca .stat-value {
-    color: #198754;
+    color: #18764f;
 }
 
 
@@ -525,23 +621,23 @@ body {
 }
 
 .dashboard-panel {
-    background: white;
-
-    border: 1px solid #e5e7eb;
-
-    border-radius: 16px;
-
+    border: 1px solid #e5eaf2;
+    border-radius: 18px;
+    background: #fff;
     padding: 24px;
+    box-shadow: 0 6px 20px rgba(35, 54, 86, 0.035);
 }
 
 .dashboard-panel h2 {
-    font-size: 19px;
-
     margin-bottom: 18px;
+    color: #233149;
+    font-size: 17px;
+    font-weight: 720;
+    letter-spacing: -0.02em;
 }
 
 .visualisations {
-    margin: 0 0 30px;
+    margin: 0 0 32px;
 }
 
 .visualisations-header {
@@ -549,73 +645,150 @@ body {
     align-items: flex-end;
     justify-content: space-between;
     gap: 18px;
-    margin-bottom: 18px;
+    margin-bottom: 17px;
+}
+
+.section-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: #5276b8;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
 }
 
 .visualisations-header h2 {
     margin: 0 0 5px;
-    font-size: 22px;
+    color: #1e2b42;
+    font-size: 23px;
+    font-weight: 760;
+    letter-spacing: -0.035em;
 }
 
 .visualisations-header p {
     margin: 0;
-    color: #6b7280;
+    color: #7a879a;
     font-size: 14px;
 }
 
 .period-switch {
     display: inline-flex;
-    gap: 4px;
+    gap: 3px;
     padding: 4px;
-    background: #e9eef8;
-    border-radius: 12px;
+    border: 1px solid #e5eaf2;
+    background: #f1f4f9;
+    border-radius: 11px;
     flex-shrink: 0;
 }
 
 .period-switch a {
-    padding: 9px 14px;
-    border-radius: 9px;
-    color: #526078;
+    padding: 8px 13px;
+    border-radius: 8px;
+    color: #748197;
     text-decoration: none;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.period-switch a:hover {
+    color: #315eb8;
 }
 
 .period-switch a.active {
     background: white;
-    color: #2563eb;
-    box-shadow: 0 2px 6px rgba(31, 41, 55, 0.1);
+    color: #315fc2;
+    box-shadow: 0 2px 7px rgba(33, 54, 94, 0.1);
 }
 
 .charts-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 18px;
+    gap: 16px;
 }
 
 .chart-card {
     min-width: 0;
-    padding: 22px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    padding: 21px 22px 18px;
+    border: 1px solid #e6ebf3;
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 7px 20px rgba(35, 54, 86, 0.035);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.chart-card:hover {
+    transform: translateY(-2px);
+    border-color: #d7e1ef;
+    box-shadow: 0 12px 27px rgba(35, 54, 86, 0.075);
+}
+
+.chart-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 42px;
+}
+
+.chart-card-heading > div {
+    min-width: 0;
 }
 
 .chart-card h3 {
     margin: 0 0 4px;
-    font-size: 16px;
+    color: #26354d;
+    font-size: 14px;
+    font-weight: 740;
+    letter-spacing: -0.015em;
+}
+
+.chart-icon {
+    display: grid;
+    width: 39px;
+    height: 39px;
+    flex: 0 0 39px;
+    place-items: center;
+    border: 1px solid #dce7ff;
+    border-radius: 12px;
+    background: #edf3ff;
+    color: #3973e6;
+}
+
+.chart-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.chart-revenue .chart-icon {
+    border-color: #d5efe4;
+    background: #eaf8f1;
+    color: #25885e;
+}
+
+.chart-status .chart-icon {
+    border-color: #e3dcff;
+    background: #f2efff;
+    color: #785bd1;
+}
+
+.chart-categories .chart-icon {
+    border-color: #f5e4ce;
+    background: #fff5e9;
+    color: #c17b2c;
 }
 
 .chart-subtitle {
-    color: #8a94a6;
-    font-size: 12px;
+    display: block;
+    color: #8a95a7;
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 .chart-area {
     width: 100%;
-    min-height: 235px;
-    margin-top: 12px;
+    min-height: 225px;
+    margin-top: 15px;
 }
 
 .chart-area svg {
@@ -623,13 +796,30 @@ body {
     width: 100%;
     height: auto;
     overflow: visible;
+    animation: chart-appear 0.45s ease both;
+}
+
+@keyframes chart-appear {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chart-area svg text {
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .chart-empty {
     display: grid;
-    min-height: 220px;
+    min-height: 225px;
     place-items: center;
-    color: #9ca3af;
+    color: #929daf;
     font-size: 14px;
 }
 
@@ -637,69 +827,77 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 26px;
-    min-height: 235px;
+    gap: 32px;
+    min-height: 225px;
 }
 
 .status-donut {
-    width: 154px;
-    height: 154px;
-    flex: 0 0 154px;
+    width: 162px;
+    height: 162px;
+    flex: 0 0 162px;
     display: grid;
     place-items: center;
     border-radius: 50%;
     background: #edf1f7;
     position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
 }
 
 .status-donut::after {
     content: "";
     position: absolute;
-    inset: 20px;
+    inset: 17px;
     background: white;
     border-radius: 50%;
+    box-shadow: 0 2px 12px rgba(30, 48, 77, 0.08);
 }
 
 .status-donut-total {
     position: relative;
     z-index: 1;
-    color: #111827;
-    font-size: 24px;
-    font-weight: 800;
+    color: #1b2940;
+    font-size: 25px;
+    font-weight: 780;
     text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
 .status-donut-total span {
     display: block;
-    color: #8a94a6;
-    font-size: 11px;
-    font-weight: 600;
+    margin-top: 2px;
+    color: #8a95a7;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .status-legend {
     display: grid;
-    gap: 11px;
-    min-width: 120px;
+    gap: 12px;
+    min-width: 138px;
 }
 
 .status-legend-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #526078;
+    gap: 9px;
+    color: #68768b;
     font-size: 12px;
 }
 
 .status-legend-dot {
-    width: 9px;
-    height: 9px;
-    flex: 0 0 9px;
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
     border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(102, 127, 170, 0.08);
 }
 
 .status-legend-row strong {
     margin-left: auto;
-    color: #1f2937;
+    color: #26354d;
+    font-variant-numeric: tabular-nums;
 }
 
 
@@ -722,21 +920,32 @@ body {
 .commandes-table th {
     text-align: left;
 
-    padding: 11px;
+    padding: 12px 13px;
 
-    background: #f9fafb;
+    background: #f6f8fb;
 
-    color: #6b7280;
+    color: #8190a4;
 
-    font-size: 12px;
+    font-size: 10px;
 
     text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .commandes-table td {
-    padding: 13px 11px;
+    padding: 14px 13px;
 
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #edf0f5;
+    color: #59677c;
+    font-size: 13px;
+}
+
+.commandes-table tbody tr {
+    transition: background 0.16s ease;
+}
+
+.commandes-table tbody tr:hover {
+    background: #f8faff;
 }
 
 .commandes-table tr:last-child td {
@@ -746,13 +955,14 @@ body {
 .commande-id {
     font-weight: 700;
 
-    color: #2563eb;
+    color: #356bd3;
 }
 
 .commande-total {
     font-weight: 700;
 
-    color: #198754;
+    color: #21865b;
+    font-variant-numeric: tabular-nums;
 }
 
 
@@ -763,17 +973,18 @@ body {
 .statut-badge {
     display: inline-block;
 
-    padding: 5px 9px;
+    padding: 6px 10px;
 
-    border-radius: 20px;
+    border: 1px solid #e0e9fb;
+    border-radius: 999px;
 
-    font-size: 12px;
+    font-size: 11px;
 
     font-weight: 600;
 
-    background: #eff6ff;
+    background: #f1f5ff;
 
-    color: #2563eb;
+    color: #426bb4;
 }
 
 
@@ -823,7 +1034,10 @@ body {
 
     margin-bottom: 18px;
 
-    font-size: 22px;
+    color: #24334b;
+    font-size: 20px;
+    font-weight: 750;
+    letter-spacing: -0.025em;
 }
 
 .management-grid {
@@ -836,49 +1050,68 @@ body {
 }
 
 .management-card {
-    background: white;
-
-    border-radius: 16px;
-
-    padding: 28px;
-
-    border: 1px solid #e5e7eb;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #fff, #fbfcff);
+    border-radius: 17px;
+    padding: 25px;
+    border: 1px solid #e5eaf2;
 
     text-decoration: none;
 
-    color: #1f2937;
+    color: #26354d;
 
-    transition: 0.2s;
+    box-shadow: 0 5px 16px rgba(35, 54, 86, 0.035);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .management-card:hover {
     transform: translateY(-4px);
-
-    box-shadow:
-        0 12px 25px rgba(
-            0,
-            0,
-            0,
-            0.08
-        );
+    border-color: #d3def0;
+    box-shadow: 0 12px 25px rgba(35, 54, 86, 0.09);
 }
 
 .management-icon {
-    font-size: 35px;
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    margin-bottom: 17px;
+    border: 1px solid #e0e9fb;
+    border-radius: 14px;
+    background: #f0f5ff;
+    font-size: 24px;
+}
 
-    margin-bottom: 15px;
+.management-icon svg {
+    width: 23px;
+    height: 23px;
+}
+
+.management-card:nth-child(3n + 2) .management-icon {
+    border-color: #e4dcff;
+    background: #f3f0ff;
+    color: #785bd1;
+}
+
+.management-card:nth-child(3n) .management-icon {
+    border-color: #d3f0e8;
+    background: #eaf8f4;
+    color: #168d79;
 }
 
 .management-card h3 {
     margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 730;
 }
 
 .management-card p {
-    color: #6b7280;
+    color: #7a879a;
 
-    font-size: 14px;
+    font-size: 13px;
 
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 .management-service {
@@ -944,6 +1177,10 @@ footer {
     .charts-grid {
         grid-template-columns: 1fr;
     }
+
+    .management-container {
+        width: 92%;
+    }
 }
 
 
@@ -957,6 +1194,10 @@ footer {
 
     .hero-content h1 {
         font-size: 30px;
+    }
+
+    .charts-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -1003,10 +1244,35 @@ footer {
     .visualisations-header {
         align-items: flex-start;
         flex-direction: column;
+        gap: 14px;
     }
 
     .chart-card {
         padding: 17px;
+    }
+
+    .management-header {
+        padding: 22px 20px;
+        border-radius: 18px;
+    }
+
+    .management-header h1 {
+        align-items: flex-start;
+        font-size: 23px;
+        line-height: 1.3;
+    }
+
+    .management-header h1 svg {
+        flex: 0 0 34px;
+    }
+
+    .period-switch {
+        width: 100%;
+    }
+
+    .period-switch a {
+        flex: 1;
+        text-align: center;
     }
 
     .status-chart-content {
@@ -1018,6 +1284,35 @@ footer {
     .status-legend {
         width: 100%;
     }
+
+    .chart-area {
+        min-height: 185px;
+    }
+
+    .chart-card-heading {
+        align-items: flex-start;
+    }
+
+    .chart-card-heading .chart-icon {
+        width: 35px;
+        height: 35px;
+        flex-basis: 35px;
+    }
+
+    .management-container {
+        padding-top: 25px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }
 
 </style>
@@ -1026,12 +1321,51 @@ footer {
 
 <body>
 
+{% macro ui_icon(nom) %}
+<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+    {% if nom == "boutique" %}
+    <path d="M4 9.5h16l-1.2 10H5.2L4 9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M3 9.5 5.2 4h13.6L21 9.5M9 9.5v2a3 3 0 0 0 6 0v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "clients" %}
+    <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM16 4.2a3.5 3.5 0 0 1 0 6.6M17 15h.5a3.5 3.5 0 0 1 3.5 3.5V20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "commandes" %}
+    <path d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="m5.5 7.8 6.5 3.4 6.5-3.4M12 11.5V20M8.5 5.8l7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "produits" %}
+    <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="m4.5 7.8 7.5 4.1 7.5-4.1M12 12v8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "services" %}
+    <path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L4 17a2.1 2.1 0 0 0 3 3l5.5-5.5a4 4 0 0 0 5.2-5.2l-2.4 2.4-2.8-2.8 2.2-2.6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "revenu" %}
+    <path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M16 6h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "tendance" %}
+    <path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif nom == "statut" %}
+    <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12V3.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M15 3.9a8.5 8.5 0 0 1 5.1 5.1H15V3.9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    {% elif nom == "categorie" %}
+    <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="m4.5 7.8 7.5 4.1 7.5-4.1M12 12v8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        {% elif nom == "sortie" %}
+        <path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        {% elif nom == "localisation" %}
+        <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+        {% elif nom == "contenu" %}
+        <path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="m13.8 6.7 3.5 3.5M4 20.8h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        {% endif %}
+    </svg>
+{% endmacro %}
+
 {% macro dashboard_visualisations() %}
 <section class="visualisations" aria-labelledby="visualisations-title">
 
     <div class="visualisations-header">
         <div>
-            <h2 id="visualisations-title">📈 Activité de la boutique</h2>
+            <span class="section-eyebrow">ANALYSE COMMERCIALE</span>
+            <h2 id="visualisations-title">Activité de la boutique</h2>
             <p>Commandes et chiffre d'affaires — {{ statistiques.libelle_periode|default("12 derniers mois") }}</p>
         </div>
 
@@ -1050,27 +1384,53 @@ footer {
     </div>
 
     <div class="charts-grid">
-        <article class="chart-card">
-            <h3>Chiffre d'affaires</h3>
-            <span class="chart-subtitle">Évolution sur la période sélectionnée</span>
+        <article class="chart-card chart-revenue">
+            <div class="chart-card-heading">
+                <span class="chart-icon">{{ ui_icon("revenu") }}</span>
+                <div>
+                    <h3>Chiffre d'affaires</h3>
+                    <span class="chart-subtitle">En F CFA · évolution sur la période</span>
+                </div>
+            </div>
             <div class="chart-area" id="revenue-chart"></div>
         </article>
 
-        <article class="chart-card">
-            <h3>Nombre de commandes</h3>
-            <span class="chart-subtitle">Toutes les commandes, par période</span>
+        <article class="chart-card chart-orders">
+            <div class="chart-card-heading">
+                <span class="chart-icon">{{ ui_icon("commandes") }}</span>
+                <div>
+                    <h3>Nombre de commandes</h3>
+                    <span class="chart-subtitle">Toutes les commandes, par période</span>
+                </div>
+            </div>
             <div class="chart-area" id="orders-chart"></div>
         </article>
 
-        <article class="chart-card">
-            <h3>Répartition des statuts</h3>
-            <span class="chart-subtitle">Vue d'ensemble de toutes les commandes</span>
+        <article class="chart-card chart-status">
+            <div class="chart-card-heading">
+                <span class="chart-icon">{{ ui_icon("statut") }}</span>
+                <div>
+                    <h3>Répartition des statuts</h3>
+                    <span class="chart-subtitle">Vue d'ensemble des commandes</span>
+                </div>
+            </div>
             <div class="status-chart-content">
                 <div class="status-donut" id="status-donut">
                     <div class="status-donut-total" id="status-total"></div>
                 </div>
                 <div class="status-legend" id="status-legend"></div>
             </div>
+        </article>
+
+        <article class="chart-card chart-categories">
+            <div class="chart-card-heading">
+                <span class="chart-icon">{{ ui_icon("categorie") }}</span>
+                <div>
+                    <h3>Produits par catégorie</h3>
+                    <span class="chart-subtitle">Unités vendues — {{ statistiques.libelle_periode|default("12 derniers mois") }}</span>
+                </div>
+            </div>
+            <div class="chart-area" id="category-chart"></div>
         </article>
     </div>
 
@@ -1090,7 +1450,7 @@ footer {
 >
 
     <span class="logo-icon">
-        🛒
+        {{ ui_icon("boutique") }}
     </span>
 
     <span>
@@ -1123,8 +1483,8 @@ footer {
         href="{{ url_for('logout') }}"
         class="logout"
     >
-
-        🚪 Déconnexion
+        {{ ui_icon("sortie") }}
+        Déconnexion
 
     </a>
 
@@ -1314,7 +1674,8 @@ footer {
 <div class="management-header">
 
     <h1>
-        🛠️ Tableau de bord administrateur
+        {{ ui_icon("tendance") }}
+        Tableau de bord administrateur
     </h1>
 
     <p>
@@ -1338,7 +1699,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            👥
+            {{ ui_icon("clients") }}
         </div>
 
         <div class="stat-label">
@@ -1355,7 +1716,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            🛒
+            {{ ui_icon("commandes") }}
         </div>
 
         <div class="stat-label">
@@ -1372,7 +1733,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            📦
+            {{ ui_icon("produits") }}
         </div>
 
         <div class="stat-label">
@@ -1389,7 +1750,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            🛠️
+            {{ ui_icon("services") }}
         </div>
 
         <div class="stat-label">
@@ -1406,7 +1767,7 @@ footer {
     <div class="stat-card stat-ca">
 
         <div class="stat-icon">
-            💰
+            {{ ui_icon("revenu") }}
         </div>
 
         <div class="stat-label">
@@ -1446,7 +1807,7 @@ footer {
     <div class="dashboard-panel">
 
         <h2>
-            📋 Dernières commandes
+            Dernières commandes
         </h2>
 
 
@@ -1570,7 +1931,7 @@ footer {
     <div class="dashboard-panel">
 
         <h2>
-            📊 Commandes par statut
+            Commandes par statut
         </h2>
 
 
@@ -1620,7 +1981,7 @@ footer {
      ===================================================== -->
 
 <h2 class="management-title">
-    ⚡ Accès rapides
+    Accès rapides
 </h2>
 
 
@@ -1633,7 +1994,7 @@ footer {
     >
 
         <div class="management-icon">
-            👥
+            {{ ui_icon("clients") }}
         </div>
 
         <h3>
@@ -1653,7 +2014,7 @@ footer {
     >
 
         <div class="management-icon">
-            📍
+            {{ ui_icon("localisation") }}
         </div>
 
         <h3>
@@ -1675,7 +2036,7 @@ footer {
     >
 
         <div class="management-icon">
-            📦
+            {{ ui_icon("produits") }}
         </div>
 
         <h3>
@@ -1696,7 +2057,7 @@ footer {
     >
 
         <div class="management-icon">
-            🛠️
+            {{ ui_icon("services") }}
         </div>
 
         <h3>
@@ -1717,7 +2078,7 @@ footer {
     >
 
         <div class="management-icon">
-            🛒
+            {{ ui_icon("commandes") }}
         </div>
 
         <h3>
@@ -1738,7 +2099,7 @@ footer {
     >
 
         <div class="management-icon">
-            👤
+            {{ ui_icon("clients") }}
         </div>
 
         <h3>
@@ -1758,7 +2119,7 @@ footer {
     >
 
         <div class="management-icon">
-            🎨
+            {{ ui_icon("contenu") }}
         </div>
 
         <h3>
@@ -1789,7 +2150,8 @@ footer {
 <div class="management-header">
 
     <h1>
-        🏪 Espace vendeur
+        {{ ui_icon("tendance") }}
+        Espace vendeur
     </h1>
 
     <p>
@@ -1813,7 +2175,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            👥
+            {{ ui_icon("clients") }}
         </div>
 
         <div class="stat-label">
@@ -1830,7 +2192,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            🛒
+            {{ ui_icon("commandes") }}
         </div>
 
         <div class="stat-label">
@@ -1847,7 +2209,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            📦
+            {{ ui_icon("produits") }}
         </div>
 
         <div class="stat-label">
@@ -1864,7 +2226,7 @@ footer {
     <div class="stat-card">
 
         <div class="stat-icon">
-            🛠️
+            {{ ui_icon("services") }}
         </div>
 
         <div class="stat-label">
@@ -1881,7 +2243,7 @@ footer {
     <div class="stat-card stat-ca">
 
         <div class="stat-icon">
-            💰
+            {{ ui_icon("revenu") }}
         </div>
 
         <div class="stat-label">
@@ -1917,7 +2279,7 @@ footer {
     <div class="dashboard-panel">
 
         <h2>
-            📋 Dernières commandes
+            Dernières commandes
         </h2>
 
 
@@ -2037,7 +2399,7 @@ footer {
     <div class="dashboard-panel">
 
         <h2>
-            📊 Commandes par statut
+            Commandes par statut
         </h2>
 
 
@@ -2087,7 +2449,7 @@ footer {
      ===================================================== -->
 
 <h2 class="management-title">
-    ⚡ Accès rapides
+    Accès rapides
 </h2>
 
 
@@ -2100,7 +2462,7 @@ footer {
     >
 
         <div class="management-icon">
-            📦
+            {{ ui_icon("produits") }}
         </div>
 
         <h3>
@@ -2121,7 +2483,7 @@ footer {
     >
 
         <div class="management-icon">
-            🛠️
+            {{ ui_icon("services") }}
         </div>
 
         <h3>
@@ -2142,7 +2504,7 @@ footer {
     >
 
         <div class="management-icon">
-            🛒
+            {{ ui_icon("commandes") }}
         </div>
 
         <h3>
@@ -2162,7 +2524,7 @@ footer {
     >
 
         <div class="management-icon">
-            📍
+            {{ ui_icon("localisation") }}
         </div>
 
         <h3>
@@ -2205,8 +2567,12 @@ Votre espace de gestion et d'achat en ligne
     const statistiques = {{ statistiques|default({})|tojson }};
     const series = statistiques.evolution || [];
     const couleursStatut = [
-        "#4f7cff", "#25b98a", "#ffae42", "#ef647c",
-        "#9b7bf7", "#36a8c8", "#8492a6"
+        "#4f7cff", "#25a879", "#df9a39", "#df6578",
+        "#8769d5", "#3295b7", "#75849a"
+    ];
+    const couleursCategorie = [
+        "#4f7cff", "#25a879", "#e0a044", "#8b70d8",
+        "#3b9ab2", "#db6d83", "#6e819a", "#a9b5c5"
     ];
     const espaceSvg = "http://www.w3.org/2000/svg";
     const formatNombre = new Intl.NumberFormat("fr-FR", {
@@ -2226,6 +2592,19 @@ Votre espace de gestion et d'achat en ligne
         conteneur.textContent = message;
     }
 
+    function arrondirMaximum(valeur) {
+        const puissance = 10 ** Math.floor(Math.log10(valeur));
+        const normalise = valeur / puissance;
+        const palier = normalise <= 1
+            ? 1
+            : normalise <= 2
+                ? 2
+                : normalise <= 5
+                    ? 5
+                    : 10;
+        return palier * puissance;
+    }
+
     function dessinerCourbe(conteneur, cle, couleur, unite) {
         const valeurs = series.map((element) => Number(element[cle]) || 0);
         if (!valeurs.length || valeurs.every((valeur) => valeur === 0)) {
@@ -2240,26 +2619,41 @@ Votre espace de gestion et d'achat en ligne
                 ? "Courbe du chiffre d'affaires"
                 : "Histogramme du nombre de commandes"
         });
-        const gauche = 18;
-        const droite = 802;
+        const gauche = 66;
+        const droite = 800;
         const haut = 16;
         const bas = 214;
         const amplitude = bas - haut;
-        const maximum = Math.max(...valeurs, 1);
+        const maximum = arrondirMaximum(Math.max(...valeurs, 1));
         const ecartX = valeurs.length > 1
             ? (droite - gauche) / (valeurs.length - 1)
             : 0;
 
         for (let index = 0; index <= 4; index += 1) {
             const y = haut + (amplitude / 4) * index;
+            const valeurAxe = maximum * (4 - index) / 4;
             svg.appendChild(elementSvg("line", {
                 x1: gauche,
                 y1: y,
                 x2: droite,
                 y2: y,
-                stroke: "#edf0f5",
-                "stroke-width": "1"
+                stroke: index === 4 ? "#dfe5ee" : "#edf1f6",
+                "stroke-width": index === 4 ? "1.3" : "1"
             }));
+            const etiquetteAxe = elementSvg("text", {
+                x: gauche - 10,
+                y: y + 4,
+                fill: "#98a2b3",
+                "font-size": "10",
+                "text-anchor": "end"
+            });
+            etiquetteAxe.textContent = cle === "chiffre_affaires"
+                ? new Intl.NumberFormat("fr-FR", {
+                    notation: "compact",
+                    maximumFractionDigits: 1
+                }).format(valeurAxe)
+                : formatNombre.format(valeurAxe);
+            svg.appendChild(etiquetteAxe);
         }
 
         const points = valeurs.map((valeur, index) => ({
@@ -2273,17 +2667,18 @@ Votre espace de gestion et d'achat en ligne
 
         if (cle === "nombre_commandes") {
             const largeur = Math.min(
-                24,
-                Math.max(5, (droite - gauche) / valeurs.length * 0.62)
+                20,
+                Math.max(4, (droite - gauche) / valeurs.length * 0.58)
             );
             points.forEach((point) => {
                 const barre = elementSvg("rect", {
                     x: point.x - largeur / 2,
                     y: point.y,
                     width: largeur,
-                    height: Math.max(0, bas - point.y),
-                    rx: "4",
-                    fill: couleur
+                    height: Math.max(2, bas - point.y),
+                    rx: "5",
+                    fill: couleur,
+                    opacity: point.valeur === 0 ? "0.12" : "0.9"
                 });
                 const info = elementSvg("title", {});
                 info.textContent = `${series[point.index].libelle} : ${point.valeur} commande(s)`;
@@ -2304,7 +2699,7 @@ Votre espace de gestion et d'achat en ligne
                 d: trace,
                 fill: "none",
                 stroke: couleur,
-                "stroke-width": "3",
+                "stroke-width": "3.2",
                 "stroke-linecap": "round",
                 "stroke-linejoin": "round"
             }));
@@ -2337,8 +2732,8 @@ Votre espace de gestion et d'achat en ligne
             const etiquette = elementSvg("text", {
                 x: point.x,
                 y: 242,
-                fill: "#8791a3",
-                "font-size": "11",
+                fill: "#8995a8",
+                "font-size": "10",
                 "text-anchor": "middle"
             });
             etiquette.textContent = series[index].libelle;
@@ -2404,6 +2799,106 @@ Votre espace de gestion et d'achat en ligne
         totalElement.append(nombreTotal, libelleTotal);
     }
 
+    function dessinerCategories() {
+        const conteneur = document.getElementById("category-chart");
+        if (!conteneur) {
+            return;
+        }
+
+        const categories = (statistiques.produits_par_categorie || [])
+            .map((element) => ({
+                nom: String(element.categorie || "Sans catégorie"),
+                quantite: Number(element.quantite) || 0
+            }))
+            .filter((element) => element.quantite > 0);
+
+        if (!categories.length) {
+            afficherVide(conteneur, "Aucun produit commandé sur cette période.");
+            return;
+        }
+
+        const principales = categories.slice(0, 7);
+        if (categories.length > principales.length) {
+            principales.push({
+                nom: "Autres catégories",
+                quantite: categories
+                    .slice(7)
+                    .reduce((somme, element) => somme + element.quantite, 0)
+            });
+        }
+
+        const largeur = 820;
+        const hauteurLigne = 34;
+        const margeHaut = 14;
+        const hauteur = margeHaut + principales.length * hauteurLigne + 8;
+        const xEtiquette = 8;
+        const xBarre = 190;
+        const largeurBarre = 560;
+        const maximum = Math.max(
+            ...principales.map((element) => element.quantite),
+            1
+        );
+        const svg = elementSvg("svg", {
+            viewBox: `0 0 ${largeur} ${hauteur}`,
+            role: "img",
+            "aria-label": "Quantité de produits commandés par catégorie"
+        });
+
+        principales.forEach((element, index) => {
+            const y = margeHaut + index * hauteurLigne;
+            const etiquette = elementSvg("text", {
+                x: xEtiquette,
+                y: y + 15,
+                fill: "#526078",
+                "font-size": "12"
+            });
+            etiquette.textContent = element.nom.length > 24
+                ? `${element.nom.slice(0, 22)}…`
+                : element.nom;
+            const info = elementSvg("title", {});
+            info.textContent = `${element.nom} : ${formatNombre.format(element.quantite)} unité(s)`;
+            etiquette.appendChild(info);
+            svg.appendChild(etiquette);
+
+            svg.appendChild(elementSvg("rect", {
+                x: xBarre,
+                y,
+                width: largeurBarre,
+                height: 20,
+                rx: "6",
+                fill: "#f0f3f8"
+            }));
+
+            const largeurRemplie = largeurBarre
+                * element.quantite
+                / maximum;
+            const barre = elementSvg("rect", {
+                x: xBarre,
+                y,
+                width: Math.max(largeurRemplie, 3),
+                height: 20,
+                rx: "6",
+                fill: couleursStatut[index % couleursStatut.length]
+            });
+            const infoBarre = elementSvg("title", {});
+            infoBarre.textContent = `${element.nom} : ${formatNombre.format(element.quantite)} unité(s)`;
+            barre.appendChild(infoBarre);
+            svg.appendChild(barre);
+
+            const valeur = elementSvg("text", {
+                x: xBarre + largeurBarre + 12,
+                y: y + 15,
+                fill: "#344054",
+                "font-size": "12",
+                "font-weight": "700"
+            });
+            valeur.textContent = formatNombre.format(element.quantite);
+            svg.appendChild(valeur);
+        });
+
+        conteneur.replaceChildren(svg);
+    }
+
     const graphiqueRevenu = document.getElementById("revenue-chart");
     const graphiqueCommandes = document.getElementById("orders-chart");
     if (graphiqueRevenu && graphiqueCommandes) {
@@ -2420,6 +2915,7 @@ Votre espace de gestion et d'achat en ligne
             " commande(s)"
         );
         dessinerStatuts();
+        dessinerCategories();
     }
 })();
 </script>
