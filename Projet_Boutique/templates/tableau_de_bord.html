@@ -71,6 +71,36 @@ body {
     z-index: 100;
 }
 
+.navbar.management-navbar {
+    background: linear-gradient(112deg, #123b7a 0%, #174995 52%, #1d58ad 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow: 0 7px 22px rgba(14, 48, 101, 0.22);
+}
+
+.management-navbar .logo {
+    color: #fff;
+}
+
+.management-navbar .logo-icon {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+}
+
+.management-navbar .user-name {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.management-navbar .logout {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.management-navbar .logout:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .logo {
     display: flex;
 
@@ -546,27 +576,27 @@ body {
 }
 
 .stat-card:nth-child(2) {
-    --stat-color: #8060d6;
-    --stat-soft: #f2efff;
-    --stat-border: #e5ddff;
+    --stat-color: #536fc3;
+    --stat-soft: #eff3ff;
+    --stat-border: #dce5fb;
 }
 
 .stat-card:nth-child(3) {
-    --stat-color: #168d79;
-    --stat-soft: #e9f8f4;
-    --stat-border: #d3f0e8;
+    --stat-color: #277db0;
+    --stat-soft: #edf7fc;
+    --stat-border: #d5eaf5;
 }
 
 .stat-card:nth-child(4) {
-    --stat-color: #dc8a28;
-    --stat-soft: #fff5e8;
-    --stat-border: #f7e7cf;
+    --stat-color: #367cc8;
+    --stat-soft: #edf5ff;
+    --stat-border: #d9e8fb;
 }
 
 .stat-card:nth-child(5) {
-    --stat-color: #2b9c68;
-    --stat-soft: #eaf8f0;
-    --stat-border: #d3efdf;
+    --stat-color: #245bb5;
+    --stat-soft: #edf3ff;
+    --stat-border: #d8e4fa;
 }
 
 .stat-icon svg {
@@ -601,7 +631,7 @@ body {
 }
 
 .stat-ca .stat-value {
-    color: #18764f;
+    color: #245bb5;
 }
 
 
@@ -761,21 +791,21 @@ body {
 }
 
 .chart-revenue .chart-icon {
-    border-color: #d5efe4;
-    background: #eaf8f1;
-    color: #25885e;
+    border-color: #d9e5fb;
+    background: #edf3ff;
+    color: #315fb9;
 }
 
 .chart-status .chart-icon {
-    border-color: #e3dcff;
-    background: #f2efff;
-    color: #785bd1;
+    border-color: #d9e7f6;
+    background: #eff6fc;
+    color: #3976a8;
 }
 
 .chart-categories .chart-icon {
-    border-color: #f5e4ce;
-    background: #fff5e9;
-    color: #c17b2c;
+    border-color: #dce5f6;
+    background: #f1f5fc;
+    color: #536fc3;
 }
 
 .chart-subtitle {
@@ -1441,7 +1471,7 @@ footer {
      NAVIGATION
      ========================================================= -->
 
-<nav class="navbar">
+<nav class="navbar{% if session.get('role') in ['admin', 'vendeur'] %} management-navbar{% endif %}">
 
 
 <a
@@ -2567,12 +2597,12 @@ Votre espace de gestion et d'achat en ligne
     const statistiques = {{ statistiques|default({})|tojson }};
     const series = statistiques.evolution || [];
     const couleursStatut = [
-        "#4f7cff", "#25a879", "#df9a39", "#df6578",
-        "#8769d5", "#3295b7", "#75849a"
+        "#315fb9", "#3679cf", "#4d91dc", "#6a80c4",
+        "#5b9ab8", "#7588a8", "#8da2bf"
     ];
     const couleursCategorie = [
-        "#4f7cff", "#25a879", "#e0a044", "#8b70d8",
-        "#3b9ab2", "#db6d83", "#6e819a", "#a9b5c5"
+        "#315fb9", "#3679cf", "#4d91dc", "#6a80c4",
+        "#5b9ab8", "#7588a8", "#8da2bf", "#b2c0d2"
     ];
     const espaceSvg = "http://www.w3.org/2000/svg";
     const formatNombre = new Intl.NumberFormat("fr-FR", {
@@ -2905,7 +2935,7 @@ Votre espace de gestion et d'achat en ligne
         dessinerCourbe(
             graphiqueRevenu,
             "chiffre_affaires",
-            "#25a879",
+            "#315fb9",
             " F CFA"
         );
         dessinerCourbe(

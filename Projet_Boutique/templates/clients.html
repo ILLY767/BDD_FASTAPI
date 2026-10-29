@@ -20,8 +20,9 @@ Clients - Gestion de Boutique
 <style>
 
     .clients-container {
-        max-width: 1200px;
+        width: min(1200px, 100%);
         margin: 30px auto;
+        min-width: 0;
     }
 
 
@@ -36,15 +37,18 @@ Clients - Gestion de Boutique
     .titre-page h2 {
         margin: 0;
         font-size: 28px;
+        color: #173a72;
     }
 
 
     .card {
+        min-width: 0;
         background: white;
         padding: 25px;
         margin-bottom: 25px;
-        border-radius: 12px;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        border: 1px solid #e1e9f5;
+        border-radius: 16px;
+        box-shadow: 0 8px 22px rgba(24, 55, 101, 0.055);
     }
 
 
@@ -59,12 +63,13 @@ Clients - Gestion de Boutique
 
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 15px;
     }
 
 
     .form-group {
+        min-width: 0;
         display: flex;
         flex-direction: column;
     }
@@ -77,6 +82,8 @@ Clients - Gestion de Boutique
 
 
     .form-group input {
+        width: 100%;
+        min-width: 0;
         padding: 11px;
         border: 1px solid #ccc;
         border-radius: 7px;
@@ -103,14 +110,13 @@ Clients - Gestion de Boutique
 
 
     .btn-ajouter {
-        background: #198754;
+        background: #1d5bb8;
         color: white;
         padding: 12px 25px;
     }
 
-
     .btn-modifier {
-        background: #0d6efd;
+        background: #2563c7;
         color: white;
     }
 
@@ -125,12 +131,6 @@ Clients - Gestion de Boutique
        RECHERCHE
        ================================= */
 
-    .recherche {
-        display: flex;
-        gap: 10px;
-    }
-
-
     .recherche input {
         flex: 1;
         padding: 12px;
@@ -141,18 +141,81 @@ Clients - Gestion de Boutique
 
 
     .btn-rechercher {
-        background: #343a40;
+        background: #1d5bb8;
         color: white;
         padding: 12px 20px;
+        min-height: 44px;
+        white-space: nowrap;
+        transition: background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .btn-rechercher:hover {
+        background: #174b9b;
+        box-shadow: 0 4px 11px rgba(29, 91, 184, 0.2);
     }
 
 
     .btn-tous {
-        background: #6c757d;
-        color: white;
-        padding: 12px 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        min-width: 78px;
+        padding: 10px 18px;
+        border: 1px solid #cbd9ef;
+        background: #eef4ff;
+        color: #1e559e;
         text-decoration: none;
-        border-radius: 7px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn-tous:hover {
+        border-color: #9fb9e3;
+        background: #e1ecff;
+    }
+
+    .geo-form {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        align-items: end;
+    }
+
+    .geo-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .geo-actions > * {
+        flex: 0 0 auto;
+    }
+
+    .geo-form input {
+        min-width: 0;
+        width: 100%;
+        border-color: #d7e0ed;
+        border-radius: 9px;
+        background: #fbfcfe;
+    }
+
+    .geo-form input:focus {
+        outline: 3px solid rgba(37, 99, 199, 0.13);
+        border-color: #4a7ed0;
+        background: #fff;
+    }
+
+    .titre-page > strong,
+    .map-count {
+        border: 1px solid #d6e4fb;
+        background: #edf4ff;
+        color: #245aa5;
     }
 
 
@@ -167,7 +230,7 @@ Clients - Gestion de Boutique
 
 
     th {
-        background: #343a40;
+        background: #174985;
         color: white;
         padding: 14px;
         text-align: left;
@@ -211,6 +274,7 @@ Clients - Gestion de Boutique
     }
 
     .table-responsive {
+        max-width: 100%;
         overflow-x: auto;
     }
 
@@ -243,8 +307,8 @@ Clients - Gestion de Boutique
         flex: 0 0 auto;
         padding: 8px 12px;
         border-radius: 999px;
-        background: #eff6ff;
-        color: #1d4ed8;
+        background: #edf4ff;
+        color: #245aa5;
         font-size: 13px;
         font-weight: 700;
     }
@@ -289,7 +353,7 @@ Clients - Gestion de Boutique
     }
 
     .map-dot-client {
-        background: #2563eb;
+        background: #2563c7;
     }
 
     .client-map-marker {
@@ -341,14 +405,54 @@ Clients - Gestion de Boutique
     }
 
     @media (max-width: 900px) {
+        .form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .geo-form {
-            grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .clients-container {
+            padding: 0 18px;
         }
     }
 
     @media (max-width: 560px) {
         .geo-form {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .form-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .geo-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .geo-actions .btn-rechercher:first-child {
+            grid-column: 1 / -1;
+        }
+
+        .geo-actions > * {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .card {
+            padding: 19px;
+        }
+
+        .titre-page {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .clients-container {
+            padding: 0 12px;
         }
 
         .leaflet-map {
@@ -525,7 +629,6 @@ Clients - Gestion de Boutique
             method="GET"
             action="{{ url_for('clients_proches') }}"
             class="geo-form"
-            style="display:grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap:12px; align-items:end;"
         >
 
             <div class="form-group">
@@ -582,7 +685,7 @@ Clients - Gestion de Boutique
                 >
             </div>
 
-            <div style="display:flex; gap:10px; align-items:flex-end;">
+            <div class="geo-actions">
                 <button type="button" class="btn-rechercher" id="gps-recherche" onclick="obtenirPositionRecherche()">
                     📍 GPS
                 </button>

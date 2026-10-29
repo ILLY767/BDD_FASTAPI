@@ -147,6 +147,62 @@
                 0 4px 20px rgba(15, 23, 42, 0.05);
         }
 
+        .navbar.navbar-management {
+            background:
+                linear-gradient(112deg, #123b7a 0%, #174995 52%, #1d58ad 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 7px 22px rgba(14, 48, 101, 0.22);
+        }
+
+        .navbar-management .logo {
+            color: #fff;
+        }
+
+        .navbar-management .logo-icon {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+        }
+
+        .navbar-management .nav-link {
+            color: rgba(255, 255, 255, 0.83);
+        }
+
+        .navbar-management .nav-link:hover {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+        }
+
+        .navbar-management .message-button,
+        .navbar-management .notification-button {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .navbar-management .message-button:hover,
+        .navbar-management .notification-button:hover,
+        .navbar-management .notification-button.has-notifications {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .navbar-management .message-badge,
+        .navbar-management .notification-badge {
+            border-color: #174995;
+        }
+
+        .navbar-management .user-menu {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .navbar-management .user-name {
+            color: #fff;
+        }
+
+        .navbar-management .user-role {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
 
         .navbar-container {
 
@@ -1189,7 +1245,7 @@
          NAVIGATION
          ===================================================== -->
 
-    <nav class="navbar">
+    <nav class="navbar{% if session.get('role') in ['admin', 'vendeur'] %} navbar-management{% endif %}">
 
         <div class="navbar-container">
 
