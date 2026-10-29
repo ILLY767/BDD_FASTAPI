@@ -540,6 +540,168 @@ body {
     margin-bottom: 18px;
 }
 
+.visualisations {
+    margin: 0 0 30px;
+}
+
+.visualisations-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.visualisations-header h2 {
+    margin: 0 0 5px;
+    font-size: 22px;
+}
+
+.visualisations-header p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.period-switch {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: #e9eef8;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.period-switch a {
+    padding: 9px 14px;
+    border-radius: 9px;
+    color: #526078;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.period-switch a.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 2px 6px rgba(31, 41, 55, 0.1);
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+}
+
+.chart-card {
+    min-width: 0;
+    padding: 22px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.chart-card h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+}
+
+.chart-subtitle {
+    color: #8a94a6;
+    font-size: 12px;
+}
+
+.chart-area {
+    width: 100%;
+    min-height: 235px;
+    margin-top: 12px;
+}
+
+.chart-area svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.chart-empty {
+    display: grid;
+    min-height: 220px;
+    place-items: center;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.status-chart-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    min-height: 235px;
+}
+
+.status-donut {
+    width: 154px;
+    height: 154px;
+    flex: 0 0 154px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #edf1f7;
+    position: relative;
+}
+
+.status-donut::after {
+    content: "";
+    position: absolute;
+    inset: 20px;
+    background: white;
+    border-radius: 50%;
+}
+
+.status-donut-total {
+    position: relative;
+    z-index: 1;
+    color: #111827;
+    font-size: 24px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.status-donut-total span {
+    display: block;
+    color: #8a94a6;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.status-legend {
+    display: grid;
+    gap: 11px;
+    min-width: 120px;
+}
+
+.status-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #526078;
+    font-size: 12px;
+}
+
+.status-legend-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+}
+
+.status-legend-row strong {
+    margin-left: auto;
+    color: #1f2937;
+}
+
 
 /* =========================================================
    TABLE DERNIÈRES COMMANDES
@@ -778,6 +940,10 @@ footer {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 
@@ -833,6 +999,25 @@ footer {
     .stat-value {
         font-size: 21px;
     }
+
+    .visualisations-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .chart-card {
+        padding: 17px;
+    }
+
+    .status-chart-content {
+        flex-direction: column;
+        gap: 20px;
+        padding: 14px 0;
+    }
+
+    .status-legend {
+        width: 100%;
+    }
 }
 
 </style>
@@ -840,6 +1025,57 @@ footer {
 </head>
 
 <body>
+
+{% macro dashboard_visualisations() %}
+<section class="visualisations" aria-labelledby="visualisations-title">
+
+    <div class="visualisations-header">
+        <div>
+            <h2 id="visualisations-title">📈 Activité de la boutique</h2>
+            <p>Commandes et chiffre d'affaires — {{ statistiques.libelle_periode|default("12 derniers mois") }}</p>
+        </div>
+
+        <nav class="period-switch" aria-label="Période des graphiques">
+            <a
+                href="{{ url_for('tableau_de_bord', granularite='jour') }}"
+                class="{{ 'active' if statistiques.granularite|default('mois') == 'jour' else '' }}"
+                {% if statistiques.granularite|default('mois') == 'jour' %}aria-current="page"{% endif %}
+            >Par jour</a>
+            <a
+                href="{{ url_for('tableau_de_bord', granularite='mois') }}"
+                class="{{ 'active' if statistiques.granularite|default('mois') == 'mois' else '' }}"
+                {% if statistiques.granularite|default('mois') == 'mois' %}aria-current="page"{% endif %}
+            >Par mois</a>
+        </nav>
+    </div>
+
+    <div class="charts-grid">
+        <article class="chart-card">
+            <h3>Chiffre d'affaires</h3>
+            <span class="chart-subtitle">Évolution sur la période sélectionnée</span>
+            <div class="chart-area" id="revenue-chart"></div>
+        </article>
+
+        <article class="chart-card">
+            <h3>Nombre de commandes</h3>
+            <span class="chart-subtitle">Toutes les commandes, par période</span>
+            <div class="chart-area" id="orders-chart"></div>
+        </article>
+
+        <article class="chart-card">
+            <h3>Répartition des statuts</h3>
+            <span class="chart-subtitle">Vue d'ensemble de toutes les commandes</span>
+            <div class="status-chart-content">
+                <div class="status-donut" id="status-donut">
+                    <div class="status-donut-total" id="status-total"></div>
+                </div>
+                <div class="status-legend" id="status-legend"></div>
+            </div>
+        </article>
+    </div>
+
+</section>
+{% endmacro %}
 
 <!-- =========================================================
      NAVIGATION
@@ -1194,6 +1430,7 @@ footer {
 
 </div>
 
+{{ dashboard_visualisations() }}
 
 <!-- =====================================================
      DERNIÈRES COMMANDES + STATUTS
@@ -1668,6 +1905,7 @@ footer {
 
 </div>
 
+{{ dashboard_visualisations() }}
 
 <!-- =====================================================
      COMMANDES
@@ -1961,6 +2199,230 @@ Votre espace de gestion et d'achat en ligne
 
 
 </footer>
+
+<script>
+(() => {
+    const statistiques = {{ statistiques|default({})|tojson }};
+    const series = statistiques.evolution || [];
+    const couleursStatut = [
+        "#4f7cff", "#25b98a", "#ffae42", "#ef647c",
+        "#9b7bf7", "#36a8c8", "#8492a6"
+    ];
+    const espaceSvg = "http://www.w3.org/2000/svg";
+    const formatNombre = new Intl.NumberFormat("fr-FR", {
+        maximumFractionDigits: 0
+    });
+
+    function elementSvg(nom, attributs) {
+        const element = document.createElementNS(espaceSvg, nom);
+        Object.entries(attributs).forEach(([cle, valeur]) => {
+            element.setAttribute(cle, valeur);
+        });
+        return element;
+    }
+
+    function afficherVide(conteneur, message) {
+        conteneur.classList.add("chart-empty");
+        conteneur.textContent = message;
+    }
+
+    function dessinerCourbe(conteneur, cle, couleur, unite) {
+        const valeurs = series.map((element) => Number(element[cle]) || 0);
+        if (!valeurs.length || valeurs.every((valeur) => valeur === 0)) {
+            afficherVide(conteneur, "Aucune donnée sur cette période.");
+            return;
+        }
+
+        const svg = elementSvg("svg", {
+            viewBox: "0 0 820 260",
+            role: "img",
+            "aria-label": cle === "chiffre_affaires"
+                ? "Courbe du chiffre d'affaires"
+                : "Histogramme du nombre de commandes"
+        });
+        const gauche = 18;
+        const droite = 802;
+        const haut = 16;
+        const bas = 214;
+        const amplitude = bas - haut;
+        const maximum = Math.max(...valeurs, 1);
+        const ecartX = valeurs.length > 1
+            ? (droite - gauche) / (valeurs.length - 1)
+            : 0;
+
+        for (let index = 0; index <= 4; index += 1) {
+            const y = haut + (amplitude / 4) * index;
+            svg.appendChild(elementSvg("line", {
+                x1: gauche,
+                y1: y,
+                x2: droite,
+                y2: y,
+                stroke: "#edf0f5",
+                "stroke-width": "1"
+            }));
+        }
+
+        const points = valeurs.map((valeur, index) => ({
+            x: valeurs.length > 1
+                ? gauche + ecartX * index
+                : (gauche + droite) / 2,
+            y: bas - (valeur / maximum) * amplitude,
+            valeur,
+            index
+        }));
+
+        if (cle === "nombre_commandes") {
+            const largeur = Math.min(
+                24,
+                Math.max(5, (droite - gauche) / valeurs.length * 0.62)
+            );
+            points.forEach((point) => {
+                const barre = elementSvg("rect", {
+                    x: point.x - largeur / 2,
+                    y: point.y,
+                    width: largeur,
+                    height: Math.max(0, bas - point.y),
+                    rx: "4",
+                    fill: couleur
+                });
+                const info = elementSvg("title", {});
+                info.textContent = `${series[point.index].libelle} : ${point.valeur} commande(s)`;
+                barre.appendChild(info);
+                svg.appendChild(barre);
+            });
+        } else {
+            const trace = points
+                .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+                .join(" ");
+            const aire = `${trace} L ${points[points.length - 1].x} ${bas} L ${points[0].x} ${bas} Z`;
+            svg.appendChild(elementSvg("path", {
+                d: aire,
+                fill: couleur,
+                opacity: "0.12"
+            }));
+            svg.appendChild(elementSvg("path", {
+                d: trace,
+                fill: "none",
+                stroke: couleur,
+                "stroke-width": "3",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round"
+            }));
+            points.forEach((point) => {
+                const cercle = elementSvg("circle", {
+                    cx: point.x,
+                    cy: point.y,
+                    r: "4",
+                    fill: "white",
+                    stroke: couleur,
+                    "stroke-width": "2"
+                });
+                const info = elementSvg("title", {});
+                info.textContent = `${series[point.index].libelle} : ${formatNombre.format(point.valeur)}${unite}`;
+                cercle.appendChild(info);
+                svg.appendChild(cercle);
+            });
+        }
+
+        const intervalleEtiquettes = series.length > 15
+            ? Math.ceil(series.length / 6)
+            : 1;
+        points.forEach((point, index) => {
+            if (
+                index % intervalleEtiquettes !== 0
+                && index !== points.length - 1
+            ) {
+                return;
+            }
+            const etiquette = elementSvg("text", {
+                x: point.x,
+                y: 242,
+                fill: "#8791a3",
+                "font-size": "11",
+                "text-anchor": "middle"
+            });
+            etiquette.textContent = series[index].libelle;
+            svg.appendChild(etiquette);
+        });
+
+        const conteneurValeur = document.createElement("div");
+        conteneurValeur.appendChild(svg);
+        conteneur.replaceChildren(conteneurValeur);
+    }
+
+    function dessinerStatuts() {
+        const donut = document.getElementById("status-donut");
+        const legende = document.getElementById("status-legend");
+        const totalElement = document.getElementById("status-total");
+        if (!donut || !legende || !totalElement) {
+            return;
+        }
+
+        const statuts = (statistiques.repartition_statuts || [])
+            .map((element) => ({
+                nom: String(element.statut || "Non défini")
+                    .replaceAll("_", " "),
+                nombre: Number(element.nombre) || 0
+            }))
+            .filter((element) => element.nombre > 0);
+        const total = statuts.reduce(
+            (somme, element) => somme + element.nombre,
+            0
+        );
+
+        if (!total) {
+            donut.style.background = "#edf1f7";
+            legende.textContent = "Aucune commande enregistrée.";
+        } else {
+            let progression = 0;
+            const segments = statuts.map((element, index) => {
+                const debut = progression;
+                progression += element.nombre / total * 100;
+                return `${couleursStatut[index % couleursStatut.length]} ${debut}% ${progression}%`;
+            });
+            donut.style.background = `conic-gradient(${segments.join(", ")})`;
+
+            statuts.forEach((element, index) => {
+                const ligne = document.createElement("div");
+                ligne.className = "status-legend-row";
+                const point = document.createElement("span");
+                point.className = "status-legend-dot";
+                point.style.backgroundColor = couleursStatut[index % couleursStatut.length];
+                const nom = document.createElement("span");
+                nom.textContent = element.nom;
+                const nombre = document.createElement("strong");
+                nombre.textContent = formatNombre.format(element.nombre);
+                ligne.append(point, nom, nombre);
+                legende.appendChild(ligne);
+            });
+        }
+
+        const nombreTotal = document.createElement("span");
+        nombreTotal.textContent = formatNombre.format(total);
+        const libelleTotal = document.createElement("span");
+        libelleTotal.textContent = "commandes";
+        totalElement.append(nombreTotal, libelleTotal);
+    }
+
+    const graphiqueRevenu = document.getElementById("revenue-chart");
+    const graphiqueCommandes = document.getElementById("orders-chart");
+    if (graphiqueRevenu && graphiqueCommandes) {
+        dessinerCourbe(
+            graphiqueRevenu,
+            "chiffre_affaires",
+            "#25a879",
+            " F CFA"
+        );
+        dessinerCourbe(
+            graphiqueCommandes,
+            "nombre_commandes",
+            "#4f7cff",
+            " commande(s)"
+        );
+        dessinerStatuts();
+    }
+})();
+</script>
 
 </body>
 

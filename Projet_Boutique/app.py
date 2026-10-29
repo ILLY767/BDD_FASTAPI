@@ -934,11 +934,19 @@ def tableau_de_bord():
 
     if role in ["admin", "vendeur"]:
 
+        granularite = request.args.get(
+            "granularite",
+            "mois"
+        )
+        if granularite not in ["jour", "mois"]:
+            granularite = "mois"
+
         try:
 
             reponse = api_get(
                 f"{API_URL}/dashboard/statistiques",
-                timeout=5
+                timeout=5,
+                params={"granularite": granularite}
             )
 
         except Exception as erreur:
@@ -991,7 +999,8 @@ def tableau_de_bord():
 
         return render_template(
             "tableau_de_bord.html",
-            statistiques=statistiques
+            statistiques=statistiques,
+            granularite=granularite
         )
 
 

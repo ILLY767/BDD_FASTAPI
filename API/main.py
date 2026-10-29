@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 import bcrypt
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 from auth import (
@@ -5187,6 +5187,10 @@ def contenu_accueil(db: Session = Depends(get_db)):
 
 @app.get("/dashboard/statistiques")
 def statistiques_dashboard(
+    granularite: str = Query(
+        default="mois",
+        pattern="^(jour|mois)$"
+    ),
     utilisateur=Depends(
         role_autorise("admin", "vendeur")
     ),
@@ -5307,7 +5311,150 @@ def statistiques_dashboard(
         })
 
     # =====================================================
-    # 7. DERNIERES COMMANDES
+    # 7. EVOLUTION DES COMMANDES ET DU CHIFFRE D'AFFAIRES
+    # =====================================================
+
+    aujourd_hui = date.today()
+
+    if granularite == "jour":
+        date_debut = aujourd_hui - timedelta(days=29)
+        date_fin = aujourd_hui
+        periodes = []
+        jour_courant = date_debut
+
+        while jour_courant <= date_fin:
+            cle_periode = jour_courant.isoformat()
+            periodes.append({
+                "cle": cle_periode,
+                "libelle": jour_courant.strftime("%d/%m")
+            })
+            jour_courant += timedelta(days=1)
+
+        def obtenir_cle_periode(date_commande):
+            return date_commande.isoformat()
+
+        libelle_periode = "30 derniers jours"
+
+    else:
+        premier_mois = aujourd_hui.replace(day=1)
+        mois_debut = premier_mois
+
+        for _ in range(11):
+            if mois_debut.month == 1:
+                mois_debut = mois_debut.replace(
+                    year=mois_debut.year - 1,
+                    month=12
+                )
+            else:
+                mois_debut = mois_debut.replace(
+                    month=mois_debut.month - 1
+                )
+
+        date_debut = mois_debut
+        date_fin = aujourd_hui
+        periodes = []
+        mois_courant = mois_debut
+        noms_mois = (
+            "janv.", "févr.", "mars", "avr.", "mai", "juin",
+            "juil.", "août", "sept.", "oct.", "nov.", "déc."
+        )
+
+        while mois_courant <= aujourd_hui.replace(day=1):
+            periodes.append({
+                "cle": mois_courant.strftime("%Y-%m"),
+                "libelle": (
+                    f"{noms_mois[mois_courant.month - 1]} "
+                    f"{mois_courant.year}"
+                )
+            })
+            if mois_courant.month == 12:
+                mois_courant = mois_courant.replace(
+                    year=mois_courant.year + 1,
+                    month=1
+                )
+            else:
+                mois_courant = mois_courant.replace(
+                    month=mois_courant.month + 1
+                )
+
+        def obtenir_cle_periode(date_commande):
+            return date_commande.strftime("%Y-%m")
+
+        libelle_periode = "12 derniers mois"
+
+    commandes_par_date = (
+        db.query(
+            Commande.date_commande,
+            func.count(Commande.id_commande)
+        )
+        .filter(
+            Commande.date_commande >= date_debut,
+            Commande.date_commande <= date_fin
+        )
+        .group_by(Commande.date_commande)
+        .all()
+    )
+
+    chiffre_affaires_par_date = {}
+
+    for lignes_commande, expression_total in (
+        (CommandeHasProduit, CommandeHasProduit.quantite
+         * CommandeHasProduit.prix_unitaire),
+        (CommandeHasService, CommandeHasService.quantite
+         * CommandeHasService.prix_unitaire)
+    ):
+        totaux = (
+            db.query(
+                Commande.date_commande,
+                func.sum(expression_total)
+            )
+            .join(
+                lignes_commande,
+                lignes_commande.COMMANDE_id_commande
+                == Commande.id_commande
+            )
+            .filter(
+                Commande.date_commande >= date_debut,
+                Commande.date_commande <= date_fin,
+                func.lower(Commande.statut) != "annulee"
+            )
+            .group_by(Commande.date_commande)
+            .all()
+        )
+
+        for date_commande, total in totaux:
+            cle_periode = obtenir_cle_periode(date_commande)
+            chiffre_affaires_par_date[cle_periode] = (
+                chiffre_affaires_par_date.get(cle_periode, 0)
+                + float(total or 0)
+            )
+
+    commandes_par_periode = {}
+
+    for date_commande, nombre in commandes_par_date:
+        cle_periode = obtenir_cle_periode(date_commande)
+        commandes_par_periode[cle_periode] = (
+            commandes_par_periode.get(cle_periode, 0) + nombre
+        )
+
+    evolution = [
+        {
+            "periode": periode["cle"],
+            "libelle": periode["libelle"],
+            "nombre_commandes": commandes_par_periode.get(
+                periode["cle"],
+                0
+            ),
+            "chiffre_affaires": chiffre_affaires_par_date.get(
+                periode["cle"],
+                0
+            )
+        }
+        for periode in periodes
+    ]
+
+    # =====================================================
+    # 8. DERNIERES COMMANDES
     # =====================================================
 
     dernieres_commandes = (
@@ -5395,7 +5542,10 @@ def statistiques_dashboard(
         "nombre_services": nombre_services,
         "chiffre_affaires": chiffre_affaires,
         "repartition_statuts": repartition_statuts,
-        "dernieres_commandes": liste_commandes
+        "dernieres_commandes": liste_commandes,
+        "granularite": granularite,
+        "libelle_periode": libelle_periode,
+        "evolution": evolution
     }
 
 
