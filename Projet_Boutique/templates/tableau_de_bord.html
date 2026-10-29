@@ -91,14 +91,15 @@ body {
 }
 
 .management-navbar .logout {
-    border-color: rgba(255, 255, 255, 0.28);
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    border-color: #f5c7cc;
+    background: #fff0f1;
+    color: #b42332;
 }
 
 .management-navbar .logout:hover {
-    border-color: rgba(255, 255, 255, 0.45);
-    background: rgba(255, 255, 255, 0.2);
+    border-color: #ebaab2;
+    background: #ffe1e4;
+    color: #8f1725;
 }
 
 .logo {
@@ -576,27 +577,27 @@ body {
 }
 
 .stat-card:nth-child(2) {
-    --stat-color: #536fc3;
-    --stat-soft: #eff3ff;
-    --stat-border: #dce5fb;
+    --stat-color: #7754b8;
+    --stat-soft: #f3effb;
+    --stat-border: #e6dcf5;
 }
 
 .stat-card:nth-child(3) {
-    --stat-color: #277db0;
-    --stat-soft: #edf7fc;
-    --stat-border: #d5eaf5;
+    --stat-color: #168779;
+    --stat-soft: #eaf7f4;
+    --stat-border: #d3eee7;
 }
 
 .stat-card:nth-child(4) {
-    --stat-color: #367cc8;
-    --stat-soft: #edf5ff;
-    --stat-border: #d9e8fb;
+    --stat-color: #bf7a27;
+    --stat-soft: #fff5e8;
+    --stat-border: #f4e3c9;
 }
 
 .stat-card:nth-child(5) {
-    --stat-color: #245bb5;
-    --stat-soft: #edf3ff;
-    --stat-border: #d8e4fa;
+    --stat-color: #20815b;
+    --stat-soft: #eaf7f0;
+    --stat-border: #d3ecdf;
 }
 
 .stat-icon svg {
@@ -618,7 +619,7 @@ body {
 .stat-value {
     position: relative;
     z-index: 1;
-    color: #1b2940;
+    color: var(--stat-color, #1b2940);
     font-size: clamp(22px, 2vw, 29px);
     font-weight: 760;
     letter-spacing: -0.04em;
@@ -631,7 +632,7 @@ body {
 }
 
 .stat-ca .stat-value {
-    color: #245bb5;
+    color: #20815b;
 }
 
 
@@ -722,13 +723,25 @@ body {
 }
 
 .period-switch a:hover {
-    color: #315eb8;
+    color: #3a649e;
 }
 
 .period-switch a.active {
     background: white;
-    color: #315fc2;
+    color: #315fb9;
     box-shadow: 0 2px 7px rgba(33, 54, 94, 0.1);
+}
+
+.period-switch a[data-granularite="jour"].active {
+    background: #eaf6f0;
+    color: #24744f;
+    box-shadow: inset 0 0 0 1px #d5eadf;
+}
+
+.period-switch a[data-granularite="mois"].active {
+    background: #f1edfa;
+    color: #6848a1;
+    box-shadow: inset 0 0 0 1px #e2d9f1;
 }
 
 .charts-grid {
@@ -791,21 +804,21 @@ body {
 }
 
 .chart-revenue .chart-icon {
-    border-color: #d9e5fb;
-    background: #edf3ff;
-    color: #315fb9;
+    border-color: #d5ebdf;
+    background: #edf7f0;
+    color: #278254;
 }
 
 .chart-status .chart-icon {
-    border-color: #d9e7f6;
-    background: #eff6fc;
-    color: #3976a8;
+    border-color: #e2d9f1;
+    background: #f3eff9;
+    color: #7657ad;
 }
 
 .chart-categories .chart-icon {
-    border-color: #dce5f6;
-    background: #f1f5fc;
-    color: #536fc3;
+    border-color: #f0dfc8;
+    background: #fff6eb;
+    color: #b5762b;
 }
 
 .chart-subtitle {
@@ -1402,11 +1415,13 @@ footer {
         <nav class="period-switch" aria-label="Période des graphiques">
             <a
                 href="{{ url_for('tableau_de_bord', granularite='jour') }}"
+                data-granularite="jour"
                 class="{{ 'active' if statistiques.granularite|default('mois') == 'jour' else '' }}"
                 {% if statistiques.granularite|default('mois') == 'jour' %}aria-current="page"{% endif %}
             >Par jour</a>
             <a
                 href="{{ url_for('tableau_de_bord', granularite='mois') }}"
+                data-granularite="mois"
                 class="{{ 'active' if statistiques.granularite|default('mois') == 'mois' else '' }}"
                 {% if statistiques.granularite|default('mois') == 'mois' %}aria-current="page"{% endif %}
             >Par mois</a>
@@ -2597,12 +2612,12 @@ Votre espace de gestion et d'achat en ligne
     const statistiques = {{ statistiques|default({})|tojson }};
     const series = statistiques.evolution || [];
     const couleursStatut = [
-        "#315fb9", "#3679cf", "#4d91dc", "#6a80c4",
-        "#5b9ab8", "#7588a8", "#8da2bf"
+        "#4f7fc5", "#48a77a", "#e0a34d", "#d96f7b",
+        "#8b70c7", "#48a3b5", "#8291a6"
     ];
     const couleursCategorie = [
-        "#315fb9", "#3679cf", "#4d91dc", "#6a80c4",
-        "#5b9ab8", "#7588a8", "#8da2bf", "#b2c0d2"
+        "#4f7fc5", "#45a37a", "#e0a34d", "#8770c2",
+        "#47a1ad", "#d66f7e", "#75869c", "#a9b5c3"
     ];
     const espaceSvg = "http://www.w3.org/2000/svg";
     const formatNombre = new Intl.NumberFormat("fr-FR", {
@@ -2908,7 +2923,7 @@ Votre espace de gestion et d'achat en ligne
                 width: Math.max(largeurRemplie, 3),
                 height: 20,
                 rx: "6",
-                fill: couleursStatut[index % couleursStatut.length]
+                fill: couleursCategorie[index % couleursCategorie.length]
             });
             const infoBarre = elementSvg("title", {});
             infoBarre.textContent = `${element.nom} : ${formatNombre.format(element.quantite)} unité(s)`;
@@ -2935,7 +2950,7 @@ Votre espace de gestion et d'achat en ligne
         dessinerCourbe(
             graphiqueRevenu,
             "chiffre_affaires",
-            "#315fb9",
+            "#2f9a68",
             " F CFA"
         );
         dessinerCourbe(
