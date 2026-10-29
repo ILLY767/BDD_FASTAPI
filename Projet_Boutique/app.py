@@ -5579,45 +5579,22 @@ def ajouter_photo_accueil():
             400
         )
 
-    # -----------------------------------------------------
-    # TÉLÉVERSEMENT (Cloudinary en production)
-    # -----------------------------------------------------
+    fichier.stream.seek(0)
 
     try:
-
-        nom_image = televerser_media(
-            fichier,
-            "accueil_photos",
-            "image"
-        )
-
-    except ErreurMedia as erreur:
-
-        return (str(erreur), 500)
-
-    # -----------------------------------------------------
-    # ENREGISTRER DANS LA BASE VIA FASTAPI
-    # -----------------------------------------------------
-
-    try:
-
         response = api_post(
             "/accueil/photos",
-            params={
-                "nom_fichier": nom_image
+            files={
+                "fichier": (
+                    fichier.filename,
+                    fichier.stream,
+                    fichier.mimetype
+                )
             }
         )
-
     except SessionExpiree:
-
-        supprimer_media(nom_image, "accueil_photos", local=True)
-
         raise
-
     except requests.RequestException:
-
-        supprimer_media(nom_image, "accueil_photos", local=True)
-
         return (
             "Impossible de contacter le serveur. "
             "Réessayez dans quelques instants.",
@@ -5625,10 +5602,6 @@ def ajouter_photo_accueil():
         )
 
     if response.status_code not in [200, 201]:
-
-        # Si l'API échoue, supprimer le fichier
-        supprimer_media(nom_image, "accueil_photos", local=True)
-
         return (
             f"Erreur lors de l'enregistrement : "
             f"{response.text}",
@@ -5736,46 +5709,23 @@ def ajouter_publicite():
             400
         )
 
-    # -----------------------------------------------------
-    # TÉLÉVERSEMENT (Cloudinary en production)
-    # -----------------------------------------------------
+    fichier.stream.seek(0)
 
     try:
-
-        nom_video = televerser_media(
-            fichier,
-            "accueil_videos",
-            "video"
-        )
-
-    except ErreurMedia as erreur:
-
-        return (str(erreur), 500)
-
-    # -----------------------------------------------------
-    # ENREGISTRER DANS LA BASE VIA FASTAPI
-    # -----------------------------------------------------
-
-    try:
-
         response = api_post(
             "/accueil/publicites",
-            params={
-                "nom_fichier": nom_video,
-                "titre": titre or None
+            params={"titre": titre} if titre else None,
+            files={
+                "fichier": (
+                    fichier.filename,
+                    fichier.stream,
+                    fichier.mimetype
+                )
             }
         )
-
     except SessionExpiree:
-
-        supprimer_media(nom_video, "accueil_videos", local=True)
-
         raise
-
     except requests.RequestException:
-
-        supprimer_media(nom_video, "accueil_videos", local=True)
-
         return (
             "Impossible de contacter le serveur. "
             "Réessayez dans quelques instants.",
@@ -5783,9 +5733,6 @@ def ajouter_publicite():
         )
 
     if response.status_code not in [200, 201]:
-
-        supprimer_media(nom_video, "accueil_videos", local=True)
-
         return (
             f"Erreur : {response.text}",
             500
