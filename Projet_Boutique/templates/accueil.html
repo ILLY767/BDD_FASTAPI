@@ -847,10 +847,7 @@
             {% for photo in photos %}
 
                 <img
-                    src="{{ url_for(
-                        'static',
-                        filename='accueil/photos/' + photo.nom_fichier
-                    ) }}"
+                    src="{{ photo.url_fichier }}"
                     class="photo-slide {% if loop.first %}active{% endif %}"
                     alt="Présentation de la boutique"
                 >
@@ -963,10 +960,7 @@
                 >
 
                     <source
-                        src="{{ url_for(
-                            'static',
-                            filename='accueil/videos/' + videos[0].nom_fichier
-                        ) }}"
+                        src="{{ videos[0].url_fichier }}"
                         type="video/mp4"
                     >
 
@@ -1236,7 +1230,7 @@
 
     <div
         id="videos-data"
-        data-videos='{{ videos | map(attribute="nom_fichier") | list | tojson | safe }}'
+        data-videos='{{ videos | map(attribute="url_fichier") | list | tojson | safe }}'
         style="display:none;"
     ></div>
 
@@ -1501,9 +1495,7 @@ function changerVideo(index) {
     videoActuelle = index;
 
 
-    videoElement.src =
-        "{{ url_for('static', filename='accueil/videos/') }}" +
-        videos[index];
+    videoElement.src = videos[index];
 
 
     videoElement.load();

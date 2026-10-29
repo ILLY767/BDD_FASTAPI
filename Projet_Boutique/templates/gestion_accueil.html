@@ -460,10 +460,7 @@
             <div class="media-card">
 
                 <img
-                    src="{{ url_for(
-                        'static',
-                        filename='accueil/photos/' + photo.nom_fichier
-                    ) }}"
+                    src="{{ photo.url_fichier }}"
                     alt="Photo accueil"
                 >
 
@@ -631,10 +628,8 @@
                 >
 
                     <source
-                        src="{{ url_for(
-                            'static',
-                            filename='accueil/videos/' + publicite.nom_fichier
-                        ) }}"
+                        src="{{ publicite.url_fichier }}"
+                        type="video/mp4"
                     >
 
                 </video>
